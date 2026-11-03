@@ -23,17 +23,17 @@ type GreetingProps = {
 
 export function HomeGreeting({ eyebrow, title, line, ai = true, aside, children }: GreetingProps) {
   return (
-    <section aria-label="Greeting" className="relative flex flex-col gap-5">
-      {ai ? <div aria-hidden="true" className="ai-glow pointer-events-none absolute inset-x-0 -top-8 h-64" /> : null}
-      <div className="relative flex flex-wrap items-center justify-between gap-5">
-        <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-2">
-          <p className="text-[.8rem] font-medium text-muted">{eyebrow}</p>
-          <h1 className={cx("text-[2rem] leading-[1.15] tracking-[-0.03em] rail:text-[2.5rem]", ai && "ai-text")}>{title}</h1>
-          <p className="max-w-[640px] text-[1.05rem] leading-relaxed text-ink/80 rail:text-[1.125rem]">{line}</p>
+    <section aria-label="Greeting" className="relative flex flex-col gap-4">
+      {ai ? <div aria-hidden="true" className="ai-glow pointer-events-none absolute inset-x-0 -top-8 h-52" /> : null}
+      <div className="relative flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-1">
+          <p className="text-[.78rem] font-medium text-muted">{eyebrow}</p>
+          <h1 className={cx("text-[1.6rem] leading-[1.2] tracking-[-0.025em] rail:text-[1.85rem]", ai && "ai-text")}>{title}</h1>
+          <p className="max-w-[680px] text-[.95rem] leading-relaxed text-ink/80">{line}</p>
         </div>
         {aside}
       </div>
-      {children ? <div className="relative flex flex-col gap-3">{children}</div> : null}
+      {children ? <div className="relative flex flex-col gap-2.5">{children}</div> : null}
     </section>
   );
 }
@@ -51,8 +51,8 @@ type AskBarProps = {
 export function AskBar({ action, placeholder, suggestions, stamp }: AskBarProps) {
   return (
     <>
-      <form action={action} method="get" className="ai-ring flex h-14 items-center gap-3 rounded-2xl pr-2 pl-[18px]">
-        <span aria-hidden="true" className="ai-spark size-5" />
+      <form action={action} method="get" className="ai-ring flex h-12 items-center gap-2.5 rounded-xl pr-1.5 pl-4">
+        <span aria-hidden="true" className="ai-spark size-[18px]" />
         <input type="hidden" name="t" value={stamp} />
         <label htmlFor="home-ask" className="sr-only">
           Ask Tradelink AI
@@ -64,20 +64,20 @@ export function AskBar({ action, placeholder, suggestions, stamp }: AskBarProps)
           maxLength={2000}
           autoComplete="off"
           placeholder={placeholder}
-          className="min-w-0 flex-1 border-0 bg-transparent text-[.95rem] text-ink outline-none placeholder:text-muted"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[.9rem] text-ink outline-none placeholder:text-muted"
         />
-        <button type="submit" aria-label="Ask Tradelink AI" className="ai-fill grid size-10 flex-none place-items-center rounded-xl">
-          <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <button type="submit" aria-label="Ask Tradelink AI" className="ai-fill grid size-9 flex-none place-items-center rounded-lg">
+          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M12 19V5M5 12l7-7 7 7" />
           </svg>
         </button>
       </form>
-      <div role="group" aria-label="Suggested questions" className="flex flex-wrap gap-2">
+      <div role="group" aria-label="Suggested questions" className="flex flex-wrap gap-1.5">
         {suggestions.map((text) => (
           <Link
             key={text}
             href={`${action}?q=${encodeURIComponent(text)}&t=${stamp}`}
-            className="inline-flex min-h-8 items-center rounded-full border border-line bg-surface px-3 text-[.84rem] font-medium text-ink no-underline transition-colors duration-150 hover:border-[var(--ai-2)] hover:text-accent"
+            className="inline-flex min-h-7 items-center rounded-full border border-line bg-surface px-2.5 text-[.78rem] font-medium text-ink no-underline transition-colors duration-150 hover:border-[var(--ai-2)] hover:text-accent"
           >
             {text}
           </Link>
@@ -94,9 +94,9 @@ const DOTS: Record<StepTone, string> = { bad: "bg-bad", warn: "bg-[#C98A1A]", in
 /** One of the quieter steps under the Next up card. */
 export function StepRow({ title, detail, href, tone }: { title: string; detail: string; href: string; tone: StepTone }) {
   return (
-    <Link href={href} className="flex items-center gap-3 border-t border-line px-1 py-3 text-ink no-underline hover:bg-sunken/60">
+    <Link href={href} className="flex items-center gap-2.5 border-t border-line px-1 py-2.5 text-ink no-underline hover:bg-sunken/60">
       <span aria-hidden="true" className={cx("size-2 flex-none rounded-full", DOTS[tone])} />
-      <span className="min-w-0 flex-1 text-[.92rem]">
+      <span className="min-w-0 flex-1 truncate text-[.85rem]">
         <b className="font-semibold">{title}</b> <span className="text-muted">· {detail}</span>
       </span>
       <Icon name="arrow" size={16} className="text-muted" />
@@ -109,14 +109,14 @@ export function GlanceRow({ lead, title, detail, end, href }: { lead?: ReactNode
   const body = (
     <>
       {lead}
-      <span className="min-w-0 flex-1 text-[.92rem]">
+      <span className="min-w-0 flex-1 text-[.85rem]">
         <b className="font-semibold">{title}</b>
         {detail ? <span className="text-muted"> · {detail}</span> : null}
       </span>
       {end}
     </>
   );
-  const className = "flex items-center gap-3 border-t border-line px-1 py-3 text-ink no-underline first:border-t-0";
+  const className = "flex items-center gap-2.5 border-t border-line px-1 py-2.5 text-ink no-underline first:border-t-0";
   return href ? (
     <Link href={href} className={cx(className, "hover:bg-sunken/60")}>
       {body}
@@ -161,9 +161,9 @@ export function CutoffRing({ minutesLeft, cutoff, totalMinutes }: { minutesLeft:
     <div
       role="img"
       aria-label={minutesLeft === null ? `Today's ${cutoff} cut-off has passed` : `${text} until the ${cutoff} cut-off`}
-      className="relative flex items-center gap-3.5 rounded-lg border border-line bg-surface py-3 pr-5 pl-3.5 shadow-card"
+      className="relative flex items-center gap-3 rounded-lg border border-line bg-surface py-2.5 pr-4 pl-3 shadow-card"
     >
-      <svg viewBox="0 0 56 56" className="size-12 flex-none" aria-hidden="true">
+      <svg viewBox="0 0 56 56" className="size-10 flex-none" aria-hidden="true">
         <circle cx="28" cy="28" r="23" fill="none" stroke="var(--sunken)" strokeWidth="6" />
         <circle
           cx="28"
@@ -179,8 +179,8 @@ export function CutoffRing({ minutesLeft, cutoff, totalMinutes }: { minutesLeft:
         />
       </svg>
       <div>
-        <p className="text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] tabular-nums">{text}</p>
-        <p className="text-[.8rem] text-muted">{minutesLeft === null ? `New orders go to the next run` : `until the ${cutoff} cut-off`}</p>
+        <p className="text-[1.1rem] font-semibold leading-tight tracking-[-0.02em] tabular-nums">{text}</p>
+        <p className="text-[.75rem] text-muted">{minutesLeft === null ? `New orders go to the next run` : `until the ${cutoff} cut-off`}</p>
       </div>
     </div>
   );

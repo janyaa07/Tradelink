@@ -23,7 +23,7 @@ export function GlanceTabs({ tabs }: { tabs: GlanceTab[] }) {
   };
 
   return (
-    <section aria-label="At a glance" className="rounded-lg border border-line bg-surface px-4 pt-4 pb-2 shadow-card rail:px-6">
+    <section aria-label="At a glance" className="rounded-lg border border-line bg-surface px-4 pt-3.5 pb-1.5 shadow-card rail:px-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2>At a glance</h2>
         <div role="tablist" aria-label="At a glance" className="flex max-w-full gap-0.5 overflow-x-auto rounded-[10px] bg-sunken p-[3px]">
@@ -44,7 +44,7 @@ export function GlanceTabs({ tabs }: { tabs: GlanceTab[] }) {
                 onClick={() => setCurrent(tab.id)}
                 onKeyDown={onKeyDown}
                 className={cx(
-                  "min-h-8 flex-none rounded-lg border-0 px-3 text-[.84rem] font-semibold whitespace-nowrap transition-colors duration-150",
+                  "min-h-7 flex-none rounded-md border-0 px-2.5 text-[.78rem] font-semibold whitespace-nowrap transition-colors duration-150",
                   selected ? "bg-surface text-ink shadow-card" : "bg-transparent text-muted hover:text-ink",
                 )}
               >
