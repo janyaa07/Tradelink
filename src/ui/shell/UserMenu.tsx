@@ -14,8 +14,6 @@ export type UserMenuProps = {
   settingsHref: string;
   /** The sign-out server action. */
   signOutAction: () => Promise<void>;
-  /** "avatar" is the round logo in the top bar; "who" is the side rail's name block on laptop. */
-  variant?: "avatar" | "who";
   className?: string;
 };
 
@@ -24,7 +22,7 @@ const itemClass =
 
 /**
  * The account menu: name, business, Settings and Sign out. A disclosure: the trigger carries
- * aria-expanded, focus moves to Settings on open, and Escape or a click outside closes it.
+ * aria-expanded, focus moves to Settings on open, and Escape, a click outside or tabbing away closes it.
  */
 export function UserMenu({
   userName,
@@ -32,7 +30,6 @@ export function UserMenu({
   roleLabel,
   settingsHref,
   signOutAction,
-  variant = "avatar",
   className,
 }: UserMenuProps) {
   const [open, setOpen] = useState(false);
@@ -60,14 +57,15 @@ export function UserMenu({
     };
   }, [open]);
 
-  const who = variant === "who";
-
   return (
     <div
       ref={wrapperRef}
-      className={cx("relative", who && "w-full", className)}
+      className={cx("relative", className)}
       onBlur={(event) => {
-        if (open && !(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setOpen(false);
+        // Only when focus lands somewhere else, as with Tab. Safari does not focus a tapped button, so
+        // tapping Sign out gives no new target; closing then would hide the menu before the tap lands.
+        const next = event.relatedTarget;
+        if (open && next instanceof Node && !event.currentTarget.contains(next)) setOpen(false);
       }}
     >
       <button
@@ -75,33 +73,16 @@ export function UserMenu({
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={who ? undefined : `Account menu for ${userName}`}
+        aria-label={`Account menu for ${userName}`}
         onClick={() => setOpen((value) => !value)}
-        className={
-          who
-            ? "flex w-full items-center gap-2.5 rounded-md border-0 bg-transparent px-2 py-2 text-left text-[.875rem] text-ink transition-colors duration-150 hover:bg-sunken aria-expanded:bg-sunken"
-            : "grid size-9 flex-none place-items-center rounded-full border-0 bg-transparent p-0 ring-offset-2 ring-offset-surface transition-shadow duration-150 hover:ring-2 hover:ring-line aria-expanded:ring-2 aria-expanded:ring-accent"
-        }
+        className="grid size-9 flex-none place-items-center rounded-full border-0 bg-transparent p-0 ring-offset-2 ring-offset-surface transition-shadow duration-150 hover:ring-2 hover:ring-line aria-expanded:ring-2 aria-expanded:ring-accent"
       >
         <BusinessLogo name={orgName} size={34} />
-        {who ? (
-          <>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{userName}</span>
-              <span className="block truncate text-[.78rem] text-muted">{orgName}</span>
-            </span>
-            <Icon name="more" size={18} className="text-muted" />
-            <span className="sr-only">, account menu</span>
-          </>
-        ) : null}
       </button>
       <div
         id={panelId}
         hidden={!open}
-        className={cx(
-          "absolute z-30 w-[min(280px,calc(100vw-24px))] rounded-lg border border-line bg-surface p-1.5 text-ink shadow-card",
-          who ? "bottom-full left-0 mb-2" : "top-full right-0 mt-2",
-        )}
+        className="absolute top-full right-0 z-30 mt-2 w-[min(280px,calc(100vw-24px))] rounded-lg border border-line bg-surface p-1.5 text-ink shadow-card"
       >
         <div className="flex items-center gap-3 px-2.5 pt-2 pb-3">
           <BusinessLogo name={orgName} size={40} />

@@ -18,6 +18,7 @@ import type { AiCard, AiProposal, AskAction, AskCard, AskReply, AskTurn, CartLin
 import { formatMoney } from "@/domain/money";
 import { StatusPill } from "@/features/orders/OrderCard";
 import { Button } from "@/ui/Button";
+import { controlClass } from "@/ui/Field";
 import { cx } from "@/ui/cx";
 import { formatDate, orderNumber } from "@/ui/format";
 import { Icon, type IconName } from "@/ui/Icon";
@@ -59,6 +60,11 @@ const SUGGESTIONS: Record<AiRole, { text: string; icon: IconName }[]> = {
 };
 
 const PLACEHOLDER = "Ask anything, or tell me what to do";
+
+const INTRO: Record<AiRole, string> = {
+  buyer: "Ask about orders, stock and spend, or tell it what to order.",
+  supplier: "Ask about orders, stock and problems, or tell it what to do.",
+};
 
 type StreamEvent =
   | { type: "text"; delta: string }
@@ -115,21 +121,16 @@ const REVIEW_CART: AskAction = { kind: "link", label: "Review cart", href: "/buy
 
 const STATUS_TONES: Record<ReadLineStatus, PillTone> = { Matched: "good", "Check this": "warn", "Not found": "bad" };
 
-const cardClass = "flex w-full max-w-[480px] flex-col rounded-xl border border-line bg-surface";
+const cardClass = "flex w-full max-w-[520px] flex-col rounded-lg border border-line bg-surface";
 const rowClass = "flex items-center justify-between gap-3 px-3.5 py-2.5 text-[.92rem]";
-
-const toolButtonClass =
-  "inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-2 text-[.875rem] font-semibold text-ink transition-colors duration-150 hover:border-accent disabled:cursor-not-allowed disabled:opacity-50";
 
 const PLUS = "M12 5v14M5 12h14";
 const CLOSE = "M6 6l12 12M18 6L6 18";
 
 function AssistantAvatar() {
   return (
-    <span aria-hidden="true" className={cx("grid size-8 flex-none place-items-center rounded-full", styles.avatar)}>
-      <svg viewBox="0 0 24 24" className="size-[18px]" focusable="false">
-        <path d="M12 2c.6 4.8 3.2 7.4 8 8-4.8.6-7.4 3.2-8 8-.6-4.8-3.2-7.4-8-8 4.8-.6 7.4-3.2 8-8z" fill="currentColor" />
-      </svg>
+    <span aria-hidden="true" className="grid size-8 flex-none place-items-center rounded-full bg-accent-soft text-accent">
+      <Icon name="spark" size={16} />
     </span>
   );
 }
@@ -243,7 +244,7 @@ function ConfirmCard({
   return (
     <div
       className={cx(
-        "w-full max-w-[520px] overflow-hidden rounded-2xl border bg-surface shadow-card",
+        "w-full max-w-[520px] overflow-hidden rounded-lg border bg-surface shadow-card",
         state === "done" ? "border-good/40" : state === "skipped" ? "border-line opacity-70" : "border-accent/50",
       )}
     >
@@ -489,27 +490,22 @@ type HistoryProps = {
   currentId: string;
   locked: boolean;
   now: Date;
-  onNew: () => void;
   onOpen: (conversation: Conversation) => void;
   onDelete: (conversation: Conversation) => void;
 };
 
-/** New chat and the saved chats, newest first. Used in the laptop column and the phone sheet. */
-function HistoryPanel({ conversations, currentId, locked, now, onNew, onOpen, onDelete }: HistoryProps) {
+/** The saved chats, newest first. Used in the laptop column and the phone sheet. */
+function HistoryPanel({ conversations, currentId, locked, now, onOpen, onDelete }: HistoryProps) {
   const headingId = useId();
   return (
-    <div className="flex min-h-0 w-full flex-col gap-3">
-      <button type="button" onClick={onNew} disabled={locked} className={cx(toolButtonClass, "self-start")}>
-        <StrokeIcon d={PLUS} />
-        New chat
-      </button>
-      <h2 id={headingId} className="px-1 pt-1 text-[.78rem] font-semibold tracking-wide text-muted uppercase">
+    <div className="flex min-h-0 w-full flex-col gap-2">
+      <h2 id={headingId} className="px-1">
         Recent chats
       </h2>
       {conversations.length === 0 ? (
         <p className="px-1 text-[.875rem] text-muted">Your chats are saved on this device and show here.</p>
       ) : (
-        <ul aria-labelledby={headingId} className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+        <ul aria-labelledby={headingId} className="-mx-1 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
           {conversations.map((conversation) => {
             const current = conversation.id === currentId;
             return (
@@ -520,7 +516,7 @@ function HistoryPanel({ conversations, currentId, locked, now, onNew, onOpen, on
                   disabled={locked}
                   aria-current={current ? "true" : undefined}
                   className={cx(
-                    "flex w-full min-w-0 flex-col rounded-xl border-0 py-2 pr-10 pl-3 text-left transition-colors duration-150 disabled:cursor-not-allowed",
+                    "flex w-full min-w-0 flex-col rounded-md border-0 py-2 pr-10 pl-3 text-left transition-colors duration-150 disabled:cursor-not-allowed",
                     current ? "bg-accent-soft text-ink" : "bg-transparent text-ink hover:bg-sunken",
                   )}
                 >
@@ -632,7 +628,9 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
     const input = inputRef.current;
     if (!input) return;
     input.style.height = "auto";
-    input.style.height = `${Math.min(input.scrollHeight, MAX_INPUT_HEIGHT)}px`;
+    // The height includes the border, which scrollHeight leaves out.
+    const border = input.offsetHeight - input.clientHeight;
+    input.style.height = `${Math.min(input.scrollHeight + border, MAX_INPUT_HEIGHT)}px`;
   }, [draft]);
 
   /** Every change to the open chat: shown, and saved to this device's history. */
@@ -865,133 +863,122 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
       currentId={currentId}
       locked={locked}
       now={now}
-      onNew={startNewChat}
       onOpen={(conversation) => openConversation(conversation.id, conversation.messages)}
       onDelete={deleteConversation}
     />
   );
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 min-[900px]:grid-cols-[232px_minmax(0,1fr)]">
-      <aside
-        aria-label="Chat history"
-        className="sticky top-0 hidden max-h-[calc(100dvh-9rem)] self-start overflow-hidden min-[900px]:flex"
-      >
-        {historyPanel}
-      </aside>
-      <HistorySheet sheetRef={sheetRef}>{historyPanel}</HistorySheet>
-      <div className={cx(styles.chat, "mx-auto flex w-full max-w-[760px] flex-col")}>
-        <div aria-hidden="true" className={styles.glow} />
-        <div className="flex items-center justify-between gap-2 min-[900px]:hidden">
-          <button type="button" onClick={() => sheetRef.current?.showModal()} className={toolButtonClass}>
+    <>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-[3px]">
+          <h1>Tradelink AI</h1>
+          <p className="text-muted">{INTRO[role]}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => sheetRef.current?.showModal()} className="min-[900px]:hidden">
             <Icon name="history" size={18} />
             History
-          </button>
-          <button type="button" onClick={startNewChat} disabled={locked} className={toolButtonClass}>
+          </Button>
+          <Button onClick={startNewChat} disabled={locked || empty}>
             <StrokeIcon d={PLUS} />
             New chat
-          </button>
-        </div>
-        <div className="flex min-h-[calc(100dvh-16rem)] flex-col">
-          {empty ? (
-            <div className="flex flex-1 flex-col justify-center gap-7 py-6">
-              <p className="text-[clamp(1.75rem,5vw,2.6rem)] font-semibold leading-tight tracking-tight">
-                <span className={styles.gradientText}>{greeting.hello}</span>
-                <br />
-                <span className="text-muted">{greeting.ask}</span>
-              </p>
-              <div role="group" aria-label="Suggestions" className="grid grid-cols-2 gap-3 min-[640px]:grid-cols-4">
-                {SUGGESTIONS[role].map((suggestion) => (
-                  <button
-                    key={suggestion.text}
-                    type="button"
-                    onClick={() => void send(suggestion.text)}
-                    className={cx(
-                      styles.chip,
-                      "flex min-h-[104px] flex-col justify-between gap-3 rounded-2xl p-3.5 text-left text-[.92rem] font-medium text-ink",
-                    )}
-                  >
-                    <span>{suggestion.text}</span>
-                    <span className="self-end text-accent">
-                      <Icon name={suggestion.icon} size={20} />
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <div
-            role="log"
-            aria-live="polite"
-            aria-label="Conversation with Tradelink AI"
-            className={cx("flex flex-col gap-6", !empty && "py-4")}
-          >
-            {messages.map((message, index) =>
-              message.ai ? (
-                <AiReply
-                  key={message.id}
-                  message={message}
-                  handlers={handlersFor(message.id)}
-                  streaming={thinking && index === messages.length - 1}
-                  onAsk={!thinking && index === messages.length - 1 ? (ask) => void send(ask) : null}
-                  onCard={(card) => updateCard(message.id, card)}
-                  waiting={
-                    thinking && index === messages.length - 1 && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
-                      <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
-                        {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}...
-                      </p>
-                    ) : null
-                  }
-                />
-              ) : (
-                <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
-              ),
-            )}
-          </div>
-          <div ref={endRef} aria-hidden="true" className="scroll-mb-40" />
-        </div>
-        <div
-          className={cx(
-            styles.dock,
-            "sticky bottom-0 z-10 pt-6 pb-2 after:absolute after:inset-x-0 after:top-full after:h-9 after:bg-bg",
-          )}
-        >
-          <form
-            onSubmit={onSubmit}
-            aria-busy={thinking || undefined}
-            className={cx(styles.composer, "flex items-end gap-2 rounded-[28px] py-1.5 pr-1.5 pl-5")}
-          >
-            <label htmlFor={inputId} className="sr-only">
-              Message Tradelink AI
-            </label>
-            <textarea
-              id={inputId}
-              ref={inputRef}
-              rows={1}
-              value={draft}
-              maxLength={MAX_CHARS}
-              autoComplete="off"
-              enterKeyHint="send"
-              placeholder={PLACEHOLDER}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={onKeyDown}
-              className="max-h-[200px] min-w-0 flex-1 resize-none self-center border-0 bg-transparent py-2 text-base leading-6 text-ink outline-none placeholder:text-muted"
-            />
-            <button
-              type="submit"
-              aria-label="Send message"
-              disabled={thinking || draft.trim() === ""}
-              className={cx(
-                styles.avatar,
-                "grid size-10 flex-none place-items-center rounded-full transition-opacity disabled:cursor-not-allowed disabled:opacity-40",
-              )}
-            >
-              <SendIcon />
-            </button>
-          </form>
-          <p className="mt-1.5 text-center text-[.75rem] text-muted">Tradelink AI asks you to confirm before it changes anything.</p>
+          </Button>
         </div>
       </div>
-    </div>
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 min-[900px]:grid-cols-[248px_minmax(0,1fr)]">
+        <aside
+          aria-label="Chat history"
+          className="sticky top-0 hidden max-h-[calc(100dvh-12rem)] overflow-hidden rounded-lg border border-line bg-surface p-3 shadow-card min-[900px]:flex"
+        >
+          {historyPanel}
+        </aside>
+        <HistorySheet sheetRef={sheetRef}>{historyPanel}</HistorySheet>
+        <section
+          aria-label="Chat"
+          className="flex min-h-[calc(100dvh-15rem)] min-w-0 flex-col rounded-lg border border-line bg-surface shadow-card"
+        >
+          <div className="flex flex-1 flex-col px-3.5 pt-4 rail:px-5">
+            {empty ? (
+              <div className="flex flex-1 flex-col justify-center gap-5 py-6">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden="true" className="grid size-11 flex-none place-items-center rounded-full bg-accent-soft text-accent">
+                    <Icon name="spark" size={22} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[1.25rem] font-semibold leading-tight">{greeting.hello}</p>
+                    <p className="text-muted">{greeting.ask}</p>
+                  </div>
+                </div>
+                <div role="group" aria-label="Suggestions" className="grid grid-cols-1 gap-2 min-[560px]:grid-cols-2">
+                  {SUGGESTIONS[role].map((suggestion) => (
+                    <button
+                      key={suggestion.text}
+                      type="button"
+                      onClick={() => void send(suggestion.text)}
+                      className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-[.92rem] font-medium text-ink transition-colors duration-150 hover:border-accent hover:bg-sunken/50"
+                    >
+                      <span className="grid size-9 flex-none place-items-center rounded-xl bg-accent-soft text-accent">
+                        <Icon name={suggestion.icon} size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">{suggestion.text}</span>
+                      <Icon name="arrow" size={16} className="text-muted" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div role="log" aria-live="polite" aria-label="Conversation with Tradelink AI" className={cx("flex flex-col gap-6", !empty && "pb-4")}>
+              {messages.map((message, index) =>
+                message.ai ? (
+                  <AiReply
+                    key={message.id}
+                    message={message}
+                    handlers={handlersFor(message.id)}
+                    streaming={thinking && index === messages.length - 1}
+                    onAsk={!thinking && index === messages.length - 1 ? (ask) => void send(ask) : null}
+                    onCard={(card) => updateCard(message.id, card)}
+                    waiting={
+                      thinking && index === messages.length - 1 && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
+                        <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
+                          {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}...
+                        </p>
+                      ) : null
+                    }
+                  />
+                ) : (
+                  <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
+                ),
+              )}
+            </div>
+            <div ref={endRef} aria-hidden="true" className="scroll-mb-32" />
+          </div>
+          <div className="sticky bottom-0 z-10 rounded-b-lg border-t border-line bg-surface px-3.5 pt-3 pb-2.5 rail:px-5">
+            <form onSubmit={onSubmit} aria-busy={thinking || undefined} className="flex items-end gap-2">
+              <label htmlFor={inputId} className="sr-only">
+                Message Tradelink AI
+              </label>
+              <textarea
+                id={inputId}
+                ref={inputRef}
+                rows={1}
+                value={draft}
+                maxLength={MAX_CHARS}
+                autoComplete="off"
+                enterKeyHint="send"
+                placeholder={PLACEHOLDER}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={onKeyDown}
+                className={cx(controlClass, "max-h-[200px] min-w-0 flex-1 resize-none leading-6")}
+              />
+              <Button type="submit" variant="primary" aria-label="Send message" disabled={thinking || draft.trim() === ""} className="min-h-11 rail:min-h-11">
+                <SendIcon />
+              </Button>
+            </form>
+            <p className="mt-1.5 text-[.75rem] text-muted">Tradelink AI asks you to confirm before it changes anything.</p>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }

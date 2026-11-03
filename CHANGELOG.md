@@ -10,6 +10,13 @@ All notable changes are listed here. The format follows Keep a Changelog, and ve
 - **New products and suppliers from chat:** buyers get a filled-in form card to add a product, and to add a supplier who is not on Tradelink yet, either with the product or on its own. Suppliers get a form card to add a product with opening stock and a reorder level. Nothing is added until the person taps the card's button. The database function `buyer_add_supplier` is new.
 
 ### Changed
+- **One navigation for every role:** suppliers and admins now have the buyer's layout. On laptop there is no side rail and the section titles sit in the top bar; on phone, suppliers get five bottom tabs. Settings is in the account menu for everyone, and admin Notifications is reached from the bell. Stock history sits under Inventory, with a link on that page.
+- **Tradelink AI looks like the rest of the app:** a page title and description, the chat and the history in the same bordered panels as other pages, suggestions styled like the home tiles, the standard input and Send button, and no gradient glow.
+
+### Fixed
+- **Account menu on Safari:** Settings and Sign out now work. Safari does not focus a tapped button, so the menu closed before the tap landed.
+
+### Changed (Tradelink AI)
 - **Cart card:** lines are grouped by supplier with subtotals, and each line has minus and plus buttons. Lines asking for more than is in stock are marked, with a one-tap fix. Place order shows the total and stays off until every line is fixed. Long carts expand in place.
 - **Waiting:** one avatar while Tradelink AI works, with the progress line inside its reply.
 - **Follow-ups:** never offer what a card already lets the person do.

@@ -1,9 +1,9 @@
 import type { NavItem, ShellRole } from "@/ui/shell/types";
 
 /**
- * Navigation for each role. The first four show as bottom tabs on phone, the rest under More.
- * Alerts are reached from the bell in the top bar, so buyers and suppliers have no Alerts item.
- * Buyers reach Settings from the account menu.
+ * Navigation for each role: the top bar on laptop, bottom tabs on phone (the first four plus More
+ * when there are more than five). Alerts are reached from the bell and Settings from the account
+ * menu, so no role has either item.
  */
 export const NAV: Record<ShellRole, NavItem[]> = {
   buyer: [
@@ -17,21 +17,17 @@ export const NAV: Record<ShellRole, NavItem[]> = {
     { href: "/supplier", label: "Home", icon: "home" },
     { href: "/supplier/assistant", label: "Tradelink AI", icon: "chat" },
     { href: "/supplier/orders", label: "Orders", icon: "list" },
-    { href: "/supplier/inventory", label: "Inventory", icon: "stock" },
+    { href: "/supplier/inventory", label: "Inventory", icon: "stock", also: ["/supplier/stock-history"] },
     { href: "/supplier/activity", label: "Activity", icon: "pulse" },
-    { href: "/supplier/stock-history", label: "Stock history", icon: "history" },
-    { href: "/supplier/settings", label: "Settings", icon: "gear" },
   ],
   admin: [
     { href: "/admin", label: "Home", icon: "home" },
     { href: "/admin/attention", label: "Attention", icon: "flag" },
     { href: "/admin/orders", label: "Orders", icon: "list" },
     { href: "/admin/suppliers", label: "Suppliers", icon: "crate" },
-    { href: "/admin/notifications", label: "Notifications", icon: "bell" },
     { href: "/admin/users", label: "Users", icon: "users" },
     { href: "/admin/operators", label: "Operators", icon: "headset" },
     { href: "/admin/audit", label: "Audit log", icon: "shield" },
-    { href: "/admin/settings", label: "Settings", icon: "gear" },
   ],
 };
 
@@ -42,6 +38,7 @@ export const NAV: Record<ShellRole, NavItem[]> = {
 export function activeHrefFor(role: ShellRole, pathname: string): string {
   const [home, ...sections] = NAV[role];
   if (home && pathname === home.href) return home.href;
-  const matches = sections.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const under = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const matches = sections.filter((item) => under(item.href) || (item.also ?? []).some(under));
   return matches.sort((a, b) => b.href.length - a.href.length)[0]?.href ?? "";
 }

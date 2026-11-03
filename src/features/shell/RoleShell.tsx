@@ -38,7 +38,6 @@ export function RoleShell({ role, userName, orgName, counts = {}, bellCount, car
       isHome={pathname === home}
       bell={{ href: `/${role}/notifications`, count: bellCount }}
       bellPanel={bellPanel}
-      navPlacement={role === "buyer" ? "top" : "rail"}
       cart={role === "buyer" ? { href: "/buyer/cart", count: cartCount ?? 0 } : null}
       signOutAction={signOut}
     >

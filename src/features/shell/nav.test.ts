@@ -10,14 +10,20 @@ describe("navigation", () => {
       "/buyer/products",
       "/buyer/insights",
     ]);
-    expect(NAV.supplier.some((item) => item.href.endsWith("/notifications"))).toBe(false);
-    expect(NAV.admin.some((item) => item.href === "/admin/notifications")).toBe(true);
+  });
+
+  it("leaves Alerts and Settings to the bell and the account menu for every role", () => {
+    for (const items of Object.values(NAV)) {
+      expect(items.some((item) => item.href.endsWith("/notifications") || item.href.endsWith("/settings"))).toBe(false);
+    }
+    expect(NAV.supplier).toHaveLength(5);
   });
 
   it("highlights the section a page belongs to", () => {
     expect(activeHrefFor("buyer", "/buyer")).toBe("/buyer");
     expect(activeHrefFor("buyer", "/buyer/orders/7d1e")).toBe("/buyer/orders");
     expect(activeHrefFor("admin", "/admin/users/buyers/1")).toBe("/admin/users");
+    expect(activeHrefFor("supplier", "/supplier/stock-history")).toBe("/supplier/inventory");
   });
 
   it("highlights nothing on pages outside the nav, such as the cart and alerts", () => {

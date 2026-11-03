@@ -141,7 +141,7 @@ function Frame({
     </div>
   );
   return (
-    <article className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-line bg-surface shadow-card transition-shadow duration-150 hover:shadow-[0_6px_22px_rgb(0_0_0/0.08)]">
+    <article className="w-full max-w-[520px] overflow-hidden rounded-lg border border-line bg-surface shadow-card">
       {href ? (
         <Link href={href} className="group block px-3.5 pt-3 pb-2.5 text-inherit no-underline hover:bg-sunken/50">
           {head}
@@ -703,7 +703,7 @@ function CartCardView({ card, cart, onChange }: { card: Extract<AiCard, { kind: 
             const visible = group.lines.filter(() => open || shown++ < CART_SHOWN);
             if (visible.length === 0) return null;
             return (
-              <section key={supplier} aria-label={supplier} className="overflow-hidden rounded-xl border border-line">
+              <section key={supplier} aria-label={supplier} className="overflow-hidden rounded-md border border-line">
                 <header className="flex items-center justify-between gap-2 bg-sunken/60 px-2.5 py-1.5 text-[.75rem] font-semibold text-muted">
                   <span className="truncate">{supplier}</span>
                   <span className="tabular-nums">{formatMoney(group.cents)}</span>

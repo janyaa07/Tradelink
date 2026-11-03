@@ -7,6 +7,8 @@ export type NavItem = {
   label: string;
   icon: IconName;
   count?: number;
+  /** Other pages that belong to this section, such as stock history under Inventory. */
+  also?: string[];
 };
 
 /** The buyer's cart: the number of draft lines and their total. The shell shows the count on the cart icon. */

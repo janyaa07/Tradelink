@@ -1,6 +1,6 @@
 /*
- * Grid areas only. Phone: top bar, main, bottom nav. From 760px, withRail: a full-width top bar over a
- * 228px side rail beside main; withTopNav: the top bar (which then holds the section titles) over main.
+ * Grid areas only. Phone: top bar, main, bottom nav. From 760px the top bar holds the section titles
+ * and the bottom nav is hidden.
  */
 .shell {
   height: 100dvh;
@@ -16,30 +16,17 @@
   grid-area: nav;
 }
 
-.who {
-  display: none;
-}
-
 .main {
   grid-area: main;
   overflow: auto;
 }
 
 @media (min-width: 760px) {
-  .withRail {
-    grid-template: "top top" auto "nav main" minmax(0, 1fr) "who main" auto / 228px minmax(0, 1fr);
-  }
-
-  .withRail .who {
-    display: flex;
-    grid-area: who;
-  }
-
-  .withTopNav {
+  .shell {
     grid-template: "top" auto "main" minmax(0, 1fr) / minmax(0, 1fr);
   }
 
-  .withTopNav .nav {
+  .nav {
     display: none;
   }
 }

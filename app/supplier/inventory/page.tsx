@@ -60,6 +60,7 @@ export default async function SupplierInventoryPage({ searchParams }: Props) {
         <Chip href={inventoryHref({ q, low: !low })} selected={low}>
           Low stock only
         </Chip>
+        <LinkButton href="/supplier/stock-history">Stock history</LinkButton>
         {adding ? null : (
           <LinkButton href={inventoryHref({ q, low, add: true })} variant="primary" scroll={false}>
             Add product
