@@ -24,7 +24,7 @@ export function availabilityOf(item: Pick<CatalogueItem, "status" | "available" 
     case "low":
       return { label: `Only ${available} left`, tone: "warn", orderable: true, limit: Math.min(available, MAX_LINE_QTY), reason: null };
     case "healthy":
-      return { label: "In stock", tone: "good", orderable: true, limit: Math.min(available, MAX_LINE_QTY), reason: null };
+      return { label: `${available} in stock`, tone: "good", orderable: true, limit: Math.min(available, MAX_LINE_QTY), reason: null };
   }
 }
 

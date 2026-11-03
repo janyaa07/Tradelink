@@ -13,13 +13,14 @@ type KpiProps = {
   children?: ReactNode;
 };
 
+/** One figure in the divided strip: two across on a phone with a line between rows, four across from 620px. */
 function Kpi({ label, value, context, children }: KpiProps) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-line bg-surface px-3.5 py-3 shadow-card">
-      <dt className="text-[.8rem] font-semibold text-muted">{label}</dt>
-      <dd className="break-words text-[1.45rem] font-bold leading-[1.2]">{value}</dd>
+    <div className="flex min-w-0 flex-col gap-1 border-line px-4 py-3.5 even:border-l [&:nth-child(n+3)]:border-t @min-[620px]:border-l @min-[620px]:first:border-l-0 @min-[620px]:[&:nth-child(n+3)]:border-t-0">
+      <dt className="text-[.8rem] font-medium text-muted">{label}</dt>
+      <dd className="text-[1.5rem] leading-[1.15] font-semibold tracking-[-0.02em] break-words tabular-nums">{value}</dd>
       {children}
-      <dd className="text-[.8rem] leading-[1.35] text-muted">{context}</dd>
+      <dd className="text-[.75rem] leading-[1.35] text-muted">{context}</dd>
     </div>
   );
 }
@@ -54,14 +55,17 @@ type InsightsKpisProps = {
   priceChangesDown: number;
 };
 
-/** The four headline figures: two across on phone, four across when there is room. */
+/** The four headline figures in one divided card: two across on phone, four across when there is room. */
 export function InsightsKpis(props: InsightsKpisProps) {
   const use = budgetUse(props.budgetCents, props.spentCents);
   const over = props.spentCents - props.budgetCents;
 
   return (
     <div className="@container">
-      <dl aria-label="This week at a glance" className="grid grid-cols-2 gap-2.5 @min-[700px]:grid-cols-4">
+      <dl
+        aria-label="This week at a glance"
+        className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-surface shadow-card @min-[620px]:grid-cols-4"
+      >
         <Kpi
           label="Spent this week"
           value={formatMoney(props.spentCents)}
@@ -74,7 +78,7 @@ export function InsightsKpis(props: InsightsKpisProps) {
             value={
               <>
                 {formatMoney(use.level === "bad" ? over : props.leftCents)}{" "}
-                <span className="text-[.85rem] font-semibold text-muted">{use.level === "bad" ? "over" : "left"}</span>
+                <span className="text-[.8rem] font-medium text-muted">{use.level === "bad" ? "over" : "left"}</span>
               </>
             }
             context={
@@ -85,10 +89,7 @@ export function InsightsKpis(props: InsightsKpisProps) {
             }
           >
             <dd aria-hidden="true" className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-sunken">
-              <span
-                className={cx("block h-full rounded-full", LEVEL_FILL[use.level])}
-                style={{ width: `${Math.min(100, use.percent)}%` }}
-              />
+              <span className={cx("block h-full rounded-full", LEVEL_FILL[use.level])} style={{ width: `${Math.min(100, use.percent)}%` }} />
             </dd>
           </Kpi>
         ) : (
@@ -96,7 +97,7 @@ export function InsightsKpis(props: InsightsKpisProps) {
             label="Budget"
             value="Not set"
             context={
-              <Link href="/buyer/settings" className="text-accent">
+              <Link href="/buyer/settings#budget" className="text-accent">
                 Set a weekly budget
               </Link>
             }

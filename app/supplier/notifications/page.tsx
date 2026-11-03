@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
-import { NotificationsPage } from "@/features/notifications/NotificationsPage";
+import { NotificationsPage, parseNotificationFilter } from "@/features/notifications/NotificationsPage";
 
 export const metadata: Metadata = { title: "Notifications · Tradelink" };
 
-export default async function SupplierNotificationsPage() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function SupplierNotificationsPage({ searchParams }: Props) {
   await requireRole("supplier");
-  return <NotificationsPage subtitle="New orders, problems from buyers and account events." />;
+  const filter = parseNotificationFilter((await searchParams).filter);
+  return <NotificationsPage role="supplier" subtitle="New orders, problems from buyers and account events." filter={filter} />;
 }

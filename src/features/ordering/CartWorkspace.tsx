@@ -3,9 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { plural } from "@/domain/catalogue";
-import { formatMoney } from "@/domain/money";
+import { formatMoney, toCents } from "@/domain/money";
 import { parseStockShort } from "@/domain/review";
+import { BusinessLogo } from "@/ui/BusinessLogo";
 import { LinkButton } from "@/ui/LinkButton";
+import { PageHeader } from "@/ui/PageHeader";
+import { Pill } from "@/ui/Pill";
 import { useToast } from "@/ui/Toast";
 import { placeOrdersAction } from "./actions";
 import { CartItem, type LineHandlers } from "./CartItem";
@@ -20,12 +23,13 @@ import { useDraftSync } from "./useDraftSync";
 
 const newId = () => crypto.randomUUID();
 
-const groupClass = "flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card";
-const groupHeadClass = "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-line px-3.5 py-2.5";
+const groupClass = "flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-card";
+const groupHeadClass =
+  "flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-line bg-[color-mix(in_srgb,var(--color-sunken)_50%,var(--color-surface))] px-4 py-2.5";
 
 function EmptyCart() {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface px-4 py-12 text-center shadow-card">
+    <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface px-4 py-12 text-center shadow-card">
       <p className="text-[1.15rem] font-semibold">Your cart is empty</p>
       <p className="max-w-[360px] text-muted">Add your usual items, tell Tradelink AI what you need, or pick products from the catalogue.</p>
       <div className="flex flex-wrap justify-center gap-2">
@@ -66,9 +70,7 @@ export function CartWorkspace({ data }: { data: CartPageData }) {
     startPlacing(async () => {
       await sync.whenSaved();
       const payload = linesRef.current.flatMap((line) =>
-        line.productId && model.byId.has(line.productId)
-          ? [{ productId: line.productId, qty: line.qty, sourceText: line.sourceText }]
-          : [],
+        line.productId && model.byId.has(line.productId) ? [{ productId: line.productId, qty: line.qty, sourceText: line.sourceText }] : [],
       );
       const result = await placeOrdersAction({ lines: payload, draftVersion: sync.currentVersion(), key: placeKey });
       if (result.ok) {
@@ -127,33 +129,44 @@ export function CartWorkspace({ data }: { data: CartPageData }) {
     cutoffs: data.cutoffs,
     budgetWarning: model.budgetWarning,
     blockers: model.blockers,
+    weekSpentCents: data.weekSpentCents,
+    budgetCents: toCents(data.budget),
     placing,
     onPlace: place,
   };
 
   return (
     <div className="flex flex-col gap-4 @container">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-[3px]">
-          <h1>Cart</h1>
-          {lines.length > 0 ? <p className="text-muted">{plural(lines.length, "line")}</p> : null}
-        </div>
-        {lines.length > 0 ? <AddUsualButton /> : null}
-      </div>
+      <PageHeader
+        title="Cart"
+        description={
+          lines.length > 0
+            ? `${plural(lines.length, "line")} from ${plural(model.cart.suppliers.length, "supplier")}. Each supplier gets its own order.`
+            : "Lines you add from Products, My usual or Tradelink AI wait here until you place the order."
+        }
+        actions={
+          lines.length > 0 ? (
+            <>
+              <AddUsualButton />
+              <LinkButton href="/buyer/products">Add products</LinkButton>
+            </>
+          ) : null
+        }
+      />
       <SyncNotice problem={sync.problem} />
       {lines.length === 0 ? (
         <EmptyCart />
       ) : (
         <>
-          <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @min-[900px]:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="flex min-w-0 flex-col gap-4">
+          <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @min-[900px]:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
+            <div className="flex min-w-0 flex-col gap-3.5">
               {model.cart.unresolved.length > 0 ? (
                 <section aria-labelledby={`${headingId}-check`} className={groupClass}>
                   <div className={groupHeadClass}>
-                    <h2 id={`${headingId}-check`} className="text-[1rem]">
+                    <h2 id={`${headingId}-check`} className="flex-1">
                       Needs your attention
                     </h2>
-                    <span className="text-[.82rem] text-muted">Choose a product or remove the line</span>
+                    <span className="text-[.8rem] text-muted">Choose a product or remove the line</span>
                   </div>
                   <ul className="flex flex-col divide-y divide-line">{model.cart.unresolved.map(renderLine)}</ul>
                 </section>
@@ -161,20 +174,18 @@ export function CartWorkspace({ data }: { data: CartPageData }) {
               {model.cart.suppliers.map((group) => (
                 <section key={group.supplierOrgId} aria-labelledby={`${headingId}-${group.supplierOrgId}`} className={groupClass}>
                   <div className={groupHeadClass}>
-                    <h2 id={`${headingId}-${group.supplierOrgId}`} className="text-[1rem]">
+                    <BusinessLogo name={group.supplierName} seedKey={group.supplierOrgId} size={26} />
+                    <h2 id={`${headingId}-${group.supplierOrgId}`} className="min-w-[9rem] flex-1 break-words">
                       {group.supplierName}
                     </h2>
-                    <span className="text-[.82rem] text-muted">
-                      {data.cutoffs[group.supplierOrgId] ? `${data.cutoffs[group.supplierOrgId]} · ` : null}
-                      <span className="tabular-nums">{formatMoney(subtotal.get(group.supplierOrgId) ?? 0)}</span>
+                    <span className="flex items-center gap-3">
+                      {data.cutoffs[group.supplierOrgId] ? <Pill>{data.cutoffs[group.supplierOrgId]}</Pill> : null}
+                      <b className="num text-[.875rem]">{formatMoney(subtotal.get(group.supplierOrgId) ?? 0)}</b>
                     </span>
                   </div>
                   <ul className="flex flex-col divide-y divide-line">{group.lines.map(renderLine)}</ul>
                 </section>
               ))}
-              <LinkButton href="/buyer/products" variant="text" className="self-start">
-                Add more products
-              </LinkButton>
             </div>
             <OrderSummary {...summary} />
           </div>

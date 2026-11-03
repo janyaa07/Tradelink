@@ -48,9 +48,11 @@ export function AddUsualForm({ options }: { options: Option[] }) {
   if (options.length === 0) return null;
   if (!open) {
     return (
-      <Button aria-expanded={false} onClick={() => setOpen(true)} className="self-start">
-        Add a usual item
-      </Button>
+      <div className="border-t border-line px-4 py-3 rail:px-[18px]">
+        <Button size="small" aria-expanded={false} onClick={() => setOpen(true)}>
+          Add a usual item
+        </Button>
+      </div>
     );
   }
   return (
@@ -58,9 +60,9 @@ export function AddUsualForm({ options }: { options: Option[] }) {
       onSubmit={submit}
       noValidate
       aria-label="Add a usual item"
-      className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3.5 shadow-card"
+      className="flex flex-col gap-3 border-t border-line bg-sunken/40 px-4 py-3.5 rail:px-[18px]"
     >
-      <h3 className="font-semibold">Add a usual item</h3>
+      <h3 className="text-[.875rem] font-semibold">Add a usual item</h3>
       <SelectField label="Product" value={productId} onChange={(event) => setProductId(event.currentTarget.value)}>
         <option value="">Choose a product</option>
         {options.map((option) => (
@@ -72,7 +74,14 @@ export function AddUsualForm({ options }: { options: Option[] }) {
       <div className="grid grid-cols-3 gap-2">
         <TextField label="Usual order" type="number" min="1" step="1" value={usualQty} onChange={(event) => setUsualQty(event.currentTarget.value)} />
         <TextField label="In your shop" type="number" min="0" step="any" value={inShop} onChange={(event) => setInShop(event.currentTarget.value)} />
-        <TextField label="Use per day" type="number" min="0" step="any" value={usePerDay} onChange={(event) => setUsePerDay(event.currentTarget.value)} />
+        <TextField
+          label="Use per day"
+          type="number"
+          min="0"
+          step="any"
+          value={usePerDay}
+          onChange={(event) => setUsePerDay(event.currentTarget.value)}
+        />
       </div>
       <FormError>{error}</FormError>
       <div className="flex flex-wrap gap-2">

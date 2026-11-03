@@ -32,7 +32,7 @@ const FIELDS: { key: Field; label: string; step: string; min: number }[] = [
 
 /** Phone: picture, name and days left, then the three fields, then the buttons. From 860px: one aligned row. */
 const ROW_COLS =
-  "grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 @min-[860px]:grid-cols-[44px_minmax(0,1fr)_repeat(3,96px)_118px_168px]";
+  "grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 @min-[860px]:grid-cols-[42px_minmax(0,1fr)_repeat(3,88px)_112px_160px]";
 
 const inputClass =
   "w-full min-w-0 rounded-md border border-control-line bg-surface px-2 py-1.5 text-right tabular-nums text-ink disabled:opacity-50 aria-invalid:border-bad";
@@ -86,14 +86,14 @@ function UsualItemRow({ row }: { row: UsualRow }) {
     });
 
   return (
-    <li className="border-b border-line px-3.5 py-3 last:border-b-0">
+    <li className="border-t border-line px-4 py-3 rail:px-[18px]">
       <form onSubmit={save} noValidate aria-label={row.name} className={cx("grid", ROW_COLS)}>
         <span className="order-1">
-          <ProductArt kind={row.art} size={44} />
+          <ProductArt kind={row.art} size={42} />
         </span>
         <span className="order-2 min-w-0">
-          <b className="block truncate font-semibold">{row.name}</b>
-          <span className="block truncate text-[.8rem] text-muted">{row.supplierName}</span>
+          <b className="block truncate text-[.875rem] font-semibold">{row.name}</b>
+          <span className="block truncate text-[.75rem] text-muted">{row.supplierName}</span>
         </span>
         <span className="order-3 justify-self-end @min-[860px]:order-4 @min-[860px]:justify-self-start">
           {days === null ? <Pill>Check numbers</Pill> : <Pill tone={daysTone(days)}>{daysLabel(days)}</Pill>}
@@ -125,18 +125,15 @@ function UsualItemRow({ row }: { row: UsualRow }) {
           <span
             id={statusId}
             role="status"
-            className={cx(
-              "mr-auto text-[.8rem] font-medium @min-[860px]:sr-only",
-              status.kind === "error" ? "text-bad" : "text-good",
-            )}
+            className={cx("mr-auto text-[.8rem] font-medium @min-[860px]:sr-only", status.kind === "error" ? "text-bad" : "text-good")}
           >
             {status.kind === "saved" ? "Saved" : status.kind === "error" ? status.message : null}
           </span>
-          <Button type="submit" variant={dirty ? "primary" : "default"} disabled={!dirty || busy} className="min-h-0 py-[5px]">
+          <Button type="submit" size="small" variant={dirty ? "primary" : "default"} disabled={!dirty || busy} className="min-h-0">
             {status.kind === "saved" && !dirty ? "Saved" : "Save"}
             <span className="sr-only"> {row.name}</span>
           </Button>
-          <Button variant="danger" disabled={busy} onClick={remove} className="py-[5px]">
+          <Button size="small" variant="danger" disabled={busy} onClick={remove}>
             Remove<span className="sr-only"> {row.name}</span>
           </Button>
         </div>
@@ -150,16 +147,16 @@ function UsualItemRow({ row }: { row: UsualRow }) {
   );
 }
 
-/** The usual items as one aligned list, with column labels from 860px. */
+/** The usual items as one aligned list inside a settings card, with column labels from 860px. */
 export function UsualList({ rows }: { rows: UsualRow[] }) {
   return (
     <div className="@container">
-      <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-card">
+      <div>
         <div
           aria-hidden="true"
           className={cx(
             ROW_COLS,
-            "hidden border-b border-line bg-sunken px-3.5 py-2 text-[.75rem] font-medium text-muted @min-[860px]:grid",
+            "hidden border-t border-line bg-[color-mix(in_srgb,var(--color-sunken)_50%,var(--color-surface))] px-[18px] py-2 text-[.72rem] font-semibold text-muted @min-[860px]:grid",
           )}
         >
           <span />

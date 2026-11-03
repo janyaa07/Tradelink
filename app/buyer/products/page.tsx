@@ -15,14 +15,11 @@ export default async function BuyerProductsPage({ searchParams }: Props) {
   const initialQuery = (Array.isArray(q) ? q[0] : q)?.slice(0, 80) ?? "";
   const [catalogue, draft] = await Promise.all([getBuyerCatalogue(), getDraft(session.userId)]);
   return (
-    <>
-      <h1>Products</h1>
-      <ProductsBrowser
-        catalogue={catalogue}
-        inCart={Object.fromEntries(quantitiesByProduct(draft.lines))}
-        cartLines={draft.lines.length}
-        initialQuery={initialQuery}
-      />
-    </>
+    <ProductsBrowser
+      catalogue={catalogue}
+      inCart={Object.fromEntries(quantitiesByProduct(draft.lines))}
+      cartLines={draft.lines.length}
+      initialQuery={initialQuery}
+    />
   );
 }

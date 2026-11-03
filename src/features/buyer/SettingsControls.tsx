@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useId, useState, useTransition, type FormEvent } from "react";
+import { SettingRow } from "@/features/settings/SettingsCard";
 import { Button } from "@/ui/Button";
-import { TextField } from "@/ui/Field";
-import { Panel } from "@/ui/Panel";
+import { controlClass } from "@/ui/Field";
 import { Switch } from "@/ui/Switch";
 import { useToast } from "@/ui/Toast";
 import type { BuyerSettings } from "./queries";
@@ -21,7 +21,7 @@ function flagsOf(settings: BuyerSettings): Flags {
   return { suggestReorder: settings.suggestReorder, priceAlerts: settings.priceAlerts, budgetWarning: settings.budgetWarning };
 }
 
-/** The three alert switches. Each takes effect at once and is shared by the whole business (BUY-44). */
+/** The three alert switches, as rows of a settings card. Each takes effect at once and is shared by the whole business (BUY-44). */
 export function AlertSwitches({ settings }: { settings: BuyerSettings }) {
   const { show } = useToast();
   const [flags, setFlags] = useState<Flags>(() => flagsOf(settings));
@@ -41,25 +41,25 @@ export function AlertSwitches({ settings }: { settings: BuyerSettings }) {
   };
 
   return (
-    <Panel title="Alerts and suggestions">
-      <div>
-        {SWITCHES.map((item) => (
+    <div className="text-[.875rem]">
+      {SWITCHES.map((item) => (
+        <div key={item.key} className="border-t border-line px-4 py-1.5 rail:px-[18px]">
           <Switch
-            key={item.key}
             title={item.title}
             description={item.description}
             checked={flags[item.key]}
             disabled={busy}
             onChange={(event) => toggle(item.key, event.currentTarget.checked)}
           />
-        ))}
-      </div>
-    </Panel>
+        </div>
+      ))}
+    </div>
   );
 }
 
-/** The weekly budget, shared by the whole business (BUY-43). */
+/** The weekly budget, as a row of a settings card, shared by the whole business (BUY-43). */
 export function BudgetForm({ settings }: { settings: BuyerSettings }) {
+  const id = useId();
   const { show } = useToast();
   const [budgetText, setBudgetText] = useState(settings.weeklyBudget);
   const [budgetError, setBudgetError] = useState<string | null>(null);
@@ -83,28 +83,34 @@ export function BudgetForm({ settings }: { settings: BuyerSettings }) {
   };
 
   return (
-    <Panel title="Weekly budget">
-      <p className="-mt-1 text-[.875rem] text-muted">Tradelink warns you before an order takes you over this amount.</p>
-      <form onSubmit={saveBudget} className="flex flex-wrap items-end gap-2" noValidate>
-        <div className="min-w-[180px] max-w-[260px] flex-1">
-          <TextField
-            label="Budget per week (S$)"
+    <SettingRow label="Weekly budget (S$)" hint="Monday to Sunday. Tradelink warns you before an order takes you over it." htmlFor={id}>
+      <form onSubmit={saveBudget} className="flex flex-col gap-1" noValidate>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            id={id}
             type="number"
             inputMode="decimal"
             min="1"
             step="0.01"
             value={budgetText}
-            error={budgetError ?? undefined}
+            aria-invalid={budgetError ? true : undefined}
+            aria-describedby={budgetError ? `${id}-error` : undefined}
             onChange={(event) => {
               setBudgetText(event.currentTarget.value);
               setBudgetError(null);
             }}
+            className={`${controlClass} num max-w-[180px]`}
           />
+          <Button type="submit" variant="primary" disabled={busy}>
+            Save budget
+          </Button>
         </div>
-        <Button type="submit" variant="primary" disabled={busy}>
-          Save budget
-        </Button>
+        {budgetError ? (
+          <p id={`${id}-error`} className="text-[.8rem] font-semibold text-bad">
+            {budgetError}
+          </p>
+        ) : null}
       </form>
-    </Panel>
+    </SettingRow>
   );
 }

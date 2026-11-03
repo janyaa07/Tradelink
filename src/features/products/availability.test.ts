@@ -3,9 +3,9 @@ import { MAX_LINE_QTY } from "@/domain/review";
 import { availabilityOf, matchesSearch } from "./availability";
 
 describe("availabilityOf", () => {
-  it("shows In stock above the reorder level, capped at what is available", () => {
+  it("shows the amount in stock above the reorder level, capped at what is available", () => {
     expect(availabilityOf({ status: "active", available: 40, reorderLevel: 10 })).toEqual({
-      label: "In stock",
+      label: "40 in stock",
       tone: "good",
       orderable: true,
       limit: 40,

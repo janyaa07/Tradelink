@@ -1,35 +1,40 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
-import { signOut } from "@/features/auth/actions";
+import { AccountCard, AppearanceCard, SettingsLayout, type SettingsNavGroup } from "@/features/settings/SettingsParts";
 import { BusinessProfile } from "@/features/supplier/BusinessProfile";
-import { PageHead } from "@/features/supplier/PageHead";
 import { getBusinessProfile } from "@/features/supplier/queries";
-import { Button } from "@/ui/Button";
-import { Panel } from "@/ui/Panel";
-import { ThemeSetting } from "@/ui/ThemeSetting";
 
 export const metadata: Metadata = { title: "Settings · Tradelink" };
+
+const NAV: SettingsNavGroup[] = [
+  { label: "Business", items: [{ id: "profile", label: "Business profile" }] },
+  {
+    label: "You",
+    items: [
+      { id: "account", label: "Account" },
+      { id: "appearance", label: "Appearance" },
+    ],
+  },
+];
 
 export default async function SupplierSettingsPage() {
   const session = await requireRole("supplier");
   const profile = await getBusinessProfile(session.orgId);
 
   return (
-    <>
-      <PageHead title="Settings">Your business details and preferences.</PageHead>
-      <Panel title="Appearance">
-        <ThemeSetting />
-      </Panel>
+    <SettingsLayout description={`${session.orgName} · ${session.fullName}`} nav={NAV}>
       <BusinessProfile profile={profile} />
-      <Panel title="Account">
-        <p className="text-muted">
-          Signed in as {session.fullName}
-          {session.email ? `, ${session.email}` : ""}.
-        </p>
-        <form action={signOut}>
-          <Button type="submit">Sign out</Button>
-        </form>
-      </Panel>
-    </>
+      <AccountCard
+        orgName={session.orgName}
+        fullName={session.fullName}
+        rows={[
+          ["Name", session.fullName],
+          ["Email", session.email ?? "Not given"],
+          ["Business", session.orgName],
+          ["Role", "Supplier"],
+        ]}
+      />
+      <AppearanceCard />
+    </SettingsLayout>
   );
 }

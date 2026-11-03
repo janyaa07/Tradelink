@@ -6,13 +6,7 @@ import type { TodoAction } from "@/domain/todos";
 import type { ActionResult } from "@/lib/errors";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
-import {
-  ackPriceChangeAction,
-  markCreditReceivedAction,
-  markIssueSeenAction,
-  orderRemainderAction,
-  skipPartialAction,
-} from "./home-actions";
+import { ackPriceChangeAction, markCreditReceivedAction, markIssueSeenAction, orderRemainderAction, skipPartialAction } from "./home-actions";
 
 /** The buttons on one alert that needs action (BUY-02 to BUY-04). */
 export function TodoActions({ action }: { action: TodoAction }) {
@@ -31,13 +25,13 @@ export function TodoActions({ action }: { action: TodoAction }) {
   switch (action.kind) {
     case "price":
       return (
-        <Button disabled={busy} onClick={() => run(() => ackPriceChangeAction(action.id), "Price change noted.")}>
+        <Button size="small" disabled={busy} onClick={() => run(() => ackPriceChangeAction(action.id), "Price change noted.")}>
           OK, noted
         </Button>
       );
     case "reply":
       return (
-        <Button disabled={busy} onClick={() => run(() => markIssueSeenAction(action.id), "Reply noted.")}>
+        <Button size="small" disabled={busy} onClick={() => run(() => markIssueSeenAction(action.id), "Reply noted.")}>
           OK
         </Button>
       );
@@ -45,6 +39,7 @@ export function TodoActions({ action }: { action: TodoAction }) {
       return (
         <Button
           variant="primary"
+          size="small"
           disabled={busy}
           onClick={() => run(() => markCreditReceivedAction({ issueId: action.id, key: creditKey }), "Credit recorded.")}
         >
@@ -56,14 +51,19 @@ export function TodoActions({ action }: { action: TodoAction }) {
         <>
           <Button
             variant="primary"
+            size="small"
             disabled={busy}
             onClick={() =>
-              run(() => orderRemainderAction(action.id), `${action.remainder} added to your cart.`, () => router.push("/buyer/cart"))
+              run(
+                () => orderRemainderAction(action.id),
+                `${action.remainder} added to your cart.`,
+                () => router.push("/buyer/cart"),
+              )
             }
           >
             Order the rest<span className="sr-only">, {action.remainder} more</span>
           </Button>
-          <Button disabled={busy} onClick={() => run(() => skipPartialAction(action.id), "Skipped.")}>
+          <Button size="small" disabled={busy} onClick={() => run(() => skipPartialAction(action.id), "Skipped.")}>
             Skip
           </Button>
         </>

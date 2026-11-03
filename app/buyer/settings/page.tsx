@@ -1,50 +1,42 @@
 import type { Metadata } from "next";
-import { requireRole, type Session } from "@/data/session";
-import { signOut } from "@/features/auth/actions";
+import { requireRole } from "@/data/session";
 import { AddUsualForm } from "@/features/buyer/AddUsualForm";
-import { getBuyerCatalogue, getBuyerSettings, getOnOrder, getUsualItems } from "@/features/buyer/queries";
+import { getBuyerCatalogue, getBuyerSettings, getConnectedSuppliers, getOnOrder, getUsualItems } from "@/features/buyer/queries";
 import { AlertSwitches, BudgetForm } from "@/features/buyer/SettingsControls";
 import { UsualList, type UsualRow } from "@/features/buyer/UsualItemRow";
+import { SettingsCard } from "@/features/settings/SettingsCard";
+import { AccountCard, AppearanceCard, SettingsLayout, type SettingsNavGroup } from "@/features/settings/SettingsParts";
 import { BusinessLogo } from "@/ui/BusinessLogo";
-import { Button } from "@/ui/Button";
-import { Panel } from "@/ui/Panel";
-import { Segmented } from "@/ui/Segmented";
+import { Pill } from "@/ui/Pill";
 
 export const metadata: Metadata = { title: "Settings · Tradelink" };
 
-type Tab = "app" | "shop";
+const NAV: SettingsNavGroup[] = [
+  {
+    label: "Shop",
+    items: [
+      { id: "budget", label: "Budget and alerts" },
+      { id: "usuals", label: "Usual items" },
+      { id: "suppliers", label: "Suppliers" },
+    ],
+  },
+  {
+    label: "You",
+    items: [
+      { id: "account", label: "Account" },
+      { id: "appearance", label: "Appearance" },
+    ],
+  },
+];
 
-function AccountPanel({ session }: { session: Session }) {
-  return (
-    <Panel title="Account">
-      <div className="flex items-center gap-3">
-        <BusinessLogo name={session.orgName} size={44} />
-        <dl className="min-w-0 text-[.925rem]">
-          <dt className="sr-only">Name</dt>
-          <dd className="break-words font-semibold">{session.fullName}</dd>
-          {session.email ? (
-            <>
-              <dt className="sr-only">Email</dt>
-              <dd className="break-words text-muted">{session.email}</dd>
-            </>
-          ) : null}
-          <dt className="sr-only">Business</dt>
-          <dd className="break-words text-[.84rem] text-muted">{session.orgName}</dd>
-        </dl>
-      </div>
-      <form action={signOut} className="border-t border-line pt-3">
-        <Button type="submit">Sign out</Button>
-      </form>
-    </Panel>
-  );
-}
-
-async function ShopSettings({ orgId }: { orgId: string }) {
-  const [settings, usuals, catalogue, onOrder] = await Promise.all([
-    getBuyerSettings(orgId),
-    getUsualItems(orgId),
+export default async function BuyerSettingsPage() {
+  const session = await requireRole("buyer");
+  const [settings, usuals, catalogue, onOrder, suppliers] = await Promise.all([
+    getBuyerSettings(session.orgId),
+    getUsualItems(session.orgId),
     getBuyerCatalogue(),
-    getOnOrder(orgId),
+    getOnOrder(session.orgId),
+    getConnectedSuppliers(session.orgId),
   ]);
   const byId = new Map(catalogue.map((item) => [item.id, item]));
   const rows: UsualRow[] = usuals.flatMap((usual) => {
@@ -64,65 +56,61 @@ async function ShopSettings({ orgId }: { orgId: string }) {
     ];
   });
   const usualIds = new Set(usuals.map((usual) => usual.productId));
-  const addable = catalogue
-    .filter((item) => !usualIds.has(item.id))
-    .map((item) => ({ id: item.id, label: `${item.name} · ${item.supplierName}` }));
+  const addable = catalogue.filter((item) => !usualIds.has(item.id)).map((item) => ({ id: item.id, label: `${item.name} · ${item.supplierName}` }));
 
   return (
-    <>
-      <BudgetForm settings={settings} />
-      <section aria-labelledby="usuals-title" className="flex flex-col gap-2.5">
-        <div className="flex flex-col gap-0.5">
-          <h2 id="usuals-title">Usual items</h2>
-          <p className="text-[.875rem] text-muted">
-            What you order most. Tradelink uses these numbers for My usual and Ready for tomorrow.
-          </p>
-        </div>
+    <SettingsLayout description={`${session.orgName} · ${session.fullName}`} nav={NAV}>
+      <SettingsCard
+        id="budget"
+        title="Budget and alerts"
+        description="How Tradelink AI and Home warn you about spend and prices. Shared by everyone at your business."
+      >
+        <BudgetForm settings={settings} />
+        <AlertSwitches settings={settings} />
+      </SettingsCard>
+
+      <SettingsCard
+        id="usuals"
+        title="Usual items"
+        description="What you order most. Tradelink uses these numbers for My usual and Ready for tomorrow."
+      >
         {rows.length > 0 ? (
           <UsualList rows={rows} />
         ) : (
-          <p className="rounded-lg border border-dashed border-line px-3.5 py-3 text-muted">
+          <p className="border-t border-line px-4 py-3.5 text-[.875rem] text-muted rail:px-[18px]">
             You have no usual items yet. Add the products you order most.
           </p>
         )}
         <AddUsualForm options={addable} />
-      </section>
-    </>
-  );
-}
+      </SettingsCard>
 
-async function AppSettings({ session }: { session: Session }) {
-  const settings = await getBuyerSettings(session.orgId);
-  return (
-    <>
-      <AccountPanel session={session} />
-      <AlertSwitches settings={settings} />
-    </>
-  );
-}
+      <SettingsCard id="suppliers" title="Suppliers" description="The suppliers you can order from.">
+        {suppliers.length > 0 ? (
+          <ul>
+            {suppliers.map((supplier) => (
+              <li key={supplier.id} className="flex items-center gap-3 border-t border-line px-4 py-2.5 text-[.875rem] rail:px-[18px]">
+                <BusinessLogo name={supplier.name} seedKey={supplier.id} size={28} />
+                <span className="min-w-0 flex-1 break-words font-medium">{supplier.name}</span>
+                {supplier.status === "invited" ? <Pill tone="warn">Invited</Pill> : <Pill tone="good">Connected</Pill>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="border-t border-line px-4 py-3.5 text-[.875rem] text-muted rail:px-[18px]">No suppliers connected yet.</p>
+        )}
+      </SettingsCard>
 
-export default async function BuyerSettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
-  const session = await requireRole("buyer");
-  const tab: Tab = (await searchParams).tab === "shop" ? "shop" : "app";
-
-  return (
-    <>
-      <div className="flex flex-col gap-1">
-        <h1>Settings</h1>
-        <p className="text-muted">
-          {tab === "app" ? "Your account and the alerts you get." : `Budget and usual items for ${session.orgName}.`}
-        </p>
-      </div>
-      <div>
-        <Segmented
-          label="Settings sections"
-          items={[
-            { href: "/buyer/settings?tab=app", label: "App settings", current: tab === "app" },
-            { href: "/buyer/settings?tab=shop", label: "Shop settings", current: tab === "shop" },
-          ]}
-        />
-      </div>
-      {tab === "app" ? <AppSettings session={session} /> : <ShopSettings orgId={session.orgId} />}
-    </>
+      <AccountCard
+        orgName={session.orgName}
+        fullName={session.fullName}
+        rows={[
+          ["Name", session.fullName],
+          ["Email", session.email ?? "Not given"],
+          ["Business", session.orgName],
+          ["Role", "Buyer"],
+        ]}
+      />
+      <AppearanceCard />
+    </SettingsLayout>
   );
 }
