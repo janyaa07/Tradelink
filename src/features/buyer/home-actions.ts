@@ -135,3 +135,26 @@ export async function loadUsualAction(): Promise<ActionResult<unknown>> {
   if (lines.length === 0) return { ok: false, error: "You have no usual items yet. Add them in Settings." };
   return done(await addLinesToDraft(session.userId, lines));
 }
+
+const placePlanInput = z.uuid();
+
+/**
+ * "Place orders" on Next up: the plan is worked out again on the server and placed straight away,
+ * one order per supplier, leaving the cart as it is (BUY-08).
+ */
+export async function placeReorderPlanAction(key: string): Promise<ActionResult<string>> {
+  const session = await requireRole("buyer");
+  if (!placePlanInput.safeParse(key).success) return NOT_AVAILABLE;
+  const plan = await getReorderPlan(session.orgId);
+  if (plan.rows.length === 0) return { ok: false, error: "You have enough stock for the next few days." };
+  const result = await callRpc<{ orders: { number: number; supplierName: string }[] }>("place_orders", {
+    p_lines: plan.rows.map((row) => ({ productId: row.productId, qty: row.qty, sourceText: `Suggested, ${formatDaysLeft(row.daysLeft)} days left` })),
+    p_draft_version: null,
+    p_key: key,
+  });
+  if (!result.ok) {
+    return result.reason === "STOCK_SHORT" ? { ok: false, error: "Some of that just sold out. Review it in the cart instead." } : result;
+  }
+  revalidatePath("/buyer", "layout");
+  return { ok: true, data: `Placed ${result.data.orders.map((order) => `${orderNumber(order.number)} to ${order.supplierName}`).join(" and ")}.` };
+}

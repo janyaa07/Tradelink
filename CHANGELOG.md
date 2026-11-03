@@ -4,6 +4,21 @@ All notable changes are listed here. The format follows Keep a Changelog, and ve
 
 ## [Unreleased]
 
+### Changed (design language: "calm app, living AI")
+- **The whole app:**
+  - A neutral canvas with white cards and fine borders.
+  - One brand green, kept for actions and key numbers. Status colours are flat: blue for in progress, amber for attention, red for problems.
+  - Smaller corners and lighter type weights. Section tabs sit in the top bar with an underline; phone tabs mark the current one with a bar.
+  - Figures sit together in one divided card.
+  - Products use a quiet grey ground and outlined Add buttons.
+  - Sign-in and the password pages use the same calm look.
+- **The AI layer:** a green Gemini-style gradient (deep green, emerald, teal, lime) marks only what Tradelink AI wrote or suggests. That covers the greeting, the ask bar, the Next up card, the spark icon, the Tradelink AI page and its input. "Why this?" shows the reasoning on a soft tint, and the ring drifts slowly unless motion is turned off.
+- **Home, one focus at a time:**
+  - **Buyer:** a briefing line written from the data and an ask bar that opens Tradelink AI with the question. One Next up card, usually tomorrow's order, with Place orders (the cart stays as it is), Review in cart and Not today. Then a week card with spend, pace to Sunday and the comparison with this time last week, and an At a glance card (deliveries, running low, prices).
+  - **Supplier:** a cut-off countdown. Next up is the oldest job first: accept new orders, or pack today's orders as one pick list added up across orders, with Mark all out for delivery. Then today against a usual weekday (order value and new orders by this time over the last four weeks), and At a glance (customer pulse, running low, coming up).
+  - **Admin:** the attention queue first, then the figures.
+- **Removed:** the green home banner, service tiles and stat cards. "My usual" is now **Add my usual** in the cart.
+
 ### Added
 - **Order now:** "order one bag of rice now" shows one confirm card that orders only that item and leaves the cart as it is. When several products match, Tradelink AI picks the likely one and offers the other as a follow-up. Product cards also have an Order now button, which needs a second tap.
 - **More supplier actions in Tradelink AI:** accept part of an order (Change quantities on the order card, down to 0 for a line), confirm the price and stock of a product a buyer added, adjust stock with a reason (damaged, expired or count correction), and change cut-off, delivery days, lead time and minimum order. Each shows a confirm card or works from its card's own buttons.

@@ -24,8 +24,6 @@ export type AppShellProps = {
   /** The nav item for the current page, or "" when the page is not in the nav. */
   activeHref: string;
   pathname: string;
-  /** Home pages let HomeHero run edge to edge. */
-  isHome: boolean;
   /** The bell: notifications plus anything that needs action. */
   bell: ShellLink;
   /** When given, the bell opens these alerts in a pop-up instead of linking to the alerts page. */
@@ -43,7 +41,6 @@ export function AppShell({
   navItems,
   activeHref,
   pathname,
-  isHome,
   bell,
   bellPanel,
   cart,
@@ -67,11 +64,11 @@ export function AppShell({
       <header
         className={cx(
           styles.top,
-          "z-20 flex items-center gap-2 border-b border-line bg-surface px-3.5 py-2.5 text-ink rail:px-5 rail:py-3",
+          "z-20 flex items-center gap-2 border-b border-line bg-surface px-3.5 py-2.5 text-ink rail:px-8 rail:py-3",
         )}
       >
         <Brand href={homeHref} />
-        {!isHome ? <TopNav items={navItems} activeHref={activeHref} /> : null}
+        <TopNav items={navItems} activeHref={activeHref} />
         <span className="flex-1" />
         <ThemeToggle />
         {bellPanel ? (
@@ -105,8 +102,8 @@ export function AppShell({
         />
       </header>
       <ShellNav items={navItems} activeHref={activeHref} className={styles.nav} />
-      <main id="main" tabIndex={-1} className={cx(styles.main, "relative px-3.5 pt-4 pb-7 outline-none rail:p-6 rail:pb-9")}>
-        {isHome ? children : <div className="mx-auto flex max-w-[1060px] flex-col gap-4">{children}</div>}
+      <main id="main" tabIndex={-1} className={cx(styles.main, "relative px-4 pt-5 pb-8 outline-none rail:px-8 rail:pt-8 rail:pb-12")}>
+        <div className="mx-auto flex max-w-[1080px] flex-col gap-5">{children}</div>
       </main>
     </div>
   );

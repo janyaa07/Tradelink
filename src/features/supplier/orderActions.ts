@@ -95,3 +95,19 @@ export async function answerIssueAction(form: FormData): Promise<FormResult> {
     () => `${input.data.buyerName} has been told.`,
   );
 }
+
+const sendOutSchema = z.array(z.object({ orderId: z.uuid(), key: z.uuid() })).min(1).max(30);
+
+/** "Mark all out for delivery" on Home: each of today's packed orders, one key per order (SUP-07). */
+export async function markAllOutForDeliveryAction(orders: z.infer<typeof sendOutSchema>): Promise<FormResult> {
+  await requireRole("supplier");
+  const parsed = sendOutSchema.safeParse(orders);
+  if (!parsed.success) return { ok: false, error: COPY.invalid };
+  const sent: string[] = [];
+  for (const order of parsed.data) {
+    const result = await runRpc<OrderResult>("mark_out_for_delivery", { p_order: order.orderId, p_key: order.key }, (data) => orderNumber(data.number));
+    if (!result.ok) return sent.length > 0 ? { ok: false, error: `${sent.join(", ")} went out, then: ${result.error}` } : result;
+    sent.push(result.message);
+  }
+  return { ok: true, message: `${sent.join(", ")} out for delivery. Buyers have been told.` };
+}

@@ -14,7 +14,7 @@ type ShellNavProps = {
   className?: string;
 };
 
-/** Bottom tabs on phone (four plus More when there are more than five), a full side rail from 760px. */
+/** Bottom tabs on phone: four plus More when there are more than five. Hidden from 760px, where the top bar holds the sections. */
 export function ShellNav({ items, activeHref, className }: ShellNavProps) {
   const hasMore = items.length > MAX_TABS;
   const extras = hasMore ? items.slice(TABS_BEFORE_MORE) : [];
@@ -25,7 +25,6 @@ export function ShellNav({ items, activeHref, className }: ShellNavProps) {
       className={cx(
         className,
         "flex min-w-0 border-t border-line bg-surface px-1 pt-[5px] pb-[max(5px,env(safe-area-inset-bottom))]",
-        "rail:flex-col rail:gap-[3px] rail:overflow-y-auto rail:border-t-0 rail:border-r rail:px-2.5 rail:py-1.5",
       )}
     >
       {items.map((item, index) => {
@@ -35,10 +34,10 @@ export function ShellNav({ items, activeHref, className }: ShellNavProps) {
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={cx(navItemClass(active), hasMore && index >= TABS_BEFORE_MORE && "hidden rail:flex")}
+            className={cx(navItemClass(active), hasMore && index >= TABS_BEFORE_MORE && "hidden")}
           >
             <span className={navIconClass(active)}>
-              <Icon name={item.icon} size={20} />
+              {item.icon === "spark" ? <span aria-hidden="true" className="ai-spark size-5" /> : <Icon name={item.icon} size={20} />}
             </span>
             <span className={navLabelClass}>{item.label}</span>
             {item.count ? <span className={navCountClass}>{item.count}</span> : null}

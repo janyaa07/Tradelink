@@ -10,7 +10,6 @@ import { EmptyState } from "@/ui/EmptyState";
 import { FieldGrid, SelectField, TextAreaField, TextField } from "@/ui/Field";
 import { formatDate, formatDateTime, greeting, issueNumber, orderNumber } from "@/ui/format";
 import { FormError } from "@/ui/FormError";
-import { HomeHero } from "@/ui/HomeHero";
 import { Icon, ICON_NAMES } from "@/ui/Icon";
 import { LinkButton } from "@/ui/LinkButton";
 import { Panel } from "@/ui/Panel";
@@ -19,10 +18,9 @@ import { ProductArt } from "@/ui/ProductArt";
 import { ProgressSteps, type OrderStatus } from "@/ui/ProgressSteps";
 import { RecordCard, RecordList } from "@/ui/RecordCard";
 import { Segmented } from "@/ui/Segmented";
-import { ServiceGrid, ServiceTile } from "@/ui/ServiceGrid";
+import { HomeGreeting } from "@/features/home/HomeParts";
 import { AppShell } from "@/ui/shell/AppShell";
 import type { NavItem } from "@/ui/shell/types";
-import { StatCard, StatGrid } from "@/ui/StatCard";
 import { Switch } from "@/ui/Switch";
 import { ThemeSetting } from "@/ui/ThemeSetting";
 import { ThemeToggle } from "@/ui/ThemeToggle";
@@ -91,7 +89,6 @@ export default function KitPage() {
       navItems={NAV}
       activeHref="/kit"
       pathname="/kit"
-      isHome={false}
       bell={{ href: "/kit#todo", count: 4 }}
       cart={{ count: 3, href: "/kit#orders" }}
       signOutAction={signOut}
@@ -154,33 +151,12 @@ export default function KitPage() {
         />
       </Section>
 
-      <Section title="Home hero, services and stats">
-        <div className="overflow-hidden rounded-lg border border-line px-3.5 pt-4 pb-4 rail:px-6 rail:pt-6">
-          <HomeHero
-            greeting={greeting(MORNING)}
-            firstName="Mei"
-            orgName="Mei's Noodle House"
-            prompt="What do you need to order?"
-            promptHref="/kit#orders"
-          >
-            <ServiceGrid>
-              <ServiceTile label="My usual" icon="repeat" href="/kit#orders" />
-              <ServiceTile label="New order" icon="order" href="/kit#orders" />
-              <ServiceTile label="Ask" icon="chat" href="/kit#orders" />
-              <ServiceTile label="Track" icon="truck" href="/kit#orders" count={2} />
-              <ServiceTile label="Invoices" icon="receipt" href="/kit#orders" count={1} />
-              <ServiceTile label="Insights" icon="trend" href="/kit#orders" />
-              <ServiceTile label="Availability" icon="stock" href="/kit#orders" />
-              <ServiceTile label="Settings" icon="gear" type="button" />
-            </ServiceGrid>
-            <StatGrid>
-              <StatCard href="/kit#orders" value={formatMoney("412.80")} label="Spent this week" />
-              <StatCard href="/kit#orders" value={formatMoney("0.00")} label="Left of budget" alert />
-              <StatCard href="/kit#orders" value={2} label="Deliveries to check" />
-              <StatCard href="/kit#orders" value={3} label="Things to do" alert />
-            </StatGrid>
-          </HomeHero>
-        </div>
+      <Section title="Home greeting and figures">
+        <HomeGreeting
+          eyebrow="Wednesday 4 November · Mei's Noodle House"
+          title={`${greeting(MORNING)}, Mei`}
+          line="Two things need you this morning, starting with tomorrow's order."
+        />
         <Tiles
           items={[
             { label: "Orders today", value: 18 },

@@ -38,6 +38,7 @@ ${shadow("dark")}
 ${themeColors}
 ${themeRadius}
   --shadow-card: var(--tl-shadow-card);
+  --shadow-float: var(--tl-shadow-float);
   --font-sans: var(--font-inter), "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
   --font-brand: var(--font-sora), var(--font-inter), sans-serif;

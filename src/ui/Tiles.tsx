@@ -10,20 +10,20 @@ type TilesProps = {
   items: Tile[];
 };
 
-/** Small value tiles, two across on phone and four from 620px. */
+/** Key figures in one card, divided: two across on phone and four from 620px. */
 export function Tiles({ items }: TilesProps) {
   return (
-    <dl className="grid grid-cols-2 gap-2.5 min-[620px]:grid-cols-4">
-      {items.map((tile) => (
+    <dl className="grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-surface shadow-card min-[620px]:grid-cols-4">
+      {items.map((tile, index) => (
         <div
           key={tile.label}
-          className="flex min-w-0 flex-col-reverse rounded-lg border border-line bg-surface px-3 py-2.5 shadow-card"
+          className={`flex min-w-0 flex-col gap-1 border-line px-4 py-3.5 ${index % 2 === 1 ? "border-l" : ""} ${index >= 2 ? "border-t min-[620px]:border-t-0" : ""} ${index === 2 ? "min-[620px]:border-l" : ""}`}
         >
-          <dt className="text-muted">
+          <dt className="text-[.8rem] font-medium text-muted">
             {tile.label}
             {tile.alert ? <span className="sr-only">, needs attention</span> : null}
           </dt>
-          <dd className={`text-2xl font-bold leading-[1.2] tabular-nums ${tile.alert ? "text-warn" : ""}`}>
+          <dd className={`text-[1.6rem] font-semibold leading-[1.15] tracking-[-0.02em] tabular-nums ${tile.alert ? "text-warn" : ""}`}>
             {tile.value}
           </dd>
         </div>

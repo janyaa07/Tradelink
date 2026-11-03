@@ -4,8 +4,8 @@ import { cx } from "./cx";
 
 function chipClass(selected: boolean): string {
   return cx(
-    "inline-flex min-h-8 flex-none items-center rounded-full border px-[11px] py-1.5 text-[.84rem] font-semibold no-underline transition-colors duration-150",
-    selected ? "border-accent bg-accent text-on-accent" : "border-line bg-surface text-muted hover:border-accent",
+    "inline-flex min-h-8 flex-none items-center rounded-full border px-3 py-1.5 text-[.84rem] font-medium no-underline transition-colors duration-150",
+    selected ? "border-accent bg-accent-soft font-semibold text-accent" : "border-line bg-surface text-ink hover:border-accent",
   );
 }
 

@@ -16,18 +16,18 @@ export type ProductImageProps = {
   className?: string;
 };
 
-/** Soft category backgrounds; the dark values sit just above the surface colour. */
+/** One quiet ground for every category, so the pictures read as product shots rather than stickers. */
 const BACKGROUNDS: Record<Category, string> = {
-  fresh: "bg-[#E6F4E1] dark:bg-[#1F3424]",
-  dry_goods: "bg-[#FBF0D9] dark:bg-[#3A3020]",
-  oils_sauces: "bg-[#FCE8DE] dark:bg-[#3D2620]",
-  supplies: "bg-[#E3EEFB] dark:bg-[#1F2C3D]",
+  fresh: "bg-sunken",
+  dry_goods: "bg-sunken",
+  oils_sauces: "bg-sunken",
+  supplies: "bg-sunken",
 };
 
 const SIZES: Record<ProductImageSize, string> = {
   sm: "size-10 rounded-sm",
   md: "size-16 rounded-md",
-  fill: "aspect-[4/3] w-full",
+  fill: "aspect-[16/10] w-full p-5",
 };
 
 const SHADOW = <ellipse cx="32" cy="54" rx="17" ry="2.6" fill="#000" opacity=".09" />;

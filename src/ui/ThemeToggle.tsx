@@ -64,7 +64,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={label}
       onClick={() => applyTheme(isDark ? "light" : "dark")}
       className={cx(
-        "grid size-9 flex-none place-items-center rounded-full border border-line bg-surface p-0 text-ink transition-colors duration-150 hover:border-accent hover:text-accent",
+        "grid size-9 flex-none place-items-center rounded-md border border-line bg-surface p-0 text-ink transition-colors duration-150 hover:bg-sunken",
         className,
       )}
     >

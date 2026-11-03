@@ -29,7 +29,7 @@ export function MoreSheet({ items, activeHref }: MoreSheetProps) {
         aria-haspopup="dialog"
         aria-current={current ? "page" : undefined}
         onClick={() => dialogRef.current?.showModal()}
-        className={`${navItemClass(current)} rail:hidden`}
+        className={navItemClass(current)}
       >
         <span className={navIconClass(current)}>
           <Icon name="more" size={20} />

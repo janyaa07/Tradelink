@@ -56,12 +56,11 @@ export function ProductTile({ item, qty, onChange }: Props) {
             </div>
           ) : (
             <Button
-              variant="primary"
               size="big"
               onClick={() => onChange(item, 1)}
               disabled={!availability.orderable}
               aria-describedby={availability.reason ? reasonId : undefined}
-              className="py-2 rail:min-h-10 disabled:border-line disabled:bg-sunken disabled:text-muted disabled:opacity-100"
+              className="py-2 rail:min-h-10 hover:border-accent hover:text-accent disabled:border-line disabled:bg-sunken disabled:text-muted disabled:opacity-100"
             >
               Add to cart
             </Button>

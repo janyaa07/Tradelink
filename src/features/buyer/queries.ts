@@ -97,20 +97,33 @@ export const getOnOrder = cache(async (orgId: string): Promise<Map<string, numbe
 const spendSchema = z.object({ order_lines: z.array(z.object({ qty: z.number(), unit_price: money })) });
 
 /** Orders placed since Monday 00:00 in Singapore, excluding rejected and cancelled ones. */
-export const getWeekSpendCents = cache(async (orgId: string): Promise<Cents> => {
+async function spendBetweenCents(orgId: string, from: Date, to: Date): Promise<Cents> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("orders")
     .select("order_lines(qty, unit_price)")
     .eq("buyer_org_id", orgId)
-    .gte("created_at", startOfWeekSingapore(new Date()).toISOString())
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString())
     .not("status", "in", "(rejected,cancelled)");
-  if (error) fail("this week's spend", error.message);
+  if (error) fail("spend", error.message);
   return z
     .array(spendSchema)
     .parse(data)
     .flatMap((order) => order.order_lines)
     .reduce((sum, line) => sum + toCents(line.unit_price) * line.qty, 0);
+}
+
+export const getWeekSpendCents = cache(async (orgId: string): Promise<Cents> => {
+  const now = new Date();
+  return spendBetweenCents(orgId, startOfWeekSingapore(now), new Date(now.getTime() + 60_000));
+});
+
+/** Last week's spend up to the same point in the week, for a fair comparison on Home. */
+export const getLastWeekSpendCents = cache(async (orgId: string): Promise<Cents> => {
+  const now = new Date();
+  const week = 7 * 24 * 60 * 60 * 1000;
+  return spendBetweenCents(orgId, new Date(startOfWeekSingapore(now).getTime() - week), new Date(now.getTime() - week));
 });
 
 /** Products the buyer chose "Not today" for, today in Singapore. */

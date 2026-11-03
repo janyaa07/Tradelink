@@ -12,6 +12,7 @@ import { CartItem, type LineHandlers } from "./CartItem";
 import type { CartPageData } from "./cart-types";
 import type { DraftLine } from "./draft";
 import { markAdded, pickProduct, removeLine, setQuantity, swapProduct } from "./line-ops";
+import { AddUsualButton } from "@/features/buyer/AddUsualButton";
 import { OrderSummary, PlaceBar } from "./OrderSummary";
 import { SyncNotice } from "./SyncNotice";
 import { useCartModel } from "./useCartModel";
@@ -19,17 +20,18 @@ import { useDraftSync } from "./useDraftSync";
 
 const newId = () => crypto.randomUUID();
 
-const groupClass = "flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-card";
+const groupClass = "flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card";
 const groupHeadClass = "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-line px-3.5 py-2.5";
 
 function EmptyCart() {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface px-4 py-12 text-center shadow-card">
+    <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface px-4 py-12 text-center shadow-card">
       <p className="text-[1.15rem] font-semibold">Your cart is empty</p>
-      <p className="max-w-[340px] text-muted">Tell the assistant what you need, or pick products from the catalogue.</p>
+      <p className="max-w-[360px] text-muted">Add your usual items, tell Tradelink AI what you need, or pick products from the catalogue.</p>
       <div className="flex flex-wrap justify-center gap-2">
+        <AddUsualButton />
         <LinkButton href="/buyer/assistant" variant="primary">
-          Open Assistant
+          Ask Tradelink AI
         </LinkButton>
         <LinkButton href="/buyer/products">Browse products</LinkButton>
       </div>
@@ -131,9 +133,12 @@ export function CartWorkspace({ data }: { data: CartPageData }) {
 
   return (
     <div className="flex flex-col gap-4 @container">
-      <div className="flex flex-col gap-[3px]">
-        <h1>Cart</h1>
-        {lines.length > 0 ? <p className="text-muted">{plural(lines.length, "line")}</p> : null}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-[3px]">
+          <h1>Cart</h1>
+          {lines.length > 0 ? <p className="text-muted">{plural(lines.length, "line")}</p> : null}
+        </div>
+        {lines.length > 0 ? <AddUsualButton /> : null}
       </div>
       <SyncNotice problem={sync.problem} />
       {lines.length === 0 ? (

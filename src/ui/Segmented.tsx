@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { cx } from "./cx";
 
-export const segmentedGroupClass = "inline-flex max-w-full rounded-full border border-line bg-surface p-[3px]";
+export const segmentedGroupClass = "inline-flex max-w-full gap-0.5 rounded-[10px] bg-sunken p-[3px]";
 
 export function segmentedItemClass(active: boolean): string {
   return cx(
-    "inline-flex min-h-8 items-center rounded-full px-[11px] py-[5px] font-semibold no-underline transition-colors duration-150",
-    active ? "bg-accent text-on-accent" : "text-muted hover:text-ink",
+    "inline-flex min-h-8 items-center rounded-lg px-3 py-[5px] text-[.875rem] font-semibold no-underline transition-colors duration-150",
+    active ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
   );
 }
 

@@ -18,7 +18,6 @@ import type { AiCard, AiProposal, AskAction, AskCard, AskReply, AskTurn, CartLin
 import { formatMoney } from "@/domain/money";
 import { StatusPill } from "@/features/orders/OrderCard";
 import { Button } from "@/ui/Button";
-import { controlClass } from "@/ui/Field";
 import { cx } from "@/ui/cx";
 import { formatDate, orderNumber } from "@/ui/format";
 import { Icon, type IconName } from "@/ui/Icon";
@@ -129,8 +128,8 @@ const CLOSE = "M6 6l12 12M18 6L6 18";
 
 function AssistantAvatar() {
   return (
-    <span aria-hidden="true" className="grid size-8 flex-none place-items-center rounded-full bg-accent-soft text-accent">
-      <Icon name="spark" size={16} />
+    <span aria-hidden="true" className="ai-tint grid size-8 flex-none place-items-center rounded-full">
+      <span className="ai-spark size-4" />
     </span>
   );
 }
@@ -579,7 +578,15 @@ function newConversationId(): string {
  * Tradelink Assistant chat (BUY-47). Each chat is saved on this device so the buyer can come back
  * to it; only the open chat's last turns go to the server, as context for the next answer.
  */
-export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName: string; userId: string; role?: AiRole }) {
+type AssistantChatProps = {
+  firstName: string;
+  userId: string;
+  role?: AiRole;
+  /** A question asked from Home (?q=&t=), sent as soon as the chat opens. */
+  initialQuestion?: { text: string; stamp: string };
+};
+
+export function AssistantChat({ firstName, userId, role = "buyer", initialQuestion }: AssistantChatProps) {
   const router = useRouter();
   const inputId = useId();
   const [now] = useState(() => new Date());
@@ -613,6 +620,32 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // A question from Home is sent once. A reload of the same ask (same stamp) reopens its chat
+  // instead of asking again; the address is left alone, since changing it would reset the page.
+  const askedFromHome = useRef(false);
+  useEffect(() => {
+    if (!initialQuestion || askedFromHome.current) return;
+    askedFromHome.current = true;
+    const storeKey = `tl-ask:${initialQuestion.stamp}:${initialQuestion.text}`;
+    let earlier: string | null = null;
+    try {
+      earlier = window.sessionStorage.getItem(storeKey);
+    } catch {
+      earlier = null;
+    }
+    const saved = earlier ? loadConversations(userId).find((conversation) => conversation.id === earlier) : undefined;
+    if (saved) {
+      openConversation(saved.id, saved.messages);
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(storeKey, currentIdRef.current);
+    } catch {
+      // Without session storage a reload asks again, which is harmless.
+    }
+    void send(initialQuestion.text);
+  });
 
   useEffect(() => {
     if (!thinking) return;
@@ -872,7 +905,7 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <h1>Tradelink AI</h1>
+          <h1 className="ai-text self-start">Tradelink AI</h1>
           <p className="text-muted">{INTRO[role]}</p>
         </div>
         <div className="flex gap-2">
@@ -902,11 +935,11 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
             {empty ? (
               <div className="flex flex-1 flex-col justify-center gap-5 py-6">
                 <div className="flex items-center gap-3">
-                  <span aria-hidden="true" className="grid size-11 flex-none place-items-center rounded-full bg-accent-soft text-accent">
-                    <Icon name="spark" size={22} />
+                  <span aria-hidden="true" className="ai-tint grid size-11 flex-none place-items-center rounded-full">
+                    <span className="ai-spark size-[22px]" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[1.25rem] font-semibold leading-tight">{greeting.hello}</p>
+                    <p className="ai-text text-[1.4rem] font-semibold leading-tight tracking-[-0.02em]">{greeting.hello}</p>
                     <p className="text-muted">{greeting.ask}</p>
                   </div>
                 </div>
@@ -954,7 +987,7 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
             <div ref={endRef} aria-hidden="true" className="scroll-mb-32" />
           </div>
           <div className="sticky bottom-0 z-10 rounded-b-lg border-t border-line bg-surface px-3.5 pt-3 pb-2.5 rail:px-5">
-            <form onSubmit={onSubmit} aria-busy={thinking || undefined} className="flex items-end gap-2">
+            <form onSubmit={onSubmit} aria-busy={thinking || undefined} className="ai-ring flex items-end gap-2 rounded-2xl p-1.5 pl-4">
               <label htmlFor={inputId} className="sr-only">
                 Message Tradelink AI
               </label>
@@ -969,11 +1002,16 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
                 placeholder={PLACEHOLDER}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={onKeyDown}
-                className={cx(controlClass, "max-h-[200px] min-w-0 flex-1 resize-none leading-6")}
+                className="max-h-[200px] min-w-0 flex-1 resize-none self-center border-0 bg-transparent py-2 text-[.95rem] leading-6 text-ink outline-none placeholder:text-muted"
               />
-              <Button type="submit" variant="primary" aria-label="Send message" disabled={thinking || draft.trim() === ""} className="min-h-11 rail:min-h-11">
+              <button
+                type="submit"
+                aria-label="Send message"
+                disabled={thinking || draft.trim() === ""}
+                className="ai-fill grid size-10 flex-none place-items-center rounded-xl transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 <SendIcon />
-              </Button>
+              </button>
             </form>
             <p className="mt-1.5 text-[.75rem] text-muted">Tradelink AI asks you to confirm before it changes anything.</p>
           </div>

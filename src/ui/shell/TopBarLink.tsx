@@ -23,8 +23,8 @@ export function TopBarLink({ href, icon, label, countLabel, count, current = fal
       title={label}
       aria-current={current ? "page" : undefined}
       className={cx(
-        "relative grid size-9 flex-none place-items-center rounded-full border no-underline transition-colors duration-150",
-        current ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface text-ink hover:border-accent hover:text-accent",
+        "relative grid size-9 flex-none place-items-center rounded-md border no-underline transition-colors duration-150",
+        current ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface text-ink hover:bg-sunken",
       )}
     >
       <Icon name={icon} size={19} />

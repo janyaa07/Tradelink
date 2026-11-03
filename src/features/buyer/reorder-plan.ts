@@ -6,7 +6,7 @@ import { toCents, type Cents } from "@/domain/money";
 import { reorderPlan, type ReorderRow } from "@/domain/reorder";
 import { getBuyerCatalogue, getBuyerSettings, getDeliveryTerms, getOnOrder, getSkippedToday, getUsualItems } from "./queries";
 
-export type PlanRow = ReorderRow & { item: CatalogueItem };
+export type PlanRow = ReorderRow & { item: CatalogueItem; inShop: number; usePerDay: number };
 
 export type ReorderPlanView = {
   rows: PlanRow[];
@@ -37,9 +37,11 @@ export const getReorderPlan = cache(async (orgId: string): Promise<ReorderPlanVi
     })),
     settings.suggestReorder,
   );
+  const usualById = new Map(visible.map((usual) => [usual.productId, usual]));
   const rows = plan.flatMap((row) => {
     const item = byId.get(row.productId);
-    return item ? [{ ...row, item }] : [];
+    const usual = usualById.get(row.productId);
+    return item && usual ? [{ ...row, item, inShop: usual.inShop, usePerDay: usual.usePerDay }] : [];
   });
 
   const suppliers = [...new Map(rows.map((row) => [row.item.supplierOrgId, row.item.supplierName]))];

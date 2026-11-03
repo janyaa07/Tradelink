@@ -82,7 +82,7 @@ export function UserMenu({
       <div
         id={panelId}
         hidden={!open}
-        className="absolute top-full right-0 z-30 mt-2 w-[min(280px,calc(100vw-24px))] rounded-lg border border-line bg-surface p-1.5 text-ink shadow-card"
+        className="absolute top-full right-0 z-30 mt-2 w-[min(280px,calc(100vw-24px))] rounded-lg border border-line bg-surface p-1.5 text-ink shadow-float"
       >
         <div className="flex items-center gap-3 px-2.5 pt-2 pb-3">
           <BusinessLogo name={orgName} size={40} />

@@ -59,3 +59,10 @@ export function orderNumber(n: number): string {
 export function issueNumber(n: number): string {
   return `ISS-${n}`;
 }
+
+const longDate = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, weekday: "long", day: "numeric", month: "long" });
+
+/** "Wednesday 4 November" in Singapore time, for the home greeting. */
+export function formatLongDate(now: Date): string {
+  return longDate.format(now).replace(",", "");
+}

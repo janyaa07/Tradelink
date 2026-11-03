@@ -22,14 +22,14 @@ type RecordCardProps = {
 /** The standard record layout: lead, title and status, figures, then actions. */
 export function RecordCard({ lead, title, titleHref, sub, pill, metrics, children, note, footer, actions }: RecordCardProps) {
   return (
-    <article className="flex min-w-0 flex-col gap-[9px] rounded-lg border border-line bg-surface px-3.5 py-3 shadow-card">
+    <article className="flex min-w-0 flex-col gap-2.5 rounded-lg border border-line bg-surface px-4 py-3.5 shadow-card">
       <div className="flex items-center justify-between gap-1.5">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
           {lead}
           <div className="min-w-0">
-            <h3 className="break-words text-[.84rem] font-bold">
+            <h3 className="break-words text-[.95rem] font-semibold">
               {titleHref ? (
-                <Link href={titleHref} className="text-accent no-underline hover:underline">
+                <Link href={titleHref} className="text-ink no-underline hover:text-accent">
                   {title}
                 </Link>
               ) : (

@@ -16,8 +16,8 @@ export function Panel({ title, action, soft = false, className, children }: Pane
   return (
     <section
       className={cx(
-        "flex min-w-0 flex-col gap-2.5 border border-line bg-surface shadow-card",
-        soft ? "rounded-[24px] p-4" : "rounded-lg p-3.5",
+        "flex min-w-0 flex-col gap-3 border border-line bg-surface shadow-card",
+        soft ? "rounded-xl p-5" : "rounded-lg p-4 rail:p-5",
         className,
       )}
     >

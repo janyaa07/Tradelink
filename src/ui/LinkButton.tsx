@@ -10,7 +10,7 @@ type LinkButtonProps = ComponentPropsWithoutRef<typeof Link> & {
 };
 
 export const textLinkClass =
-  "inline-flex min-h-6 items-center gap-1 font-bold text-accent no-underline hover:underline underline-offset-2";
+  "inline-flex min-h-6 items-center gap-1 font-semibold text-accent no-underline hover:underline underline-offset-2";
 
 export function LinkButton({ variant = "default", size = "default", className, ...rest }: LinkButtonProps) {
   const base = variant === "text" ? textLinkClass : buttonClass(variant, size);

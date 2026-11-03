@@ -65,8 +65,8 @@ export function AlertsPopover({ count, children }: AlertsPopoverProps) {
           setOpen((value) => !value);
         }}
         className={cx(
-          "relative grid size-9 place-items-center rounded-full border transition-colors duration-150",
-          open ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface text-ink hover:border-accent hover:text-accent",
+          "relative grid size-9 place-items-center rounded-md border transition-colors duration-150",
+          open ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface text-ink hover:bg-sunken",
         )}
       >
         <Icon name="bell" size={19} />
@@ -89,7 +89,7 @@ export function AlertsPopover({ count, children }: AlertsPopoverProps) {
         onClick={(event) => {
           if (event.target instanceof Element && event.target.closest("a")) setOpen(false);
         }}
-        className="fixed top-[58px] right-3 z-30 flex max-h-[min(78dvh,620px)] w-[min(420px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-card outline-none rail:top-[62px] rail:right-5"
+        className="fixed top-[58px] right-3 z-30 flex max-h-[min(78dvh,620px)] w-[min(420px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-float outline-none rail:top-[62px] rail:right-5"
       >
         {children}
       </div>

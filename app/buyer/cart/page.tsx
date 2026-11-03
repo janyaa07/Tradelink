@@ -8,5 +8,6 @@ export const metadata: Metadata = { title: "Cart · Tradelink" };
 export default async function BuyerCartPage() {
   const session = await requireRole("buyer");
   const data = await getCartPageData(session);
-  return <CartWorkspace data={data} />;
+  // A new draft version (lines added elsewhere) starts the workspace afresh with the saved lines.
+  return <CartWorkspace key={data.draft.version} data={data} />;
 }

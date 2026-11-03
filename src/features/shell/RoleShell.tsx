@@ -22,10 +22,9 @@ type Props = {
   children: ReactNode;
 };
 
-/** Wires the app shell to the current route: active tab, home layout, the bell, the cart and sign out. */
+/** Wires the app shell to the current route: active tab, the bell, the cart and sign out. */
 export function RoleShell({ role, userName, orgName, counts = {}, bellCount, cartCount, bellPanel, children }: Props) {
   const pathname = usePathname();
-  const home = NAV[role][0]?.href ?? "/";
   const navItems = NAV[role].map((item) => ({ ...item, count: counts[item.href] || undefined }));
   return (
     <AppShell
@@ -35,7 +34,6 @@ export function RoleShell({ role, userName, orgName, counts = {}, bellCount, car
       navItems={navItems}
       activeHref={activeHrefFor(role, pathname)}
       pathname={pathname}
-      isHome={pathname === home}
       bell={{ href: `/${role}/notifications`, count: bellCount }}
       bellPanel={bellPanel}
       cart={role === "buyer" ? { href: "/buyer/cart", count: cartCount ?? 0 } : null}
