@@ -1,6 +1,6 @@
-# Plan: turning Tradelink into Restock by Ledger
+# Plan: turning Tradelink into Tradelink AI
 
-Source of truth: `Restock_AI_Copilot_US_App.xlsx` (72 stories). Read with `docs/AUDIT.md`.
+Source of truth: `the spec spreadsheet` (72 stories). Read with `docs/AUDIT.md`.
 
 **Status:** proposal. Nothing in this plan has been built. Building starts only after the owner's OK and answers to section 9.
 
@@ -75,7 +75,7 @@ How the sheet's GCP services map to our stack:
 
 ## 3. Data model
 
-The sheet's model replaces the current domain tables. Section 9 asks for approval. The current data is demo-only, so the proposal is a clean set of new migrations plus Restock-shaped mock data, keeping these: `audit_log`, `idempotency_keys`, `rate_limits`, `ai_usage`, `app.state_transitions` and the guard trigger.
+The sheet's model replaces the current domain tables. Section 9 asks for approval. The current data is demo-only, so the proposal is a clean set of new migrations plus Tradelink AI mock data, keeping these: `audit_log`, `idempotency_keys`, `rate_limits`, `ai_usage`, `app.state_transitions` and the guard trigger.
 
 ### 3.1 Tables, grouped
 
@@ -85,7 +85,7 @@ The sheet's model replaces the current domain tables. Section 9 asks for approva
 | Shops and suppliers | `shop` (ONBOARDING, LIVE, paused; place_id, address, quiet hours, rest day, staff default, activation_status, licence), `outlet`, `supplier` (shared record: name, phone, place_id, verified), `supplier_user`, `shop_supplier` (PENDING, LIVE, OPTED_OUT; cut_off, delivery_days, delivery_window, minimum_order, delivery_fee, free_delivery_at, payment_terms, order_channel, seen_counts_as_accepted, ack_at) |
 | Items and prices | `product` (global: barcode, brand, name, variant, pack_size, photos, halal, regulated, verified; never prices), `shop_item` (product, supplier, order_unit, base_unit, billing_type, nickname[], confirmed_words[], status, shelf_life_days, no_substitutes), `list_version` (n, DRAFT, LOCKED, DISCARDED, locked_by, undo_until), `catalogue_snapshot`, `price_observation` (source, price, unit, ref, accepted), `expected_price` (low, high, basis, n_observations, effective_from), `usage_rate` (per open day, usual qty, correction, in_usual), `learned_fact` (text, kind, forgotten_at), `calendar_event` (holiday, shop closure, supplier closure, supply news) |
 | Ordering | `order` (shop and outlet; DRAFT, AWAITING_CONFIRM, CONFIRMED, CANCELLED; version, source, urgent, deadline, created_by, list_version_id, one_off), `order_line` (raw text, shop_item_id, qty, hint_qty, picked_by, picked_at, expected_price, delivery_date, status, warnings jsonb), `standing_order`, `daily_plan` (SCHEDULED, READY, SENT, SKIPPED, EXPIRED; version), `budget` (weekly limit) |
-| Purchase orders | `purchase_order` (number R-nnnn, supplier, version, idempotency_key = order + supplier, channel, delivery_date, eta, urgent, state, sent_at, seen_at, accepted_version, outside_restock), `po_line` (per version: shop_item, qty, expected price, status, held), `supplier_reply` (source: tap, note, web link, phone, ops or owner; parsed lines; confidence; version tapped; person) |
+| Purchase orders | `purchase_order` (number R-nnnn, supplier, version, idempotency_key = order + supplier, channel, delivery_date, eta, urgent, state, sent_at, seen_at, accepted_version, outside_tradelink), `po_line` (per version: shop_item, qty, expected price, status, held), `supplier_reply` (source: tap, note, web link, phone, ops or owner; parsed lines; confidence; version tapped; person) |
 | Delivery and money | `delivery` (window, eta, recheck_at, received_at, status), `delivery_issue` (type, qty, photo, photo_taken_at, claim_value, resolution), `credit` (OPEN, CLOSED; source, amount), `invoice` and `invoice_line` (if in scope, section 9), `quote_request` (QUOTE or MATCH; SENT, ANSWERED, EXPIRED) |
 | Agent and comms | `chat_thread` (shop, supplier PO thread, support), `chat_message` (client_message_id unique, reply_to, attachments, transcript, author: owner, staff, supplier, agent or ops), **`card_instance`** (section 4.3), `agent_action` (agent, tool, inputs, rule, confidence, outcome, undo_until, undone_at), `autonomy_setting` (area, level, limit_cents, temporary level, restore_at), `alert` (type, priority, status SENT/QUEUED/MERGED/MUTED, release_at, merged_into), `notification` (channel, type, sent, delivered, opened), `notification_type` (name, language, channel, body, version), `notification_pref` (daily limit, muted types, per-type push) |
 | Ops and running | `case` (type, shop, PO, due_at, status, assignee, claimed_at, ai_paused, reason_code, ops_minutes, blocking), `job` (kind, run_at, dedupe_key unique, payload, status, attempts), `event` (append-only metrics), `baseline`, `scorecard_snapshot`, `app_release` (platform, version, min_version), `feedback`, and `billing_account` / `subscription` if in scope |
@@ -182,7 +182,7 @@ RLS restricts each row to its shop's people, the supplier's users, or ops.
 
 | Rule (sheet) | Enforced by |
 | --- | --- |
-| Restock never picks an item, even a single option (US-06, EC01) | `order_line.shop_item_id` can be set only by the owner's pick (`picked_by`, `picked_at`) or by the pin rule. Pick pages never preselect. Confirm refuses unpicked lines. |
+| Tradelink AI never picks an item, even a single option (US-06, EC01) | `order_line.shop_item_id` can be set only by the owner's pick (`picked_by`, `picked_at`) or by the pin rule. Pick pages never preselect. Confirm refuses unpicked lines. |
 | Quantities come only from the owner; the usual is a hint (EC02) | `qty` and `hint_qty` are separate fields. Computed baskets (US-09, US-11, US-72) are proposals the owner confirms with one tap. |
 | Nothing goes to a supplier before Confirm on the latest version | POs are created only inside `confirm_order(order_id, p_version, p_key)`. Level 3 auto-send (December) is a recorded exception with Undo. |
 | [Undo] while it can be undone (US-71) | `agent_action.undo_until`. The card shows Undo until then, and Undo calls `undo_agent_action`. |
@@ -302,7 +302,7 @@ Two further rules:
 - **Cross-shop privacy (EC31).** A supplier never sees another shop's prices or names, and a shop never sees another shop's anything. The shared `product` and `catalogue_snapshot` hold no shop data.
 - **Untrusted content.** Supplier notes, photos, invoices and chat are data, never instructions. Prompts keep them in a quoted data section, and tools enforce scope on the server (ADR 0010 continues).
 - **Data protection (PDPA).**
-  - Consent ledger, STOP, and deletion after 30 days by anonymisation.
+  - Consent stock history, STOP, and deletion after 30 days by anonymisation.
   - Legal records and the consent log are kept.
   - Every ops view and change is audit-logged.
 
@@ -330,29 +330,29 @@ I'll build one milestone at a time and show each one before starting the next. R
 | Question | Answer | Effect on this plan |
 | --- | --- | --- |
 | Client | PWA now, store app later | As in section 2.1. A Capacitor shell comes later for store listings and native push. |
-| Schema | Replace with the Restock model | M0 adds new migrations and Restock mock data. It keeps `audit_log`, `idempotency_keys`, `rate_limits`, `ai_usage` and `app.state_transitions`. |
-| Money | Only the due list and Mark paid (US-24) | **Out:** invoice reading and matching (US-22, 23), the bank-detail alert (US-62, reversing the earlier "keep the bank-detail check"), and Stripe billing (US-46). **In:** "due this week" and Mark paid, with amounts estimated from delivered POs and each supplier's payment terms (no invoices), plus a monthly spend statement. Restock records payments the owner says he made; it never pays. Price signals use PO line prices, supplier answers and price notices instead of invoices. Credits come from delivery claims (US-20). |
-| SMS provider | None for now | Sign-in stays phone-number based, with a password until a provider is added; the SMS-code step is behind a switch that turns on with a provider. Supplier invites and web links are shared by the owner with copy link or the share sheet (US-44 already allows this), not by SMS from Restock. Until SMS exists, a web link is a bearer sign-in: random, stored hashed, expiring, revocable and scoped to one supplier and its shops. The new-device code (US-53) and the chase ladder's SMS step (US-17) are skipped, so the ladder goes push, reminder push, then the ops call. |
+| Schema | Replace with the Tradelink AI model | M0 adds new migrations and Tradelink AI mock data. It keeps `audit_log`, `idempotency_keys`, `rate_limits`, `ai_usage` and `app.state_transitions`. |
+| Money | Only the due list and Mark paid (US-24) | **Out:** invoice reading and matching (US-22, 23), the bank-detail alert (US-62, reversing the earlier "keep the bank-detail check"), and Stripe billing (US-46). **In:** "due this week" and Mark paid, with amounts estimated from delivered POs and each supplier's payment terms (no invoices), plus a monthly spend statement. Tradelink AI records payments the owner says he made; it never pays. Price signals use PO line prices, supplier answers and price notices instead of invoices. Credits come from delivery claims (US-20). |
+| SMS provider | None for now | Sign-in stays phone-number based, with a password until a provider is added; the SMS-code step is behind a switch that turns on with a provider. Supplier invites and web links are shared by the owner with copy link or the share sheet (US-44 already allows this), not by SMS from Tradelink AI. Until SMS exists, a web link is a bearer sign-in: random, stored hashed, expiring, revocable and scoped to one supplier and its shops. The new-device code (US-53) and the chase ladder's SMS step (US-17) are skipped, so the ladder goes push, reminder push, then the ops call. |
 
 ### 9.2 Original questions
 
 1. **Client:** a PWA now with a Capacitor shell later for the stores (recommended), or an Expo / React Native app now.
-2. **Schema:** replace the demo tables with the Restock model in new migrations and reseed mock data (recommended, since the data is demo only), or evolve the current tables step by step.
+2. **Schema:** replace the demo tables with the Tradelink AI model in new migrations and reseed mock data (recommended, since the data is demo only), or evolve the current tables step by step.
 3. **Money scope.** The sheet includes features that touch money:
    - invoice reading and matching (US-22, 23);
    - a due-this-week list with Mark paid (US-24);
    - a bank-detail change alert (US-62; matches the earlier "keep the bank-detail check");
-   - a Stripe subscription for Restock itself (US-46, P0 in the sheet).
+   - a Stripe subscription for Tradelink AI itself (US-46, P0 in the sheet).
 
-   **Recommendation:** keep invoices and the bank-detail alert, since Restock never pays. Keep the statement as spend only. Defer Mark paid and Stripe billing until the owner decides on charging.
+   **Recommendation:** keep invoices and the bank-detail alert, since Tradelink AI never pays. Keep the statement as spend only. Defer Mark paid and Stripe billing until the owner decides on charging.
 4. **SMS provider** for sign-in codes and supplier links: Twilio is recommended (native in Supabase phone auth). This needs:
    - the owner's Twilio account;
-   - registration of the "Restock" sender ID with Singapore's SMS Sender ID Registry (SSIR); unregistered alphanumeric senders are marked "Likely-SCAM";
+   - registration of the "Tradelink AI" sender ID with Singapore's SMS Sender ID Registry (SSIR); unregistered alphanumeric senders are marked "Likely-SCAM";
    - later, a backup provider (US-50).
 5. **Later, not blocking M0 to M2:**
    - a speech-to-text provider for voice notes (US-07, P1);
    - a Google Maps Places API key for ops onboarding (US-38, M2);
-   - the name and logo switch from Tradelink to Restock by Ledger (default: rename in M1, keeping the repository and Vercel names).
+   - the name and logo switch from Tradelink to Tradelink AI (default: rename in M1, keeping the repository and Vercel names).
 
 ## 10. Proposed answers to gaps in the sheet
 
@@ -368,7 +368,7 @@ Each will be recorded in an ADR as it is built.
 - **Out of stock after ACCEPTED:** the PO moves `ACCEPTED -> PARTIAL` and the US-73 flow runs.
 - **Credit (US-23):** opens when the supplier taps Will credit; a query alone does not open one.
 - **Ops hours:** the rota runs 5:30am to the last cut-off. The promise to the owner is "within 15 minutes, 6am to 10pm".
-- **STOP:** bare STOP mutes notifications only. "Stop Restock", "delete my data" or "Stop after pilot" starts offboarding after a confirm card.
+- **STOP:** bare STOP mutes notifications only. "Stop Tradelink AI", "delete my data" or "Stop after pilot" starts offboarding after a confirm card.
 - **Deletion (US-47):** personal fields are anonymised in append-only tables. Legal records and the consent log are kept for their legal period.
 - **Standing order, daily plan and usual for the same cut-off:** the standing order wins its lines, the plan leaves out anything already ordered or standing (EC34), and "usual" on demand shows a merged view.
 - **Missing storage:** `learned_fact`, `notification_pref`, `budget`, `stock_count`, `feedback` and `pending_supplier_question` are added as tables.

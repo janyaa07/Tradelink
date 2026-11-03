@@ -1,4 +1,4 @@
--- Restock core schema (M0). Adds the Restock data model beside the Tradelink tables, which keep
+-- Tradelink AI core schema (M0). Adds the Tradelink AI data model beside the Tradelink tables, which keep
 -- serving the live app until each slice replaces them (docs/PLAN.md, section 3). Reserved words are
 -- avoided: shop_order, shop_order_line, ops_case.
 

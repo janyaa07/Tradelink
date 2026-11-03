@@ -13,7 +13,7 @@ import {
   getWeekSpendCents,
 } from "@/features/buyer/queries";
 import { PROBLEM_TYPES } from "@/features/buyer/problem";
-import { getRestockPlan } from "@/features/buyer/restock-plan";
+import { getReorderPlan } from "@/features/buyer/reorder-plan";
 import { getTodos } from "@/features/buyer/todo-queries";
 import { getDraft } from "@/features/ordering/queries";
 import { getOrders, OPEN_STATUSES } from "@/features/orders/queries";
@@ -131,7 +131,7 @@ export const BUYER_TOOLS: AiTool[] = [
     description: "The buyer's usual items (usual quantity, use per day, count in the shop, last price paid) and what is running low and suggested for tomorrow.",
     input: z.object({}),
     run: async (ctx) => {
-      const [usuals, plan, byId] = await Promise.all([getUsualItems(ctx.session.orgId), getRestockPlan(ctx.session.orgId), catalogueById()]);
+      const [usuals, plan, byId] = await Promise.all([getUsualItems(ctx.session.orgId), getReorderPlan(ctx.session.orgId), catalogueById()]);
       return {
         data: {
           usual: usuals.map((usual) => ({

@@ -1,6 +1,6 @@
--- Restock demo data (M0). Fictional shop, people and prices; products use real brand names only as
+-- Tradelink AI demo data (M0). Fictional shop, people and prices; products use real brand names only as
 -- catalogue examples. Demo password for every account: Tradelink-demo-2026. Phone sign-in arrives in M1.
--- Safe to run once on an empty Restock schema.
+-- Safe to run once on an empty Tradelink AI schema.
 
 with people (id, email, full_name, phone) as (
   values
@@ -9,7 +9,7 @@ with people (id, email, full_name, phone) as (
     ('00000000-0000-4000-a000-000000000003'::uuid, 'ahhuat@ahhuat.example', 'Lim Ah Huat', '+6591000003'),
     ('00000000-0000-4000-a000-000000000004'::uuid, 'sales@kltrading.example', 'Kumar Letchumanan', '+6591000004'),
     ('00000000-0000-4000-a000-000000000005'::uuid, 'orders@freshpoultry.example', 'Grace Ong', '+6591000005'),
-    ('00000000-0000-4000-a000-000000000006'::uuid, 'ops@ledger.example', 'Nadia Ops', '+6591000006')
+    ('00000000-0000-4000-a000-000000000006'::uuid, 'ops@tradelink-ai.example', 'Nadia Ops', '+6591000006')
 ), new_users as (
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,

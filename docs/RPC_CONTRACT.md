@@ -6,7 +6,7 @@ The write path for the app (ADR 0004). Every function:
 - is executable by `authenticated` only;
 - returns `jsonb`.
 
-Each function checks the caller from `auth.uid()` and its organisation (`app.my_org_id()`, `app.my_org_kind()`, `app.is_admin()`). It checks the state transition, locks rows with `for update` (products in ascending ID order), writes the ledger, audit log and notifications in the same transaction, and returns.
+Each function checks the caller from `auth.uid()` and its organisation (`app.my_org_id()`, `app.my_org_kind()`, `app.is_admin()`). It checks the state transition, locks rows with `for update` (products in ascending ID order), writes the stock history, audit log and notifications in the same transaction, and returns.
 
 ## Errors
 
@@ -46,7 +46,7 @@ Audit action text follows the prototype, for example "Placed ORD-1044", "Accepte
 | Function | Behaviour |
 | --- | --- |
 | `save_draft(p_lines jsonb, p_version int)` | Replaces the caller's draft. Lines: `[{id, sourceText, productId \| null, qty, kg \| null, qtyAssumed, options: uuid[], state}]`, at most 60. Every non-null `productId` must pass `app.can_see_product`. Version mismatch raises `STALE_DRAFT`. Returns `{version}`. |
-| `place_orders(p_lines jsonb, p_draft_version int, p_key uuid)` (I) | `p_lines`: `[{productId, qty, sourceText}]`. Merges duplicate products. Checks visibility, open supplier and connection. Locks inventory and checks availability for `active` products. On a shortfall, raises `STOCK_SHORT` with detail and changes nothing. Creates one `pending` order per supplier, with `unit_price` copied from the product and `held = (status = 'active')`, and reserves held lines (ledger `reserved`). Writes order events, sets `usual_items.last_paid`, clears the draft lines (version + 1), and writes audit and notifications. Returns `{orders: [{id, number, supplierName}]}`. |
+| `place_orders(p_lines jsonb, p_draft_version int, p_key uuid)` (I) | `p_lines`: `[{productId, qty, sourceText}]`. Merges duplicate products. Checks visibility, open supplier and connection. Locks inventory and checks availability for `active` products. On a shortfall, raises `STOCK_SHORT` with detail and changes nothing. Creates one `pending` order per supplier, with `unit_price` copied from the product and `held = (status = 'active')`, and reserves held lines (stock history `reserved`). Writes order events, sets `usual_items.last_paid`, clears the draft lines (version + 1), and writes audit and notifications. Returns `{orders: [{id, number, supplierName}]}`. |
 | `cancel_order(p_order uuid, p_key uuid)` (I) | Own buyer. `pending` to `cancelled`. Releases held lines. |
 | `confirm_all_here(p_order, p_key)` (I) | Own buyer. If `out_for_delivery`, delivers first (as `mark_delivered`). Requires `delivered` and `unchecked`. Sets `all_here`. Adds quantities to `usual_items.in_shop` for items in usuals. |
 | `report_problem(p_order, p_product, p_type text, p_qty int, p_note text, p_key)` (I) | Type is `short`, `damaged`, `wrong_item` or `expired`. Quantity 1 to the line quantity. Delivers first if out for delivery. Requires delivered and unchecked. Sets `problem`. Creates an issue with amount = qty × `unit_price`. Adds (line qty − qty) to `in_shop`. |
@@ -69,13 +69,13 @@ Audit action text follows the prototype, for example "Placed ORD-1044", "Accepte
 | `part_accept_order(p_order, p_lines jsonb, p_date, p_key)` (I) | `p_lines`: `[{productId, sendQty}]`, 0 to qty. All zero means reject. Otherwise reduces quantities, releases the difference, deletes zero lines, inserts `partial_fulfilments` for reduced lines, then accepts as above. |
 | `reject_order(p_order, p_key)` (I) | `pending` to `rejected`. Releases held lines. |
 | `mark_out_for_delivery(p_order, p_key)` (I) | `accepted` to `out_for_delivery`. |
-| `mark_delivered(p_order, p_key)` (I) | `out_for_delivery` to `delivered`. Sets `delivered_at`. Each held line writes a ledger `delivered` row (on hand −qty, reserved −qty). |
+| `mark_delivered(p_order, p_key)` (I) | `out_for_delivery` to `delivered`. Sets `delivered_at`. Each held line writes a stock history `delivered` row (on hand −qty, reserved −qty). |
 | `answer_issue(p_issue, p_answer text, p_key)` (I) | Answer is `credit` (amount > 0), `replace` (not late or invoice), `on_the_way` (late only, to `supplier_replied`) or `dispute`. Issue must be open and own. Sets `buyer_seen = false` and `answered_at`. |
-| `supplier_add_product(p_name, p_unit, p_price, p_opening int, p_reorder int, p_category text, p_art text, p_key)` (I) | SKU is a prefix from the supplier's initials, a dash and the next number. Opening stock is written to the ledger as `received` with reason `opening_stock` when above 0. |
+| `supplier_add_product(p_name, p_unit, p_price, p_opening int, p_reorder int, p_category text, p_art text, p_key)` (I) | SKU is a prefix from the supplier's initials, a dash and the next number. Opening stock is written to the stock history as `received` with reason `opening_stock` when above 0. |
 | `receive_stock(p_product, p_qty int, p_key)` (I) | Quantity 1 to 9999. If the product is `unconfirmed`, it becomes `active` and gets reorder level 5 when it was 0. |
 | `confirm_product_stock(p_product, p_qty, p_price, p_reorder, p_key)` (I) | For an unconfirmed product: becomes `active` with the given price and reorder level, and receives the quantity. |
 | `change_price(p_product, p_price numeric, p_key)` (I) | Inserts into `price_changes` when the price differs. |
-| `adjust_stock(p_product, p_change int, p_reason text, p_note text, p_key)` (I) | Change from −9999 to 9999, not 0. On hand + change must be at least reserved, otherwise `BELOW_RESERVED`. Writes an `adjusted` ledger row. |
+| `adjust_stock(p_product, p_change int, p_reason text, p_note text, p_key)` (I) | Change from −9999 to 9999, not 0. On hand + change must be at least reserved, otherwise `BELOW_RESERVED`. Writes an `adjusted` stock history row. |
 | `update_business_profile(p_contact, p_phone, p_email, p_address, p_range, p_days smallint[], p_lead int, p_cutoff time, p_minimum numeric)` | Updates the supplier's business profile. |
 
 ## Admin functions (`app.is_admin()`)

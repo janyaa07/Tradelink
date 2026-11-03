@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   getBuyerSettings: vi.fn(),
   getUsualItems: vi.fn(),
   getWeekSpendCents: vi.fn(),
-  getRestockPlan: vi.fn(),
+  getReorderPlan: vi.fn(),
   readOrderAction: vi.fn(),
   getOrders: vi.fn(),
   getOrderCardByNumber: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock("@/features/buyer/queries", () => ({
   getWeekSpendCents: mocks.getWeekSpendCents,
   getConnectedSuppliers: vi.fn(),
 }));
-vi.mock("@/features/buyer/restock-plan", () => ({ getRestockPlan: mocks.getRestockPlan }));
+vi.mock("@/features/buyer/reorder-plan", () => ({ getReorderPlan: mocks.getReorderPlan }));
 vi.mock("@/features/ordering/actions", () => ({ readOrderAction: mocks.readOrderAction }));
 vi.mock("@/features/ordering/queries", () => ({ readDraft: mocks.readDraft }));
 vi.mock("@/features/orders/queries", () => ({
@@ -132,7 +132,7 @@ beforeEach(() => {
   mocks.getBuyerSettings.mockResolvedValue({ weeklyBudget: "900.00", suggestReorder: true, priceAlerts: true, budgetWarning: true });
   mocks.getUsualItems.mockResolvedValue([{ productId: OIL, usualQty: 2, usePerDay: 0.5, inShop: 3, lastPaid: "37.00" }]);
   mocks.getWeekSpendCents.mockResolvedValue(61250);
-  mocks.getRestockPlan.mockResolvedValue({ rows: [], totalCents: 0, cutoffLines: [] });
+  mocks.getReorderPlan.mockResolvedValue({ rows: [], totalCents: 0, cutoffLines: [] });
   mocks.getOrders.mockResolvedValue([]);
   mocks.getOrderCardByNumber.mockResolvedValue(null);
   mocks.getSupplierRecords.mockResolvedValue([]);
@@ -145,7 +145,7 @@ function expectOnlyOwnOrganisation() {
     ...mocks.getBuyerSettings.mock.calls.map((call) => call[0]),
     ...mocks.getUsualItems.mock.calls.map((call) => call[0]),
     ...mocks.getWeekSpendCents.mock.calls.map((call) => call[0]),
-    ...mocks.getRestockPlan.mock.calls.map((call) => call[0]),
+    ...mocks.getReorderPlan.mock.calls.map((call) => call[0]),
     ...mocks.getOrderCardByNumber.mock.calls.map((call) => call[0]),
     ...mocks.getSupplierRecords.mock.calls.map((call) => call[0]),
     ...mocks.getOrders.mock.calls.map((call) => call[0].buyerOrgId),
@@ -210,8 +210,8 @@ describe("respondToAsk: intents answer from the buyer's own data (BUY-48)", () =
     expect(mocks.getOrders).toHaveBeenCalledWith({ buyerOrgId: ORG, statuses: ["out_for_delivery"], limit: 20 });
   });
 
-  it("lists the restock plan with prices and Add to cart", async () => {
-    mocks.getRestockPlan.mockResolvedValue({
+  it("lists the reorder plan with prices and Add to cart", async () => {
+    mocks.getReorderPlan.mockResolvedValue({
       rows: [{ productId: EGGS, daysLeft: 1.25, want: 3, qty: 3, item: catalogue[0] }],
       totalCents: 3000,
       cutoffLines: [],

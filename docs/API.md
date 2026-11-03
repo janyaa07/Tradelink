@@ -26,7 +26,7 @@ Columns: action name, role, input (Zod summary), database function, success copy
 | --- | --- | --- | --- |
 | `readOrder` | `text` 1 to 4,000 chars | AI module, then `save_draft` | none (opens review) |
 | `loadUsuals` | none | `save_draft` | none |
-| `loadRestockPlan` | none | `save_draft` | none |
+| `loadReorderPlan` | none | `save_draft` | none |
 | `addProductToDraft` | `productId` | `add_draft_line` | "{product} added." |
 | `updateDraftLine` | `lineId`, `productId?`, `qty` 1 to 9,999 | `update_draft_line` | none |
 | `removeDraftLine` | `lineId` | `remove_draft_line` | none |
@@ -35,7 +35,7 @@ Columns: action name, role, input (Zod summary), database function, success copy
 | `suggestItemsForMinimum` | `supplierId` | AI module (read only) | none |
 | `draftMinimumRequest` | `supplierId` | AI module (read only) | none |
 | `placeOrders` | `draftId`, `deliveryDates: { supplierId, requestedDate? }[]`, `negotiationMessages: { supplierId, body ≤ 1,000, draftedByAi, edited }[]`, (I) | `place_orders` | "{n} orders placed and stock reserved." |
-| `skipRestockToday` | none | `skip_restock_today` | "Skipped for today." |
+| `skipReorderToday` | none | `skip_restock_today` | "Skipped for today." |
 | `ackPriceChange` | `priceChangeId` | `ack_price_change` | none |
 | `resolvePartial` | `partialId`, `choice` (`order_rest`, `skip`) | `resolve_partial` (+ `save_draft` for `order_rest`) | none |
 | `answerPriceRise` | `orderLineId`, `choice` (`keep`, `remove`), (I) | `answer_price_rise` | none |

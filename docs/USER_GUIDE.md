@@ -25,7 +25,7 @@ The mock data (`supabase/mock-data.sql`) puts orders in every state, so each acc
 | --- | --- |
 | **Siti** (Lotus Leaf) | Ready for tomorrow shows tofu and noodles. Check 3 deliveries, two of them out for delivery. Follow up the late report and the open problem. Acknowledge the coconut milk price alert. Cancel pending ORD-1064. |
 | **Wei Jie** (Golden Crust) | Answer the part-delivery notice on ORD-1063. Mark the S$52.00 credit received. See the disputed problem ISS-305. Ready for tomorrow shows three items. |
-| **Ravi** (Island Spice) | Accept, part accept or reject ORD-1064 and ORD-1065. Mark ORD-1058 delivered. Restock dried chillies (out) and star anise (low). Change a price. |
+| **Ravi** (Island Spice) | Accept, part accept or reject ORD-1064 and ORD-1065. Mark ORD-1058 delivered. Receive stock for dried chillies (out) and star anise (low). Change a price. |
 | **Priya** (Harbour) | Answer problem ISS-302. Move accepted orders out for delivery and deliver them. |
 | **Daniel** (Fresh Lane) | Answer the late report on ORD-1061 with "It is on the way". Mark it delivered. |
 | **Hannah** (admin) | Resolve the ISS-305 dispute in Needs attention. Assign items to operators. Suspend and reactivate a supplier. Read the audit log. |

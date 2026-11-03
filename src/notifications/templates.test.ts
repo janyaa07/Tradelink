@@ -57,7 +57,7 @@ describe("checkTemplate", () => {
 
 /** Reads the seed rows from the pending migration: ('name', 'lang', 'channel', 'title', 'body'). */
 function seedRows(): { name: string; language: string; template: NotificationTemplate }[] {
-  const path = fileURLToPath(new URL("../../supabase/migrations/20261103133838_restock_notification_types.sql", import.meta.url));
+  const path = fileURLToPath(new URL("../../supabase/migrations/20261103133838_ai_notification_types.sql", import.meta.url));
   const sql = readFileSync(path, "utf8");
   const literal = "'((?:[^']|'')*)'";
   const row = new RegExp(`\\(${literal}, ${literal}, ${literal}, ${literal}, ${literal}\\)`, "g");
@@ -101,7 +101,7 @@ describe("seeded notification types", () => {
       expect(`${row.template.title}${row.template.body}`).not.toMatch(/[!！]/);
       if (row.language === "en") {
         const words = row.template.title.split(" ").slice(1);
-        expect(words.filter((word) => /^[A-Z][a-z]/.test(word) && word !== "Restock"), row.name).toEqual([]);
+        expect(words.filter((word) => /^[A-Z][a-z]/.test(word) && word !== "Tradelink AI"), row.name).toEqual([]);
       }
     }
   });

@@ -9,7 +9,7 @@ Status: Phase 1 draft for review. This document holds the threat model, the perm
 | Asset | Why it matters |
 | --- | --- |
 | Orders, prices and spend of each business | Commercially sensitive. One shop must never see another's orders or prices (D1). |
-| Stock levels and ledger | Wrong stock causes oversold orders and lost trust. |
+| Stock levels and stock history | Wrong stock causes oversold orders and lost trust. |
 | Supplier bank fingerprints and invoice files | Bank detail fraud is the main payment risk for small businesses, even though Tradelink never pays (D6, D7). |
 | User accounts and sessions | Takeover lets an attacker place or cancel orders. Admin takeover exposes everyone. |
 | Invitation tokens | A leaked token lets someone join as a supplier or buyer. |
@@ -56,7 +56,7 @@ Boundary rules: everything from the browser, the email link, uploaded files and 
 | T1 | Tampering with prices | Client sends a lower price | Prices are read from `products` inside `place_orders`; client prices are ignored | Integration |
 | T2 | Tampering with status | Supplier skips states or buyer marks delivered without stock moving | State machine trigger and function checks | Unit + pgTAP for every invalid transition |
 | T3 | Oversell under load | Two buyers order the last 3 units at once | Row locks, re-check inside the transaction, constraints `reserved <= on_hand` | Concurrency test with 50 parallel checkouts |
-| T4 | Altering the audit log or ledger | Admin deletes a row | Append-only grants and triggers | pgTAP: update and delete raise |
+| T4 | Altering the audit log or stock history | Admin deletes a row | Append-only grants and triggers | pgTAP: update and delete raise |
 | T5 | Changed bank details on an invoice | Fraudster sends an invoice with a new account | Fingerprint comparison, "Do not pay yet", attention item, phone confirmation copy | Unit and E2E |
 | R1 | Denying an action | "I never cancelled that" | Audit log with user, org, role, request ID; order events | Integration: each action writes audit |
 | I1 | Cross-organisation read | Buyer A opens buyer B's order by ID | RLS on every table; IDs are UUIDs; 404 for not visible | pgTAP matrix, E2E direct URL |
@@ -106,7 +106,7 @@ Legend: Y allowed; O own organisation only; C connected organisations only; R re
 | Notifications | O | O | Y (platform) | N |
 | System status | N | N | Y | Status only via `/api/health` |
 | Audit log | N | Own-org rows on Activity | Y (read only) | N |
-| Change or delete audit or ledger rows | N | N | N | N |
+| Change or delete audit or stock history rows | N | N | N | N |
 
 ## 5. Controls
 

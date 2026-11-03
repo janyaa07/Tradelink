@@ -91,7 +91,7 @@ export function deliveriesText(count: number): string {
   return `${count === 1 ? "1 delivery" : `${count} deliveries`} on the way.`;
 }
 
-export function restockText(count: number): string {
+export function reorderText(count: number): string {
   return `${count === 1 ? "1 item" : `${count} items`} will run out soon.`;
 }
 

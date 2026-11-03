@@ -1,4 +1,4 @@
--- Restock core functions (M0): chat messages, cards, versioned shop orders, jobs, events, devices
+-- Tradelink AI core functions (M0): chat messages, cards, versioned shop orders, jobs, events, devices
 -- and the agent log. Agent output (cards, agent messages, agent actions, jobs) is written only by the
 -- server with the secret key (app.rs_is_system()), so a signed-in user can never forge it.
 

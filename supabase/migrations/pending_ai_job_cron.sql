@@ -2,7 +2,7 @@
 -- pg_net. The route needs no secret because it only runs jobs that are already due; scheduling the
 -- same job name again replaces the schedule, so this file can be re-applied.
 select cron.schedule(
-  'restock-jobs-tick',
+  'tradelink-ai-jobs-tick',
   '* * * * *',
   $$
   select net.http_post(

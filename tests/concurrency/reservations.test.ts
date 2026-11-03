@@ -21,7 +21,7 @@ async function signedIn(email: string): Promise<SupabaseClient> {
 }
 
 describe.runIf(enabled)("stock reservations under concurrency", () => {
-  it("reserves at most the stock available and keeps the ledger consistent", async () => {
+  it("reserves at most the stock available and keeps the stock history consistent", async () => {
     const [supplier, mei, arif] = await Promise.all([
       signedIn("priya@harbourdry.example"),
       signedIn("mei@noodlehouse.example"),
@@ -68,10 +68,10 @@ describe.runIf(enabled)("stock reservations under concurrency", () => {
     expect(level?.reserved).toBe(reservedByOrders);
 
     const { data: movements } = await supplier.from("stock_movements").select("on_hand_change, reserved_change").eq("product_id", productId);
-    const ledger = (movements ?? []).reduce(
+    const history = (movements ?? []).reduce(
       (sum, row) => ({ onHand: sum.onHand + row.on_hand_change, reserved: sum.reserved + row.reserved_change }),
       { onHand: 0, reserved: 0 },
     );
-    expect(ledger).toEqual({ onHand: level?.on_hand, reserved: level?.reserved });
+    expect(history).toEqual({ onHand: level?.on_hand, reserved: level?.reserved });
   }, 60_000);
 });

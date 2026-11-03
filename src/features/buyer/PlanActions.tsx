@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
-import { loadRestockPlanAction, skipRestockPlanAction } from "./home-actions";
+import { loadReorderPlanAction, skipReorderPlanAction } from "./home-actions";
 
 /** "Add to cart" and "Not today" on Ready for tomorrow (BUY-08). */
 export function PlanActions() {
@@ -14,14 +14,14 @@ export function PlanActions() {
 
   const addToCart = () =>
     start(async () => {
-      const result = await loadRestockPlanAction();
+      const result = await loadReorderPlanAction();
       if (result.ok) router.push("/buyer/cart");
       else show(result.error);
     });
 
   const skip = () =>
     start(async () => {
-      const result = await skipRestockPlanAction();
+      const result = await skipReorderPlanAction();
       show(result.ok ? "Skipped for today." : result.error);
     });
 

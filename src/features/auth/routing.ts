@@ -20,11 +20,11 @@ export const EXPIRED_LINK_PATH = "/sign-in?link=expired";
 const PUBLIC_PATHS = ["/forgot-password", "/auth/callback", "/api/health", "/api/jobs", "/offline"] as const;
 
 /**
- * The Restock app (M0 onwards). Any signed-in person may open it; RLS and database functions decide
- * what they see, so a Restock user needs no Tradelink organisation.
+ * The Tradelink AI app (M0 onwards). Any signed-in person may open it; RLS and database functions decide
+ * what they see, so a Tradelink AI user needs no Tradelink organisation.
  */
-export const RESTOCK_HOME = "/r";
-const RESTOCK_PATHS = [RESTOCK_HOME, "/api/cards", "/api/push"] as const;
+export const AI_HOME = "/r";
+const AI_PATHS = [AI_HOME, "/api/cards", "/api/push"] as const;
 
 /** For signed-out users only: a signed-in user is sent to their home. */
 const SIGNED_OUT_PATHS = [SIGN_IN_PATH, SIGN_UP_PATH] as const;
@@ -98,14 +98,14 @@ export function decideRoute({ pathname, signedIn, kind }: RouteInput): RouteDeci
   // Set a new password needs a session but no organisation, so a user can always finish a reset.
   if (matches(pathname, PUBLIC_PATHS) || matches(pathname, [RESET_PASSWORD_PATH])) return "allow";
 
-  if (matches(pathname, RESTOCK_PATHS)) return "allow";
+  if (matches(pathname, AI_PATHS)) return "allow";
 
   const home = homeFor(kind);
   if (!home) {
-    // Signed in without a Tradelink organisation: a Restock user, whose home is the Restock app.
+    // Signed in without a Tradelink organisation: a Tradelink AI user, whose home is the Tradelink AI app.
     // Sign in stays reachable, and redirecting it to itself would loop.
     if (pathname === SIGN_IN_PATH) return "allow";
-    return RESTOCK_HOME;
+    return AI_HOME;
   }
 
   if (pathname === "/" || matches(pathname, SIGNED_OUT_PATHS)) return home;

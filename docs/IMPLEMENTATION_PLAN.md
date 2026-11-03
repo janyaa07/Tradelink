@@ -70,11 +70,11 @@ flowchart LR
 
 | M | Scope | Stories | Done when |
 | --- | --- | --- | --- |
-| 3.1 | Products, inventory levels, stock ledger, price changes; supplier inventory page, add product, receive, confirm, change price, adjust; stock history; Availability page | SUP-10 to SUP-16, BUY-42, OPS-01 | Ledger replay test; RLS matrix for catalogue tables |
+| 3.1 | Products, inventory levels, stock history, price changes; supplier inventory page, add product, receive, confirm, change price, adjust; stock history; Availability page | SUP-10 to SUP-16, BUY-42, OPS-01 | Stock history replay test; RLS matrix for catalogue tables |
 | 3.2 | Drafts and draft lines; Order page with usuals, manual add, product cards, CartBar; review lines with picker, stepper, substitutes, price warning; add a missing product and invite a supplier; summary with cut-offs, budget warning and delivery dates; rule-based reader as the first reader | BUY-12 to BUY-21, BUY-23, SUP-20, SUP-21 | Review E2E with the prototype's sample message |
 | 3.3 | `place_orders` with locks, idempotency, split by supplier, unconfirmed lines; buyer Orders page and cancel | BUY-22, BUY-27, BUY-28, OPS-02, OPS-04 | Concurrency suite passes |
 | 3.4 | Supplier Home and To do, Incoming orders, accept with date, part accept, reject, out for delivery, delivered, Activity; business profile and bank details | SUP-01 to SUP-07, SUP-17 to SUP-19, BUY-26 | Fulfilment state machine tests pass |
-| 3.5 | Buyer Home with To do (price, part delivery), Ready for tomorrow, Not today, Arriving; usual items in Settings | BUY-01 to BUY-03, BUY-08, BUY-09, BUY-46 | Restock plan unit tests; buyer home E2E |
+| 3.5 | Buyer Home with To do (price, part delivery), Ready for tomorrow, Not today, Arriving; usual items in Settings | BUY-01 to BUY-03, BUY-08, BUY-09, BUY-46 | Reorder plan unit tests; buyer home E2E |
 
 ### Phase 4: AI
 

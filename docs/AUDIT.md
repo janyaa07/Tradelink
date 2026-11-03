@@ -1,6 +1,6 @@
-# Audit: Tradelink against the Restock spec
+# Audit: Tradelink against the Tradelink AI spec
 
-This audit compares the current Tradelink code with the Restock by Ledger spec (`Restock_AI_Copilot_US_App.xlsx`, 72 user stories, 3 November 2026). The sheet is the source of truth. "Keep", "Change" and "Missing" below are measured against it.
+This audit compares the current Tradelink code with the Tradelink AI spec (`the spec spreadsheet`, 72 user stories, 3 November 2026). The sheet is the source of truth. "Keep", "Change" and "Missing" below are measured against it.
 
 The sheet was read in full: every story and every column. Per-story digests (agents, cards, data, states, timers, rules, acceptance, edge cases) were used to write this audit and `docs/PLAN.md`.
 
@@ -22,7 +22,7 @@ The sheet was read in full: every story and every column. Per-story digests (age
 ### Data model today
 
 - **Business:** `organisations` (buyer or supplier), `profiles`, `memberships`, `trading_connections` (buyer to supplier, invited/active/declined/ended), `supplier_profiles`, `buyer_settings`, `admin_profiles`.
-- **Catalogue and stock:** `products` (a supplier's catalogue with price and status), `inventory_levels`, `stock_movements` (ledger), `price_changes`, `price_change_acks`.
+- **Catalogue and stock:** `products` (a supplier's catalogue with price and status), `inventory_levels`, `stock_movements` (stock history), `price_changes`, `price_change_acks`.
 - **Ordering:** `order_drafts` (the cart), `orders` (one per supplier: pending, accepted, out_for_delivery, delivered, rejected, cancelled), `order_lines`, `order_events`, `partial_fulfilments`.
 - **After delivery:** `issues` (open, credit_promised, replacement_promised, supplier_replied, disputed, closed, credit_received).
 - **Buyer memory:** `usual_items`, `restock_skips`.
@@ -62,11 +62,11 @@ These are design conflicts, not just missing features. Each needs the change des
    - Ops runs a guided onboarding (US-38 to US-42).
    - The owner locks his list.
    - Each supplier acknowledges the exact-item rule (US-44) before any order is sent.
-   - Nobody is connected automatically, and Restock never cold-contacts a supplier.
-7. **Money.** Earlier owner decisions were: no payments on the platform, prices used for analytics, and keep the bank-detail check. The spec agrees that Restock never pays a supplier, but it adds:
+   - Nobody is connected automatically, and Tradelink AI never cold-contacts a supplier.
+7. **Money.** Earlier owner decisions were: no payments on the platform, prices used for analytics, and keep the bank-detail check. The spec agrees that Tradelink AI never pays a supplier, but it adds:
    - invoice reading and matching (US-22, US-23);
    - a due-this-week reminder with Mark paid (US-24);
-   - a Stripe subscription for Restock itself (US-46, $80 per outlet per month).
+   - a Stripe subscription for Tradelink AI itself (US-46, $80 per outlet per month).
 
    These need a decision (`docs/PLAN.md`, section 9).
 
@@ -83,7 +83,7 @@ These are design conflicts, not just missing features. Each needs the change des
 | Design tokens, UI kit (`src/ui`), shell with the alerts pop-up, cart pill, user menu | Reused for Shop mode, Supplier mode and the web link. The pop-up becomes the Alerts inbox. |
 | Typed assistant cards (order, price, lines) and the chat surface | Starting point for the card registry, rebuilt as versioned, persisted cards. |
 | Admin needs-attention queue with assignment and dispute resolution | Base of the ops console and handoff queue (US-48). |
-| Insights maths (weekly spend, supplier share, on-time record), restock-days maths (`src/domain/restock.ts`) | Reused by US-25, US-26, US-32 and as the first version of usage rates (US-69). |
+| Insights maths (weekly spend, supplier share, on-time record), reorder-days maths (`src/domain/reorder.ts`) | Reused by US-25, US-26, US-32 and as the first version of usage rates (US-69). |
 | Vitest setup and the domain-first structure (`src/domain` pure and tested) | The sheet's acceptance criteria map well to unit tests. Playwright still needs adding. |
 
 ## 4. Change
@@ -97,7 +97,7 @@ These are design conflicts, not just missing features. Each needs the change des
 | Supplier catalogue `products` with prices and stock | Global `product` (barcode, brand, name, variant, pack size, photos, halal, regulated; never prices), per-shop `shop_item` (nicknames, confirmed words, order and base unit, billing type, supplier) inside a versioned, locked `list_version`, and `catalogue_snapshot` per supplier. |
 | `price_changes` | `price_observation` (every price seen, with source) and `expected_price` (range per item and supplier, with basis and "based on N orders"). |
 | `order_drafts` and per-supplier `orders` | Shop `order` and `order_line` (DRAFT to CONFIRMED, version, urgent, deadline, source) plus versioned `purchase_order` and `po_line` with the full PO state machine and `supplier_reply`. |
-| Reservation at order time, inventory ledger | Not in the ordering path. Suppliers answer per line. The ledger tables stay but are no longer used by ordering. |
+| Reservation at order time, inventory history | Not in the ordering path. Suppliers answer per line. The stock history tables stay but are no longer used by ordering. |
 | `issues` with credit, replace and dispute | `delivery` and `delivery_issue` (short, damaged, wrong, expired, with a photo and photo time) and `credit` (OPEN to CLOSED), driven by the timed arrival check (US-20). |
 | `usual_items` with fixed usual quantities | `usage_rate` per item (use per open day, calendar effect, edit habit) feeding a freshly computed usual (US-09), and owner-visible learned facts with Forget (US-69). |
 | `notifications` | `notification` (push and in-app, with sent, delivered and opened times), `alert` (priority, status SENT, QUEUED, MERGED or MUTED, release time) and a `notification_type` registry in 4 languages. |
@@ -112,7 +112,7 @@ Grouped by the sheet's categories. P0 items are in bold.
 
 - **Setup and profile:**
   - **Lead funnel and welcome card (US-01).**
-  - **Terms, consent ledger, STOP and the 14-day terms grace (US-43).**
+  - **Terms, consent stock history, STOP and the 14-day terms grace (US-43).**
   - Supplier add and link with duplicate check (US-02).
   - **Add item from the product database or by scan, never from typed words (US-03).**
   - Staff with caps (US-04).
@@ -128,7 +128,7 @@ Grouped by the sheet's categories. P0 items are in bold.
   - Standing orders (US-11).
   - **Edit or cancel through PO versions (US-12).**
   - Multi-outlet (US-14).
-  - **Daily restock plan at cut-off minus 2 hours (US-72).**
+  - **Daily reorder plan at cut-off minus 2 hours (US-72).**
 - **Supplier comms:**
   - **PO split with self-check and the urgent path (US-15).**
   - **Per-line supplier actions and the roll-up (US-16).**
@@ -164,7 +164,7 @@ Grouped by the sheet's categories. P0 items are in bold.
   - **Talk to a person with the agent paused (US-36).**
   - Feedback (US-37).
 - **Ops onboarding:** **guided shop session with place lookup (US-38), barcode scan (US-39), invoice reading into suppliers (US-40), supplier terms (US-41), review and hand to owner (US-42).**
-- **Running Restock:**
+- **Running Tradelink AI:**
   - **First-week activation (US-45).**
   - **Trial to paid (US-46).**
   - Offboarding and deletion (US-47).

@@ -3,7 +3,7 @@
 Tradelink is a wholesale ordering platform for small food businesses and their suppliers. It replaces ordering over WhatsApp with one secure web app, which works on phone, tablet and laptop.
 
 - **Buyers** type orders the way they text a supplier. Claude reads them, and every line is reviewed before anything is sent. Stock is reserved per supplier, and deliveries are checked on arrival.
-- **Suppliers** accept, part accept or reject orders, deliver them, answer problems, and manage inventory with a full stock ledger.
+- **Suppliers** accept, part accept or reject orders, deliver them, answer problems, and manage inventory with a full stock history.
 - **Admins** see what needs attention, resolve disputes, oversee suppliers and users, and read the append-only audit log.
 
 All demo businesses, people and figures are fictional. Demo accounts are listed in [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
@@ -15,7 +15,7 @@ Next.js 16 (App Router) with strict TypeScript, Tailwind CSS 4 with tokens gener
 ## Architecture in brief
 
 - **Reads** use the signed-in user's Supabase session, so Row Level Security limits every row to the user's organisation, its trading connections or, for admins, the platform.
-- **Writes** go only through Postgres functions (`security definer`). Each one checks the caller and the state transition, locks rows, and writes the stock ledger, audit log and notifications in one transaction. Critical actions are idempotent. See [docs/RPC_CONTRACT.md](docs/RPC_CONTRACT.md).
+- **Writes** go only through Postgres functions (`security definer`). Each one checks the caller and the state transition, locks rows, and writes the stock history, audit log and notifications in one transaction. Critical actions are idempotent. See [docs/RPC_CONTRACT.md](docs/RPC_CONTRACT.md).
 - **AI** lives in `src/integrations/claude/`. It returns structured output that is grounded against the buyer's words and catalogue. If it fails, a rule-based reader takes over. It never writes data.
 
 | Folder | Contents |

@@ -8,7 +8,7 @@ const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 export default defineConfig({
   testDir: "e2e",
   // Traces and screenshots go outside the repository, which may sit in a synced folder.
-  outputDir: join(tmpdir(), "restock-playwright"),
+  outputDir: join(tmpdir(), "tradelink-ai-playwright"),
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: true,

@@ -24,7 +24,7 @@ Start: 16:15 SGT. Deadline: 23:00 SGT. That leaves about 6 hours 45 minutes.
 | Buyer | Home (To do, Ready for tomorrow, Arriving), Order (usuals, product cards, manual add, typed order read by AI with the rule-based fallback), mandatory review with match status, quantities, kg conversion, stock blockers, substitutes, cut-off and budget warnings, split by supplier, Confirm and reserve stock, CartBar, Orders list, cancel, All here, Report a problem, Not here yet, Availability, Settings (budget, switches, usual items) | BUY-01 to BUY-04, BUY-08 to BUY-17, BUY-20 to BUY-23, BUY-27 to BUY-31, BUY-42 to BUY-46 |
 | Supplier | Home, To do, Incoming orders (accept with delivery date, part accept, reject, out for delivery, delivered), answer problems, Inventory (add product, receive stock, change price, adjust), Stock history, Activity, Settings (business profile) | SUP-01 to SUP-07, SUP-09 to SUP-18 |
 | Admin | Home, Needs attention (live rules, filters, assign, mark handled), resolve disputes, All orders, Suppliers and profile, suspend and reactivate, Users and buyer details, Operators list, Audit log, Settings | ADM-01 to ADM-05, ADM-07, ADM-09 to ADM-14, ADM-18, ADM-19 |
-| Platform | Stock ledger, row-locked reservations, idempotent actions, state machines, RLS isolation, seeded demo data, health endpoint, deploy | OPS-01 to OPS-05, OPS-08 |
+| Platform | Stock history, row-locked reservations, idempotent actions, state machines, RLS isolation, seeded demo data, health endpoint, deploy | OPS-01 to OPS-05, OPS-08 |
 
 ### After tonight (in this order)
 
@@ -48,7 +48,7 @@ Adding a product for a connected supplier works tonight. Inviting a brand-new su
 | 16:15 to 16:30 | Kickoff. You do the owner actions in section 4 while I scaffold. | Repo skeleton |
 | 16:30 to 17:45 | **Foundation.** Next.js 16 with strict TypeScript; tokens to Tailwind; core UI components; app shell for three roles; Supabase project; migrations for organisations, memberships, profiles, connections, audit log, state transitions, idempotency; RLS helpers; sign in and out; role routing; seed users | You can sign in as each demo account and see an empty shell |
 | 17:45 to 18:00 | **Checkpoint 1** | Go, or cut |
-| 18:00 to 19:30 | **Catalogue and ordering.** Products, inventory, ledger and functions; Availability; Order page; rule-based reader and AI reader; review; CartBar; `place_orders` with row locks and idempotency; buyer Orders and cancel; reservation and RLS tests | A buyer can place real orders that reserve stock |
+| 18:00 to 19:30 | **Catalogue and ordering.** Products, inventory, stock history and functions; Availability; Order page; rule-based reader and AI reader; review; CartBar; `place_orders` with row locks and idempotency; buyer Orders and cancel; reservation and RLS tests | A buyer can place real orders that reserve stock |
 | 19:30 to 20:00 | **Checkpoint 2** and fixes | Go, or cut |
 | 20:00 to 21:15 | **Supplier and delivery.** Supplier home, orders and every transition, inventory actions, stock history, activity, profile; buyer delivery checks and problems; supplier answers; buyer home To do and Ready for tomorrow | The full buyer-to-supplier loop works |
 | 21:15 to 22:00 | **Admin.** Home, attention view, disputes, orders, suppliers with suspend, users, operators, audit log; in-app notifications | Admin can oversee everything |
@@ -80,10 +80,10 @@ These are the only things that can block tonight.
 
 The GitHub CLI, Docker, the Supabase CLI and the Vercel CLI are not installed, and tonight's route avoids needing them.
 
-## 5. Reuse from `Samarthss05/ledger-outlet`
+## 5. Reuse from the reference repository
 
-The reference repository ("ReStock by Ledger", last commit 12 October 2026) is a different product built on a different stack:
-- a single shop owner's ledger, with no supplier or admin roles;
+The reference repository ("the reference app", last commit 12 October 2026) is a different product built on a different stack:
+- a single shop owner's records, with no supplier or admin roles;
 - Vite and Fastify rather than Next.js;
 - OpenAI called through `fetch` rather than Claude through the Anthropic SDK;
 - RLS policies that let the browser write directly.
@@ -102,9 +102,9 @@ The AI part is the most reusable piece. Its prompts, schemas and safety checks c
 | Versioned drafts (`version` checked on confirm, stale confirms rejected) | Stops a stale review being confirmed after another change | `place_orders` checks the draft version (BUY-22) | Tonight |
 | Its order tests (`tests/chat-order.test.ts`, `tests/whatsapp-order.test.ts`) | About 300 lines of cases | `src/domain/reader/*.test.ts` and the start of the evaluation set (AI-06) | Tonight |
 | `classify` intent router: regex fast paths, then the model | Tells an order from a question, "usual" and "repeat last order" | Ask routing (BUY-47 to BUY-49) | Stretch tonight, otherwise first after tonight |
-| Agent team plus `ledgerAgent` reads: account-scoped facts with IDs, an answer that must cite fact IDs, and an independent reviewer | Grounded answers with no invented numbers; off-topic guard | Ask answers, with reads through the buyer's own session (BUY-48, BUY-50). Simplified from five model calls to two (plan, then answer with citations) for speed | Stretch tonight, otherwise first after tonight |
+| Agent team plus its account agent reads: account-scoped facts with IDs, an answer that must cite fact IDs, and an independent reviewer | Grounded answers with no invented numbers; off-topic guard | Ask answers, with reads through the buyer's own session (BUY-48, BUY-50). Simplified from five model calls to two (plan, then answer with citations) for speed | Stretch tonight, otherwise first after tonight |
 | `invoiceDraft` schema and photo extraction (`server/liveAi.ts`) | Reads supplier, invoice number, date, lines and prices from a photo into an editable draft | `readInvoice` (BUY-32 to BUY-36, AI-07) | After tonight |
-| AI quota (`ledger_ai_usage`, 30 per account per hour) | Limits cost and abuse | `ai_usage` and rate limits (AI-05, OPS-07) | Tonight |
+| AI quota (its AI usage table, 30 per account per hour) | Limits cost and abuse | `ai_usage` and rate limits (AI-05, OPS-07) | Tonight |
 
 Adapting these pieces to Tradelink:
 - `itemId` matching becomes `productId` matching against `v_catalogue`.
@@ -124,7 +124,7 @@ Adapting these pieces to Tradelink:
 | Piece | Why |
 | --- | --- |
 | Data model and RLS | Built for a single owner per account. Tradelink needs buyer, supplier and platform organisations, trading connections and reservations, with writes only through database functions. |
-| UI and branding | ReStock brand. Tradelink must match its own approved prototype. |
+| UI and branding | The reference app's brand. Tradelink must match its own approved prototype. |
 | AI actions that change records | Tradelink's AI never writes; people confirm every change. |
 | WhatsApp webhook | Out of scope. |
 

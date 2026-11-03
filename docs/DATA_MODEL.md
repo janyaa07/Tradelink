@@ -16,7 +16,7 @@ erDiagram
   organisations ||--o{ invitations : "for"
   organisations ||--o{ products : "supplier owns"
   products ||--|| inventory_levels : has
-  products ||--o{ stock_movements : "ledger"
+  products ||--o{ stock_movements : "history"
   products ||--o{ price_changes : has
   organisations ||--o{ orders : "buyer places"
   organisations ||--o{ orders : "supplier fulfils"
@@ -230,7 +230,7 @@ stateDiagram-v2
 - `audit_log`, `stock_movements`, `price_changes`, `order_events` and `negotiation_messages` are append-only. `update`, `delete` and `truncate` are revoked from every role except the migration owner, and a `before update or delete` trigger raises an error. Rows are inserted only by `api` functions and `api.log_denied`.
 - A pgTAP test proves that the sum of `stock_movements` per product equals `inventory_levels`.
 - Retention (Q13 default):
-  - kept for 5 years: orders, invoices, issues, the audit log and the stock ledger;
+  - kept for 5 years: orders, invoices, issues, the audit log and the stock history;
   - deleted after 90 days: `ai_runs`, `ask_messages`, raw `order_drafts.source_text` and `service_checks`;
   - deleted after 7 days: `idempotency_keys`;
   - deleted after 1 day: `rate_limits`.
@@ -320,7 +320,7 @@ All in the `api` schema, declared `security definer` with `search_path = ''`. Fu
 - platform users: admin Hannah Lim and the operators Farid Ismail, Grace Chua and Vikram Menon;
 - the 13 products, with stock, reorder levels and aliases;
 - connections between each buyer and its suppliers;
-- orders ORD-1038 to ORD-1043, with matching reservations and ledger rows;
+- orders ORD-1038 to ORD-1043, with matching reservations and stock history rows;
 - issue ISS-301, invoice INV-301, the cooking oil price change and the usual items;
 - four weeks of earlier orders, so Insights shows real history.
 

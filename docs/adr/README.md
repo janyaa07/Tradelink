@@ -11,7 +11,7 @@ Any new dependency or service needs an ADR before it is used. To change a decisi
 | [0003](0003-supabase-platform.md) | Supabase for database, auth, storage and realtime | Proposed |
 | [0004](0004-writes-through-postgres-functions.md) | Writes go through Postgres functions; reads go through RLS | Proposed |
 | [0005](0005-tenancy-and-connections.md) | Organisation tenancy and trading connections | Proposed |
-| [0006](0006-inventory-ledger-and-reservations.md) | Inventory ledger and stock reservations | Proposed |
+| [0006](0006-inventory-history-and-reservations.md) | Inventory history and stock reservations | Proposed |
 | [0007](0007-state-machines.md) | Explicit state machines in the database and the domain layer | Proposed |
 | [0008](0008-claude-integration.md) | Claude behind a server-only AI module | Proposed |
 | [0009](0009-ask-assistant-tools.md) | Ask assistant with read-only, organisation-scoped tools | Proposed |
@@ -30,5 +30,5 @@ Any new dependency or service needs an ADR before it is used. To change a decisi
 | [0022](0022-environments-migrations-ci.md) | Environments, migrations and CI | Proposed |
 | [0023](0023-ask-with-grounded-facts.md) | Ask answers from grounded facts, not a tool runner | Accepted |
 | [0024](0024-self-sign-up-without-two-factor.md) | Self sign-up for buyers and suppliers; two-factor sign-in removed for now | Accepted |
-| [0025](0025-restock-data-model-beside-tradelink.md) | The Restock data model is built beside the Tradelink tables | Accepted |
+| [0025](0025-ai-data-model-beside-tradelink.md) | The Tradelink AI data model is built beside the Tradelink tables | Accepted |
 | [0026](0026-cards-jobs-and-pwa.md) | Cards from the database, jobs on pg_cron, and a PWA first | Accepted |

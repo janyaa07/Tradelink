@@ -19,7 +19,7 @@ export function toCartLine(line: DraftLine): CartLine {
   };
 }
 
-/** A line the assistant suggests for a catalogue product (usuals, restock plan, a priced product). */
+/** A line the assistant suggests for a catalogue product (usuals, reorder plan, a priced product). */
 export function productCartLine(productId: string, qty: number, sourceText: string, state: "suggested" | "manual"): CartLine {
   return { productId, qty, sourceText, options: [], state, kg: null, qtyAssumed: false };
 }

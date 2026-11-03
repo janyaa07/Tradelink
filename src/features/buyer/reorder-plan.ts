@@ -3,12 +3,12 @@ import { cache } from "react";
 import type { CatalogueItem } from "@/domain/catalogue";
 import { cutoffText } from "@/domain/cutoff";
 import { toCents, type Cents } from "@/domain/money";
-import { restockPlan, type RestockRow } from "@/domain/restock";
+import { reorderPlan, type ReorderRow } from "@/domain/reorder";
 import { getBuyerCatalogue, getBuyerSettings, getDeliveryTerms, getOnOrder, getSkippedToday, getUsualItems } from "./queries";
 
-export type PlanRow = RestockRow & { item: CatalogueItem };
+export type PlanRow = ReorderRow & { item: CatalogueItem };
 
-export type RestockPlanView = {
+export type ReorderPlanView = {
   rows: PlanRow[];
   totalCents: Cents;
   /** "{supplier}: Order by 16:00 for tomorrow", one per supplier in the plan. */
@@ -16,7 +16,7 @@ export type RestockPlanView = {
 };
 
 /** Ready for tomorrow for the buyer's business (BUY-08), from real usual items, orders and stock. */
-export const getRestockPlan = cache(async (orgId: string): Promise<RestockPlanView> => {
+export const getReorderPlan = cache(async (orgId: string): Promise<ReorderPlanView> => {
   const [settings, usuals, catalogue, onOrder, skipped] = await Promise.all([
     getBuyerSettings(orgId),
     getUsualItems(orgId),
@@ -26,7 +26,7 @@ export const getRestockPlan = cache(async (orgId: string): Promise<RestockPlanVi
   ]);
   const byId = new Map(catalogue.map((item) => [item.id, item]));
   const visible = usuals.filter((usual) => byId.has(usual.productId));
-  const plan = restockPlan(
+  const plan = reorderPlan(
     visible.map((usual) => ({
       productId: usual.productId,
       inShop: usual.inShop,

@@ -5,13 +5,13 @@ import { z } from "zod";
 import { callRpc } from "@/data/rpc";
 import { requireRole } from "@/data/session";
 import { createSupabaseServerClient } from "@/data/supabase/server";
-import { formatDaysLeft } from "@/domain/restock";
+import { formatDaysLeft } from "@/domain/reorder";
 import { rankProducts } from "@/domain/reader/rules";
 import { addLinesToDraft } from "@/features/ordering/draft-store";
 import type { ActionResult } from "@/lib/errors";
 import { orderNumber } from "@/ui/format";
 import { getBuyerCatalogue, getUsualItems } from "./queries";
-import { getRestockPlan } from "./restock-plan";
+import { getReorderPlan } from "./reorder-plan";
 
 const NOT_AVAILABLE: ActionResult<never> = { ok: false, error: "This record is not available." };
 
@@ -99,9 +99,9 @@ export async function orderRemainderAction(id: string): Promise<ActionResult<unk
 }
 
 /** "Add to cart" on Ready for tomorrow: the plan is worked out again on the server (BUY-08). */
-export async function loadRestockPlanAction(): Promise<ActionResult<unknown>> {
+export async function loadReorderPlanAction(): Promise<ActionResult<unknown>> {
   const session = await requireRole("buyer");
-  const plan = await getRestockPlan(session.orgId);
+  const plan = await getReorderPlan(session.orgId);
   if (plan.rows.length === 0) return { ok: false, error: "You have enough stock for the next few days." };
   return done(
     await addLinesToDraft(
@@ -117,9 +117,9 @@ export async function loadRestockPlanAction(): Promise<ActionResult<unknown>> {
 }
 
 /** "Not today": hides the current plan items until tomorrow (BUY-08). */
-export async function skipRestockPlanAction(): Promise<ActionResult<unknown>> {
+export async function skipReorderPlanAction(): Promise<ActionResult<unknown>> {
   const session = await requireRole("buyer");
-  const plan = await getRestockPlan(session.orgId);
+  const plan = await getReorderPlan(session.orgId);
   if (plan.rows.length === 0) return { ok: true, data: null };
   return done(await callRpc("skip_restock_today", { p_products: plan.rows.map((row) => row.productId) }));
 }

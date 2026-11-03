@@ -1,13 +1,13 @@
 import { plural } from "@/domain/catalogue";
 import { formatMoney } from "@/domain/money";
-import { formatDaysLeft } from "@/domain/restock";
+import { formatDaysLeft } from "@/domain/reorder";
 import { Panel } from "@/ui/Panel";
 import { ProductArt } from "@/ui/ProductArt";
 import { PlanActions } from "./PlanActions";
-import type { RestockPlanView } from "./restock-plan";
+import type { ReorderPlanView } from "./reorder-plan";
 
 /** Ready for tomorrow: usual items running low, with quantities for a week and cut-offs (BUY-08). */
-export function ReadyPanel({ plan }: { plan: RestockPlanView }) {
+export function ReadyPanel({ plan }: { plan: ReorderPlanView }) {
   const hasPlan = plan.rows.length > 0;
   return (
     <Panel soft title="Ready for tomorrow" action={hasPlan ? <b className="tabular-nums">{formatMoney(plan.totalCents)}</b> : undefined}>

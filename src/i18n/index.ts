@@ -5,7 +5,7 @@ import { zh } from "./zh";
 
 export type { Dictionary, MessageKey };
 
-/** The languages Restock speaks, matching `app_user.language` (docs/PLAN.md, section 6). */
+/** The languages Tradelink AI speaks, matching `app_user.language` (docs/PLAN.md, section 6). */
 export const LANGUAGES = ["en", "zh", "ms", "ta"] as const;
 export type Language = (typeof LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: Language = "en";

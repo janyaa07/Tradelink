@@ -90,20 +90,20 @@ describe("decideRoute: buyers and suppliers", () => {
   });
 });
 
-describe("decideRoute: signed in without an organisation (a Restock user)", () => {
+describe("decideRoute: signed in without an organisation (a Tradelink AI user)", () => {
   const orphan: RouteInput = { ...buyer, kind: null };
 
   it("allows Sign in instead of redirecting it to itself", () => {
     expect(decideRoute({ ...orphan, pathname: "/sign-in" })).toBe("allow");
   });
 
-  it("allows the Restock app and its APIs", () => {
+  it("allows the Tradelink AI app and its APIs", () => {
     expect(decideRoute({ ...orphan, pathname: "/r" })).toBe("allow");
     expect(decideRoute({ ...orphan, pathname: "/r/dev/cards" })).toBe("allow");
     expect(decideRoute({ ...orphan, pathname: "/api/cards/abc/act" })).toBe("allow");
   });
 
-  it("sends every other page to the Restock app", () => {
+  it("sends every other page to the Tradelink AI app", () => {
     expect(decideRoute({ ...orphan, pathname: "/buyer" })).toBe("/r");
     expect(decideRoute({ ...orphan, pathname: "/" })).toBe("/r");
     expect(decideRoute({ ...orphan, pathname: "/sign-up" })).toBe("/r");
@@ -114,12 +114,12 @@ describe("decideRoute: signed in without an organisation (a Restock user)", () =
   });
 });
 
-describe("decideRoute: Restock paths", () => {
-  it("lets Tradelink users open the Restock app too", () => {
+describe("decideRoute: Tradelink AI paths", () => {
+  it("lets Tradelink users open the Tradelink AI app too", () => {
     expect(decideRoute({ ...buyer, pathname: "/r" })).toBe("allow");
   });
 
-  it("keeps the Restock app behind sign-in but leaves the job runner open", () => {
+  it("keeps the Tradelink AI app behind sign-in but leaves the job runner open", () => {
     expect(decideRoute({ ...signedOut, pathname: "/r" })).toBe("/sign-in?next=%2Fr");
     expect(decideRoute({ ...signedOut, pathname: "/api/jobs/run" })).toBe("allow");
   });

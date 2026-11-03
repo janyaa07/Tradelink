@@ -14,7 +14,7 @@ import {
   priceText,
   readLineStatus,
   reliabilityText,
-  restockText,
+  reorderText,
   spendText,
   unitPriceLabel,
 } from "./replies";
@@ -51,8 +51,8 @@ describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
   it("counts deliveries and items in plain English", () => {
     expect(deliveriesText(1)).toBe("1 delivery on the way.");
     expect(deliveriesText(3)).toBe("3 deliveries on the way.");
-    expect(restockText(1)).toBe("1 item will run out soon.");
-    expect(restockText(4)).toBe("4 items will run out soon.");
+    expect(reorderText(1)).toBe("1 item will run out soon.");
+    expect(reorderText(4)).toBe("4 items will run out soon.");
   });
 
   it("states price per unit and the best supplier", () => {

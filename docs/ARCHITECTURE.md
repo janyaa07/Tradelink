@@ -9,7 +9,7 @@ Status: Phase 1 draft for review. Decisions referenced as D1 to D11 are in `docs
 - Replace WhatsApp ordering between small food businesses and their suppliers with one secure web app that matches the approved prototype.
 - Phone first: busy, standing up, one hand. A responsive PWA works on phone, tablet and laptop.
 - Permissions are enforced on the server and in Row Level Security. Each buyer and supplier organisation is fully isolated.
-- Stock is never oversold. Every stock change is in a ledger. Critical actions are idempotent.
+- Stock is never oversold. Every stock change is in the stock history. Critical actions are idempotent.
 - AI suggests and prepares; people confirm. AI never sends orders, changes stock, pays or changes bank details.
 - No payments. Tradelink checks invoices but never pays them (D6).
 - S$, Asia/Singapore, English (en-SG).
@@ -99,7 +99,7 @@ flowchart TB
 | --- | --- | --- | --- |
 | UI | `app/`, `src/ui/` | Routes, layouts, pages, design-system components, feature components | `src/features`, `src/domain` (types and pure helpers only) |
 | Feature services | `src/features/<feature>/` | Server actions, use-case functions, Zod input schemas, error-to-copy mapping | `src/domain`, `src/data`, `src/integrations`, `src/lib` |
-| Domain | `src/domain/` | Pure TypeScript: money, quantities, stock health, state machines, restock plan, rule-based order reader, invoice checks, attention rules, cut-off and delivery dates | nothing outside `src/domain` and `src/lib/time` |
+| Domain | `src/domain/` | Pure TypeScript: money, quantities, stock health, state machines, reorder plan, rule-based order reader, invoice checks, attention rules, cut-off and delivery dates | nothing outside `src/domain` and `src/lib/time` |
 | Data | `src/data/` | Supabase client factories (browser, server, admin), typed read queries, RPC wrappers, `database.types.ts` | `src/lib`, `src/domain` types |
 | Integrations | `src/integrations/` | `claude/` (ADR 0008), `email/` (Resend), `storage/` (signed URLs, upload checks) | `src/lib`, `src/domain` types |
 | Library | `src/lib/` | Env parsing (Zod), logger, errors, rate limit, idempotency keys, time zone helpers | nothing app-specific |
@@ -123,7 +123,7 @@ src/features/       ordering, review, deliveries, issues, invoices, credits, neg
                     inventory, fulfilment, invitations, team, notifications, insights, attention,
                     admin-records, system-status, settings, ask
 src/domain/         money, quantity, stock, order, issue, invoice, invitation, negotiation,
-                    restock, reader, attention, delivery-dates
+                    reorder, reader, attention, delivery-dates
 src/data/           clients, queries, rpc, database.types.ts
 src/integrations/   claude, email, storage
 src/lib/            env, logger, errors, rate-limit, idempotency, time
@@ -208,11 +208,11 @@ sequenceDiagram
 
 ### 4.3 Supplier fulfilment
 
-Accept (with a confirmed delivery date, D4), part accept, reject, mark out for delivery and mark delivered each call one function. It locks the order row, asserts the transition, adjusts reservations and the ledger, notifies the buyer and writes the audit log. Accepting an order with unconfirmed products first requires the supplier to confirm those products' stock and price; pending orders take the confirmed price, and a price rise waits for the buyer (Q10 default).
+Accept (with a confirmed delivery date, D4), part accept, reject, mark out for delivery and mark delivered each call one function. It locks the order row, asserts the transition, adjusts reservations and the stock history, notifies the buyer and writes the audit log. Accepting an order with unconfirmed products first requires the supplier to confirm those products' stock and price; pending orders take the confirmed price, and a price rise waits for the buyer (Q10 default).
 
 ### 4.4 Delivery check and problems
 
-All here, Report a problem and Not here yet each call one function. If the order is still Out for delivery, All here and Report a problem first move it to Delivered: on hand and reserved both go down, and a `delivered` ledger row is written. Then the check status is set, the buyer's shop counts are updated and the supplier is notified. A problem creates an issue, and its amount is the quantity times the line's order price.
+All here, Report a problem and Not here yet each call one function. If the order is still Out for delivery, All here and Report a problem first move it to Delivered: on hand and reserved both go down, and a `delivered` stock history row is written. Then the check status is set, the buyer's shop counts are updated and the supplier is notified. A problem creates an issue, and its amount is the quantity times the line's order price.
 
 ### 4.5 Invoice check
 

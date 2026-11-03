@@ -8,7 +8,7 @@ export type AskIntent =
   | { kind: "cart" }
   | { kind: "spend" }
   | { kind: "deliveries" }
-  | { kind: "restock" }
+  | { kind: "reorder" }
   | { kind: "usual" }
   | { kind: "reliability" }
   | { kind: "price"; query: string }
@@ -24,7 +24,7 @@ const PLACE_ORDER =
 const ADD = /\badd\b/;
 const SPEND = /\bspen[dt]|\bspending\b|\bbudget/;
 const DELIVERIES = /\barriv|\bdeliver|\bcoming\b|\bon the way\b/;
-const RESTOCK = /\brunning low\b|\bwhat should i (?:re)?order\b|\bneed to order\b|\bwhat do i need\b|\blow\b/;
+const REORDER = /\brunning low\b|\bwhat should i (?:re)?order\b|\bneed to order\b|\bwhat do i need\b|\blow\b/;
 const USUAL = /\busual\b|\breorder\b|\bsame as\b/;
 const RELIABILITY = /\breliab|\bon time\b|\bbest supplier\b|\blate\b/;
 const SUPPLIER = /\bsuppliers?\b/;
@@ -78,7 +78,7 @@ export function routeIntent(message: string): AskIntent {
     // "2 ctn eggs, deliver before 9am" is an order, not a delivery question.
     return isQuestion(text) || !QUANTITY.test(text) ? { kind: "deliveries" } : { kind: "none" };
   }
-  if (RESTOCK.test(text)) return { kind: "restock" };
+  if (REORDER.test(text)) return { kind: "reorder" };
   if (USUAL.test(text)) return { kind: "usual" };
   if (RELIABILITY.test(text)) return { kind: "reliability" };
   if (PRICE.test(text)) return { kind: "price", query: priceQuery(text) };

@@ -11,7 +11,7 @@ import { logger } from "@/lib/logger";
 import { renderCard } from "./render";
 import { devPagesEnabled, getMyShop, type MyShop } from "./shop";
 
-/** Kopi Corner's items in supabase/restock-mock-data.sql. */
+/** Kopi Corner's items in supabase/tradelink-ai-mock-data.sql. */
 const DEMO_ITEMS = {
   eggs: "00000000-0000-4000-e000-000000000001",
   oil: "00000000-0000-4000-e000-000000000009",

@@ -454,7 +454,7 @@ Refs: B6; ADR 0009.
 1. Asking about an order number shows that order's card, or "I cannot find that order on your account."
 2. Spend questions answer with this week's spend against budget and "Open Insights".
 3. Delivery questions list orders on the way, or "Nothing is on the way right now."
-4. "What should I order?" lists the restock plan with "Review and send", or "You have enough stock for the next few days."
+4. "What should I order?" lists the reorder plan with "Review and send", or "You have enough stock for the next few days."
 5. Price questions show price per unit, supplier, availability and "You last paid" when known, or "I could not find that product in the catalogue."
 6. Reliability questions name the connected supplier with the best on-time record and "See all suppliers".
 7. Asking for "my usual" or "same as last time" answers "I can load your usual items for you to review." with "Load my usual".
@@ -505,7 +505,7 @@ Refs: S2.
 
 ### SUP-07 Out for delivery and delivered (Must)
 1. Accepted orders show "Mark out for delivery"; out-for-delivery orders show "Mark delivered".
-2. Marking delivered removes the quantities from on hand and reserved and writes a "Delivered" ledger row per product.
+2. Marking delivered removes the quantities from on hand and reserved and writes a "Delivered" stock history row per product.
 3. Any other transition is refused with "You do not have access to do that." and logged as denied.
 
 ### SUP-08 Answer a below-minimum request (Must)
@@ -534,7 +534,7 @@ Refs: S3.
 
 ### SUP-12 Receive stock (Must)
 1. "Receive stock" opens an inline quantity field with "Add" and "Cancel"; whole numbers from 1 to 9999 only ("Enter a whole number between 1 and 9999.").
-2. On save, on hand increases, a "Received" ledger row is written and the toast says "Added {n} to {product}."
+2. On save, on hand increases, a "Received" stock history row is written and the toast says "Added {n} to {product}."
 
 ### SUP-13 Confirm a product a buyer added (Must)
 1. "Confirm stock" asks for quantity received, price and reorder level (default 5).
@@ -548,7 +548,7 @@ Refs: S3.
 ### SUP-15 Adjust stock (Should)
 1. "Adjust stock" takes a change (positive or negative), a reason (Damaged, Expired, Count correction) and an optional note.
 2. A change that would leave less on hand than reserved is refused with "This leaves less stock than is reserved for open orders."
-3. On save, an "Adjusted" ledger row is written and the toast says "Stock adjusted."
+3. On save, an "Adjusted" stock history row is written and the toast says "Stock adjusted."
 
 ### SUP-16 Stock history (Must)
 Refs: S4.
@@ -721,9 +721,9 @@ Refs: ADR 0010.
 
 ## 7. Platform qualities (OPS)
 
-### OPS-01 Inventory ledger (Must)
-1. Every change to on hand or reserved writes one ledger row in the same transaction.
-2. A database test replays the ledger and matches every balance; ledger rows cannot be changed or deleted.
+### OPS-01 Inventory history (Must)
+1. Every change to on hand or reserved writes one stock history row in the same transaction.
+2. A database test replays the stock history and matches every balance; stock history rows cannot be changed or deleted.
 
 ### OPS-02 No overselling (Must)
 1. 50 parallel checkouts for a product with 10 available reserve exactly 10 units in total; the rest fail with "Only {n} available. Reduce the quantity."
@@ -799,7 +799,7 @@ Refs: ADR 0010.
 | A12 Admin settings | ADM-19 |
 | Stock rules (6.1) | SUP-07, SUP-12, SUP-13, SUP-15, OPS-01, OPS-02 |
 | Ordering rules (6.2) | BUY-14 to BUY-22, AI-01 to AI-03 |
-| Restock plan (6.3) | BUY-08, BUY-46 |
+| Reorder plan (6.3) | BUY-08, BUY-46 |
 | Delivery checks (6.4) | BUY-29 to BUY-31 |
 | Invoice rules (6.5) | BUY-32 to BUY-36 |
 | Validation copy (6.8), toasts (6.9) | the stories quoting each message, SH-05 |

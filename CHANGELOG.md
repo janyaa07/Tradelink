@@ -82,7 +82,7 @@ All notable changes are listed here. The format follows Keep a Changelog, and ve
 - **Platform**:
   - Supabase schema with Row Level Security on every table.
   - Writes only through Postgres functions, with row locks and idempotency keys.
-  - Explicit state machines, an append-only stock ledger and audit log, and fictional demo data.
+  - Explicit state machines, an append-only stock history and audit log, and fictional demo data.
   - Health endpoint.
   - Opt-in concurrency test proving that reservations never oversell.
 - **Documentation**: Phase 0 discovery, Phase 1 architecture, data model, API, security, user stories, test plan, implementation plan, 22 ADRs, README and user guide.

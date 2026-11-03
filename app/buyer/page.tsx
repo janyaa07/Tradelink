@@ -5,7 +5,7 @@ import { ArrivingPanel } from "@/features/buyer/ArrivingPanel";
 import { MyUsualTile } from "@/features/buyer/MyUsualTile";
 import { getBuyerSettings, getDeliveriesToCheck, getWeekSpendCents } from "@/features/buyer/queries";
 import { ReadyPanel } from "@/features/buyer/ReadyPanel";
-import { getRestockPlan } from "@/features/buyer/restock-plan";
+import { getReorderPlan } from "@/features/buyer/reorder-plan";
 import { getTodos } from "@/features/buyer/todo-queries";
 import { greeting } from "@/ui/format";
 import { HomeHero } from "@/ui/HomeHero";
@@ -18,7 +18,7 @@ export default async function BuyerHomePage() {
   const session = await requireRole("buyer");
   const [todos, plan, deliveries, spentCents, settings] = await Promise.all([
     getTodos(session.orgId),
-    getRestockPlan(session.orgId),
+    getReorderPlan(session.orgId),
     getDeliveriesToCheck(session.orgId),
     getWeekSpendCents(session.orgId),
     getBuyerSettings(session.orgId),

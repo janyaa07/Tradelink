@@ -4,7 +4,7 @@ import type { SupplierRecord } from "@/domain/ask/supplier-record";
 import type { OrderCardData } from "@/domain/ask/types";
 import { plural, type CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, type Cents } from "@/domain/money";
-import { formatDaysLeft } from "@/domain/restock";
+import { formatDaysLeft } from "@/domain/reorder";
 import { formatDate, orderNumber } from "@/ui/format";
 import type { OrderStatus } from "@/ui/ProgressSteps";
 

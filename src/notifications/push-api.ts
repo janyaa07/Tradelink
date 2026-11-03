@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { callRpc } from "@/data/rpc";
 import { createSupabaseServerClient } from "@/data/supabase/server";
-import { RESTOCK_HOME } from "@/features/auth/routing";
+import { AI_HOME } from "@/features/auth/routing";
 import { pushSubscriptionSchema } from "./subscription";
 
 const subscribeSchema = z.object({
@@ -53,7 +53,7 @@ export async function handleSubscribe(request: Request): Promise<NextResponse> {
     p_app_version: parsed.data.appVersion,
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: statusFor(result.reason) });
-  revalidatePath(RESTOCK_HOME, "layout");
+  revalidatePath(AI_HOME, "layout");
   return NextResponse.json({ ok: true, deviceId: result.data, push: parsed.data.subscription !== null });
 }
 
@@ -65,6 +65,6 @@ export async function handleOpened(request: Request): Promise<NextResponse> {
 
   const result = await callRpc("rs_notification_opened", { p_id: parsed.data.notificationId });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: statusFor(result.reason) });
-  revalidatePath(RESTOCK_HOME, "layout");
+  revalidatePath(AI_HOME, "layout");
   return NextResponse.json({ ok: true });
 }

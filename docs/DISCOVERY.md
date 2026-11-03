@@ -238,7 +238,7 @@ Invalid or unauthorised transitions are refused and written to the audit log as 
 - Cut-off: "Order by {hh}:00 for tomorrow". After the cut-off: "Past cut-off, earliest delivery is the day after tomorrow". Default 16:00.
 - The order line price is fixed at order time.
 
-### 6.3 Ready for tomorrow (restock plan)
+### 6.3 Ready for tomorrow (reorder plan)
 - Only when "Suggest what to reorder" is on. Includes usual items where days left = (in shop + on open orders) ÷ use per day is below 3, not skipped today, and still in the catalogue.
 - Quantity = min(max(1, ⌈7 × use per day − in shop − on order⌉), max(1, available)). This covers about a week.
 - "Not today" skips the current plan items.
@@ -314,7 +314,7 @@ These need a decision or a small fix. None changes the approved design.
 14. **Admin "Low stock, See all" opens Suppliers**, which has no low-stock filter.
 15. **The More sheet has no Escape handling or focus trap**, and the bottom nav uses `warn` counts while the service grid uses `bad`.
 16. **There is no way to edit a business profile**, including the supplier's saved bank details that invoice checks rely on.
-17. **There is no stock adjustment** for write-offs or count corrections, so the ledger cannot fix mistakes.
+17. **There is no stock adjustment** for write-offs or count corrections, so the stock history cannot fix mistakes.
 18. **A buyer can move an order to Delivered** with All here while it is Out for delivery. This is intended in the prototype, so I will keep it unless you say otherwise.
 19. **There are no screens for multiple users per organisation**, or for admins to invite buyers.
 20. **Weekly budget, usage rates and "in your shop" counts are manual.** The prototype shows no derived values.
@@ -348,7 +348,7 @@ Questions 1 to 6 change the data model or security design, so I need answers bef
 8. **Usual items.** Should use per day and "in your shop" be calculated from order and delivery history (editable), or entered manually as in the prototype?
 9. **Supplier suspension.** When a supplier is suspended, should its products be hidden and its pending orders cancelled, held, or left to finish?
 10. **Buyer-added products.** When the supplier confirms the product, they confirm both price and stock. Should pending orders then reprice to the confirmed price (with the buyer told), or keep the estimate?
-11. **Stock adjustments.** Should suppliers be able to make a stock adjustment with a reason (damaged, count correction)? I recommend yes, logged in the ledger.
+11. **Stock adjustments.** Should suppliers be able to make a stock adjustment with a reason (damaged, count correction)? I recommend yes, logged in the stock history.
 12. **Accounts and cost.** Do you already have GitHub, Vercel, Supabase and Anthropic Console accounts, and on which plans? Vercel Hobby limits cron jobs to once a day, and free Supabase projects pause when idle. A Supabase and a Vercel connector are available in this session; I will confirm which organisation to use before creating anything. Do you have a domain name in mind?
 13. **Data retention.** How long should order texts, invoice files and AI logs be kept? Is there a privacy notice (PDPA) I should write against?
 14. **Ask for suppliers.** Ask is buyer-only in the prototype. Confirm that suppliers and admins do not need it.
@@ -376,7 +376,7 @@ Defaults for questions 7 to 14:
 - **Q8 Usual items:** use per day and "in your shop" are calculated from order and delivery history over the last 28 days, and the buyer can override them in Settings, as in the prototype.
 - **Q9 Suspension:** a suspended supplier's products are hidden from buyers and no new orders can be placed. Pending orders are cancelled, their stock is released and buyers are told. Accepted and out-for-delivery orders can still be completed. The supplier can sign in read-only.
 - **Q10 Buyer-added products:** when the supplier confirms stock, they also confirm the price. Pending orders take the confirmed price. If the price went up, the buyer gets a To do item to keep or cancel the line before the supplier can accept.
-- **Q11 Stock adjustments:** yes. Suppliers can adjust stock with a reason (Damaged, Expired, Count correction), and each adjustment is recorded in the ledger.
+- **Q11 Stock adjustments:** yes. Suppliers can adjust stock with a reason (Damaged, Expired, Count correction), and each adjustment is recorded in the stock history.
 - **Q13 Retention:** invoice files and order records are kept for 5 years. Raw order text and AI request logs are kept for 90 days, then only usage counts remain.
 - **Q14 Ask:** buyer only.
 

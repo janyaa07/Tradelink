@@ -255,10 +255,10 @@ cross join lateral (values
 
 select setval('public.order_number_seq', 1043);
 
--- Stock ledger ----------------------------------------------------------------------------------------
+-- Stock history ----------------------------------------------------------------------------------------
 -- Every order reserves its held lines when placed, and every delivered order takes them out of stock.
 -- Opening stock is received on 1 Oct 2026 in the amount that leaves on hand at the prototype figures,
--- so the ledger sums equal inventory_levels by construction.
+-- so the stock history sums equal inventory_levels by construction.
 
 create temporary table seed_moves (
   product_id uuid, type text, on_hand_change int, reserved_change int, reason text, order_id uuid, source text, actor uuid, at timestamptz

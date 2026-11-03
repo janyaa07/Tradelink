@@ -7,7 +7,7 @@ import { createSupabaseServerClient } from "@/data/supabase/server";
 import { logger } from "@/lib/logger";
 import { resolveOrigin } from "./origin";
 import { passwordUpdateError, validateNewPassword, type PasswordErrors } from "./password";
-import { EXPIRED_RESET_PATH, homeFor, RESET_PASSWORD_PATH, RESTOCK_HOME, safeNextPath, SIGN_IN_PATH } from "./routing";
+import { EXPIRED_RESET_PATH, homeFor, RESET_PASSWORD_PATH, AI_HOME, safeNextPath, SIGN_IN_PATH } from "./routing";
 import { readSignUpForm, SIGN_UP_MESSAGES, signUpMetadata, signUpOutcome, validateSignUp, welcomeToast, type SignUpFormState } from "./signUp";
 
 const signInSchema = z.object({
@@ -40,7 +40,7 @@ async function emailLinkOrigin(): Promise<string | null> {
 async function roleHome(supabase: SupabaseServerClient): Promise<string> {
   const { data: who } = await supabase.rpc("whoami");
   const kind = who && typeof who === "object" && "kind" in who ? String(who.kind) : null;
-  return homeFor(kind) ?? RESTOCK_HOME;
+  return homeFor(kind) ?? AI_HOME;
 }
 
 export type SignInState = { error: string | null; email: string };

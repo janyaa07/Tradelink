@@ -9,7 +9,7 @@
 --
 -- What it adds:
 --   Buyers     Lotus Leaf Vegetarian (Siti Rahim), Golden Crust Bakery (Wei Jie Lim)
---   Supplier   Island Spice Traders (Ravi Kumar), 8 products IS-3001 to IS-3008, opening stock on the ledger
+--   Supplier   Island Spice Traders (Ravi Kumar), 8 products IS-3001 to IS-3008, opening stock on the stock history
 --   Links      both new buyers to Harbour Dry Goods, Fresh Lane Produce and Island Spice Traders;
 --              Mei's Noodle House and Seaside Kopitiam to Island Spice Traders
 --   Usual items for both new buyers, 15 orders in every state (M01 to M15 below), 3 problems, 1 late report,
@@ -18,7 +18,7 @@
 -- Orders, issues, stock and notifications are created through the real write functions (place_orders,
 -- accept_order, part_accept_order, reject_order, mark_out_for_delivery, mark_delivered, confirm_all_here,
 -- report_problem, report_not_here, answer_issue, change_price) by impersonating the user in each transaction,
--- so reservations, the stock ledger, audit log and notifications stay consistent. Step 9 then backdates the
+-- so reservations, the stock history, audit log and notifications stay consistent. Step 9 then backdates the
 -- rows that may be updated (orders, issues, partial fulfilments, notifications) so the history spreads over
 -- the last 10 days. order_events, stock_movements, audit_log and price_changes are append-only, so their
 -- timestamps stay at the time this script ran.
@@ -140,7 +140,7 @@ insert into public.products (id, supplier_org_id, sku, name, unit, price, catego
 insert into public.inventory_levels (product_id)
 select p.id from public.products p where p.supplier_org_id = '00000000-0000-4000-8000-0000000000d3';
 
--- Opening stock through the ledger helper (as supplier_add_product does): one 'received' row per product with
+-- Opening stock through the stock history helper (as supplier_add_product does): one 'received' row per product with
 -- reason opening_stock, actor Ravi. Dried chillies (10) are all taken by M02 and M08, so they end out of
 -- stock; star anise (14) ends low after M13 reserves 6.
 select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-9000-0000000000d3', 'role', 'authenticated')::text, true);
@@ -445,8 +445,8 @@ commit;
 
 -- 10. Checks (read only) --------------------------------------------------------------------------------------------
 
--- Ledger invariant: expect no rows.
-select p.sku, i.on_hand, i.reserved, sum(m.on_hand_change) as ledger_on_hand, sum(m.reserved_change) as ledger_reserved
+-- Stock history invariant: expect no rows.
+select p.sku, i.on_hand, i.reserved, sum(m.on_hand_change) as history_on_hand, sum(m.reserved_change) as history_reserved
 from public.products p
 join public.inventory_levels i on i.product_id = p.id
 left join public.stock_movements m on m.product_id = p.id

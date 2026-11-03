@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { daysLeft, formatDaysLeft, restockPlan, restockQuantity, type RestockInput } from "./restock";
+import { daysLeft, formatDaysLeft, reorderPlan, reorderQuantity, type ReorderInput } from "./reorder";
 
-const item = (overrides: Partial<RestockInput> = {}): RestockInput => ({
+const item = (overrides: Partial<ReorderInput> = {}): ReorderInput => ({
   productId: "p1",
   inShop: 2,
   usePerDay: 1,
@@ -11,7 +11,7 @@ const item = (overrides: Partial<RestockInput> = {}): RestockInput => ({
   ...overrides,
 });
 
-describe("restock plan", () => {
+describe("reorder plan", () => {
   it("counts days left from shop stock and open orders", () => {
     expect(daysLeft(2, 1, 1.5)).toBe(2);
     expect(daysLeft(5, 0, 0)).toBe(Number.POSITIVE_INFINITY);
@@ -19,18 +19,18 @@ describe("restock plan", () => {
   });
 
   it("suggests enough for a week, less what is in the shop and on order", () => {
-    expect(restockQuantity(item({ inShop: 2, usePerDay: 1, onOrder: 1 }))).toBe(4);
-    expect(restockQuantity(item({ inShop: 0, usePerDay: 0.3 }))).toBe(3);
+    expect(reorderQuantity(item({ inShop: 2, usePerDay: 1, onOrder: 1 }))).toBe(4);
+    expect(reorderQuantity(item({ inShop: 0, usePerDay: 0.3 }))).toBe(3);
   });
 
   it("never suggests more than is available, but at least one", () => {
-    expect(restockQuantity(item({ inShop: 0, usePerDay: 2, available: 5 }))).toBe(5);
-    expect(restockQuantity(item({ inShop: 0, usePerDay: 2, available: 0 }))).toBe(1);
-    expect(restockQuantity(item({ inShop: 6.9, usePerDay: 1 }))).toBe(1);
+    expect(reorderQuantity(item({ inShop: 0, usePerDay: 2, available: 5 }))).toBe(5);
+    expect(reorderQuantity(item({ inShop: 0, usePerDay: 2, available: 0 }))).toBe(1);
+    expect(reorderQuantity(item({ inShop: 6.9, usePerDay: 1 }))).toBe(1);
   });
 
   it("lists only items with less than 3 days left that were not skipped today", () => {
-    const plan = restockPlan(
+    const plan = reorderPlan(
       [
         item({ productId: "low", inShop: 2 }),
         item({ productId: "enough", inShop: 3 }),
@@ -44,6 +44,6 @@ describe("restock plan", () => {
   });
 
   it("returns nothing when suggestions are off", () => {
-    expect(restockPlan([item({ inShop: 0 })], false)).toEqual([]);
+    expect(reorderPlan([item({ inShop: 0 })], false)).toEqual([]);
   });
 });

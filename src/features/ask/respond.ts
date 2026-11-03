@@ -14,7 +14,7 @@ import {
   otherShopsText,
   priceText,
   reliabilityText,
-  restockText,
+  reorderText,
   spendText,
   textReply,
   unitPriceLabel,
@@ -24,7 +24,7 @@ import type { AskReply, AskTurn } from "@/domain/ask/types";
 import type { CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, toCents } from "@/domain/money";
 import { readOrderWithRules } from "@/domain/reader/rules";
-import { formatDaysLeft } from "@/domain/restock";
+import { formatDaysLeft } from "@/domain/reorder";
 import { checkLines, subtotalsBySupplier } from "@/domain/review";
 import {
   getBuyerCatalogue,
@@ -32,7 +32,7 @@ import {
   getUsualItems,
   getWeekSpendCents,
 } from "@/features/buyer/queries";
-import { getRestockPlan } from "@/features/buyer/restock-plan";
+import { getReorderPlan } from "@/features/buyer/reorder-plan";
 import { readOrderAction } from "@/features/ordering/actions";
 import type { DraftLine } from "@/features/ordering/draft";
 import { readDraft } from "@/features/ordering/queries";
@@ -91,9 +91,9 @@ async function usualReply(orgId: string, copy: UsualCopy): Promise<AskReply> {
   };
 }
 
-/** "What should I reorder?": the restock plan with Add to cart, else the usual items. */
-async function restockReply(orgId: string): Promise<AskReply> {
-  const plan = await getRestockPlan(orgId);
+/** "What should I reorder?": the reorder plan with Add to cart, else the usual items. */
+async function reorderReply(orgId: string): Promise<AskReply> {
+  const plan = await getReorderPlan(orgId);
   if (plan.rows.length === 0) return usualReply(orgId, { text: ASK_COPY.enoughStockUsual, empty: ASK_COPY.enoughStock });
   const byId = new Map(plan.rows.map((row) => [row.productId, row.item]));
   const suggested = plan.rows.map((row) => {
@@ -101,7 +101,7 @@ async function restockReply(orgId: string): Promise<AskReply> {
     return { daysLeft, line: productCartLine(row.productId, row.qty, `Suggested, ${daysLeft}`, "suggested") };
   });
   return {
-    text: restockText(plan.rows.length),
+    text: reorderText(plan.rows.length),
     cards: [{ kind: "lines", rows: suggested.map(({ line, daysLeft }) => lineRow(line, byId, daysLeft)) }],
     actions: [{ kind: "add_to_cart", lines: suggested.map(({ line }) => line) }],
   };
@@ -202,7 +202,7 @@ async function openQuestionReply(
     getWeekSpendCents(session.orgId),
     getBuyerSettings(session.orgId),
     getOrders({ buyerOrgId: session.orgId, statuses: OPEN_STATUSES, limit: 10 }),
-    getRestockPlan(session.orgId),
+    getReorderPlan(session.orgId),
     getUsualItems(session.orgId),
     getSupplierRecords(session.orgId),
   ]);
@@ -255,8 +255,8 @@ export async function respondToAsk(session: Session, message: string, history: A
       return spendReply(session.orgId);
     case "deliveries":
       return deliveriesReply(session.orgId);
-    case "restock":
-      return restockReply(session.orgId);
+    case "reorder":
+      return reorderReply(session.orgId);
     case "usual":
       return usualReply(session.orgId, { text: ASK_COPY.usual, empty: ASK_COPY.noUsuals });
     case "reliability":

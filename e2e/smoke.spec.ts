@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// A fictional Tradelink AI owner from supabase/restock-mock-data.sql. Override for other environments.
+// A fictional Tradelink AI owner from supabase/tradelink-ai-mock-data.sql. Override for other environments.
 const OWNER_EMAIL = process.env.E2E_OWNER_EMAIL ?? "tan@kopicorner.example";
 const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD ?? "Tradelink-demo-2026";
 

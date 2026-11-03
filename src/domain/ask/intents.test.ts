@@ -3,7 +3,7 @@ import { isQuestion, priceQuery, readsAsOrder, routeIntent } from "./intents";
 
 describe("routeIntent: prototype suggestion chips", () => {
   it.each([
-    ["What should I order?", "restock"],
+    ["What should I order?", "reorder"],
     ["What's arriving today?", "deliveries"],
     ["How much did I spend this week?", "spend"],
     ["Which supplier is most reliable?", "reliability"],
@@ -55,12 +55,12 @@ describe("routeIntent: other intents", () => {
     ["What have I spent so far", "spend"],
     ["When is my delivery coming?", "deliveries"],
     ["anything on the way", "deliveries"],
-    ["What's running low?", "restock"],
-    ["which items are low", "restock"],
+    ["What's running low?", "reorder"],
+    ["which items are low", "reorder"],
     ["same as last time please", "usual"],
     ["load my usual", "usual"],
     ["Order my usual", "usual"],
-    ["What should I reorder?", "restock"],
+    ["What should I reorder?", "reorder"],
     ["Which supplier delivers on time?", "reliability"],
     ["who is always late", "reliability"],
     ["price of jasmine rice", "price"],

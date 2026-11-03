@@ -3,7 +3,7 @@
 Status: Accepted (3 November 2026).
 
 ## Context
-The Restock spec makes every agent output a typed, editable card. It needs about 40 timers (merge windows, cut-off reminders, chase ladders, arrival checks), and it assumes a native app with push. The owner chose a PWA now and a store app later.
+The Tradelink AI spec makes every agent output a typed, editable card. It needs about 40 timers (merge windows, cut-off reminders, chase ladders, arrival checks), and it assumes a native app with push. The owner chose a PWA now and a store app later.
 
 ## Decision
 - **Cards.**

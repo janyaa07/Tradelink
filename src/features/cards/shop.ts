@@ -11,7 +11,7 @@ const MembershipSchema = z.object({
 
 export type MyShop = { userId: string; shopId: string; shopName: string; role: "owner" | "staff" };
 
-/** The signed-in person's active Restock shop (RLS: their own membership rows), or null. */
+/** The signed-in person's active Tradelink AI shop (RLS: their own membership rows), or null. */
 export const getMyShop = cache(async (): Promise<MyShop | null> => {
   const supabase = await createSupabaseServerClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -29,7 +29,7 @@ export const getMyShop = cache(async (): Promise<MyShop | null> => {
   return { userId: auth.user.id, shopId: parsed.data.shop_id, shopName: parsed.data.shop?.name ?? "Your shop", role: parsed.data.role };
 });
 
-/** Restock's dev pages: never in production unless RESTOCK_DEV_PAGES=1. */
+/** Tradelink AI's dev pages: never in production unless TRADELINK_AI_DEV_PAGES=1. */
 export function devPagesEnabled(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.RESTOCK_DEV_PAGES === "1";
+  return process.env.NODE_ENV !== "production" || process.env.TRADELINK_AI_DEV_PAGES === "1";
 }

@@ -31,7 +31,7 @@ Status: Phase 1 draft for review. Tooling is in ADR 0018. `docs/TESTING.md` (Pha
 | Quantities | kg to pack rounding up, whole-number checks, plural units ("2 boxes", "1 bag") |
 | Stock | Available, health (`out`, `low`, `healthy`, `unconfirmed`), stock bar width |
 | State machines | Every allowed transition per role, every disallowed one; parity with the SQL seed |
-| Restock plan | Days left, 7-day quantity, capped by availability, skip handling, toggle off |
+| Reorder plan | Days left, 7-day quantity, capped by availability, skip handling, toggle off |
 | Cut-off and delivery dates | Before and after cut-off, delivery days, lead time, weekends, Asia/Singapore boundaries |
 | Rule-based reader | The prototype's sample message and 40 more cases: units, "x 2", "and", "&", filler words, aliases, ties, no match |
 | Draft checks | Unresolved lines, over-stock lines, blockers text, supplier split and totals |
@@ -52,7 +52,7 @@ For each table and view in DATA_MODEL section 5.2, the test signs in as: buyer A
 For every `api` function: success for the right role, `TL403` for every other role, `TL404` across organisations, `TL409` for each invalid state, idempotent replay, audit row written, notification and outbox rows written where specified.
 
 ### 4.3 Integrity
-- Ledger replay equals `inventory_levels` after a scripted sequence of every movement type.
+- Stock history replay equals `inventory_levels` after a scripted sequence of every movement type.
 - Append-only tables refuse update and delete for all roles.
 - Constraints: `reserved <= on_hand`, non-negative stock, price range, unique pending invitation, one open late issue per order.
 - State transition triggers refuse direct status updates outside the table.
@@ -61,7 +61,7 @@ For every `api` function: success for the right role, `TL403` for every other ro
 
 | Test | Expectation |
 | --- | --- |
-| 50 parallel checkouts of 1 to 3 units against 10 available | Total reserved is at most 10; every failure is `STOCK_SHORT`; ledger consistent |
+| 50 parallel checkouts of 1 to 3 units against 10 available | Total reserved is at most 10; every failure is `STOCK_SHORT`; stock history consistent |
 | Parallel checkouts touching the same two products in opposite order | No deadlock (ordered locking); all finish within 5 s |
 | Supplier adjusts stock down while buyers check out | Never `reserved > on_hand`; adjustment refused when it would break it |
 | Same idempotency key sent 10 times in parallel | One order set created; all calls return the same result |

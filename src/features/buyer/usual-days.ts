@@ -1,4 +1,4 @@
-import { daysLeft, formatDaysLeft } from "@/domain/restock";
+import { daysLeft, formatDaysLeft } from "@/domain/reorder";
 
 export type DaysTone = "good" | "warn" | "bad" | "plain";
 
