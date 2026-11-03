@@ -154,6 +154,7 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       return {
         data: {
           card: tag(card),
+          filled_in: card.form,
           similar_in_inventory: similar.map((item) => `${item.name} (${item.sku})`),
           note: "Nothing is added until they tap Add product on the card.",
         },
