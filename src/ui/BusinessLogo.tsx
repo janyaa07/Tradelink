@@ -137,7 +137,7 @@ export function BusinessLogo({ name, seedKey, size = 36 }: BusinessLogoProps) {
             fontWeight="800"
             fontSize="15"
             fill="#FFFFFF"
-            style={{ fontFamily: "var(--font-jakarta), sans-serif" }}
+            style={{ fontFamily: "var(--font-inter), sans-serif" }}
           >
             {initialsOf(name)}
           </text>

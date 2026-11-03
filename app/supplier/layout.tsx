@@ -22,8 +22,8 @@ export default async function SupplierLayout({ children }: { children: ReactNode
       counts={{
         "/supplier/orders": newOrders,
         "/supplier/inventory": catalogue.filter(needsReorder).length,
-        "/supplier/notifications": unread,
       }}
+      bellCount={unread}
     >
       {children}
     </RoleShell>

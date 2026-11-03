@@ -1,16 +1,12 @@
-/* Grid areas only. Phone: top bar, main, cart, bottom nav. From 760px: a 228px side rail beside main. */
+/* Grid areas only. Phone: top bar, main, bottom nav. From 760px: a full-width top bar over a 228px side rail beside main. */
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template: "top" auto "main" minmax(0, 1fr) "cart" auto "nav" auto / minmax(0, 1fr);
+  grid-template: "top" auto "main" minmax(0, 1fr) "nav" auto / minmax(0, 1fr);
 }
 
 .top {
   grid-area: top;
-}
-
-.home .top {
-  display: none;
 }
 
 .nav {
@@ -26,29 +22,13 @@
   overflow: auto;
 }
 
-.cart {
-  grid-area: cart;
-}
-
 @media (min-width: 760px) {
   .shell {
-    grid-template: "top main" auto "nav main" minmax(0, 1fr) "who cart" auto / 228px minmax(0, 1fr);
-  }
-
-  .home .top {
-    display: flex;
+    grid-template: "top top" auto "nav main" minmax(0, 1fr) "who main" auto / 228px minmax(0, 1fr);
   }
 
   .who {
     display: flex;
     grid-area: who;
-  }
-
-  .main {
-    grid-area: 1 / 2 / 4 / 3;
-  }
-
-  .hasCart .main {
-    grid-area: 1 / 2 / 3 / 3;
   }
 }

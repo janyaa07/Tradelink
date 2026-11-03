@@ -1,10 +1,8 @@
 import type { CatalogueItem } from "@/domain/catalogue";
 import { packsForWeight } from "@/domain/reader/rules";
-import { MAX_LINE_QTY, mergeLines } from "@/domain/review";
 import type { DraftLine } from "./draft";
-import type { UsualOption } from "./review-types";
 
-/** Pure edits to the review lines. Each returns a new array. */
+/** Pure edits to the cart lines. Each returns a new array. */
 
 function update(lines: DraftLine[], id: string, change: (line: DraftLine) => DraftLine): DraftLine[] {
   return lines.map((line) => (line.id === id ? change(line) : line));
@@ -39,39 +37,7 @@ export function markAdded(lines: DraftLine[], id: string, productId: string): Dr
   return update(lines, id, (line) => ({ ...line, productId, kg: null, options: [], state: "added" }));
 }
 
-/** "+" or "Add another product": one more of a product already in the order, or a new "Added by you" line. */
-export function addOne(lines: DraftLine[], productId: string, newId: string): DraftLine[] {
-  const existing = lines.find((line) => line.productId === productId);
-  if (existing) return update(lines, existing.id, (line) => ({ ...line, qty: Math.min(MAX_LINE_QTY, line.qty + 1) }));
-  return [
-    ...lines,
-    { id: newId, sourceText: "Added by you", productId, qty: 1, kg: null, qtyAssumed: false, options: [], state: "manual" },
-  ];
-}
-
-/** "Use my usual" and "Add all": every usual item still in the catalogue at its usual quantity (BUY-12). */
-export function addUsuals(
-  lines: DraftLine[],
-  usuals: UsualOption[],
-  catalogue: Map<string, CatalogueItem>,
-  newId: () => string,
-): DraftLine[] {
-  const incoming: DraftLine[] = usuals
-    .filter((usual) => catalogue.has(usual.productId))
-    .map((usual) => ({
-      id: newId(),
-      sourceText: "My usual",
-      productId: usual.productId,
-      qty: usual.usualQty,
-      kg: null,
-      qtyAssumed: false,
-      options: [],
-      state: "suggested",
-    }));
-  return mergeLines(lines, incoming);
-}
-
-/** Quantity of each product across the lines, for "{n} in order". */
+/** Quantity of each product across the lines, for "{n} in cart". */
 export function quantitiesByProduct(lines: DraftLine[]): Map<string, number> {
   const totals = new Map<string, number>();
   for (const line of lines) {

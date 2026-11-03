@@ -17,7 +17,9 @@ export type ReplyInput = { id: string; orderRef: string; supplierName: string; s
 export type TodoAction =
   | { kind: "price"; id: string }
   | { kind: "partial"; id: string; remainder: number }
-  | { kind: "reply"; id: string };
+  | { kind: "reply"; id: string }
+  /** A promised credit: the buyer marks it received once it arrives. */
+  | { kind: "credit"; id: string };
 
 export type Todo = { key: string; tone: TodoTone; title: string; detail: string; action: TodoAction };
 
@@ -75,7 +77,7 @@ function replyTodo(reply: ReplyInput): Todo | null {
     tone: reply.status === "disputed" ? "bad" : "good",
     title: `Reply on ${reply.orderRef}`,
     detail,
-    action: { kind: "reply", id: reply.id },
+    action: reply.status === "credit_promised" ? { kind: "credit", id: reply.id } : { kind: "reply", id: reply.id },
   };
 }
 

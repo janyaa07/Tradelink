@@ -35,7 +35,7 @@ const base: FactSources = {
 describe("buildFacts", () => {
   it("always states the business, this week's spend and empty sections", () => {
     expect(buildFacts(base)).toEqual([
-      { id: "F1", text: "Business: Mei's Noodle House. Ask can only see this business's orders and prices." },
+      { id: "F1", text: "Business: Mei's Noodle House. Tradelink Assistant can only see this business's orders and prices." },
       {
         id: "F2",
         text: "Spend this week (since Monday, Singapore time): S$612.50 of a S$900.00 weekly budget, S$287.50 left.",
@@ -66,7 +66,7 @@ describe("buildFacts", () => {
     }).map((fact) => fact.text);
 
     expect(facts).toEqual([
-      "Business: Mei's Noodle House. Ask can only see this business's orders and prices.",
+      "Business: Mei's Noodle House. Tradelink Assistant can only see this business's orders and prices.",
       "Spend this week (since Monday, Singapore time): S$950.00 of a S$900.00 weekly budget, S$50.00 over budget.",
       "Open order ORD-1044 from Harbour Dry Goods: Out for delivery, delivery Wed 4 Nov, total S$120.00. Items: 2 × Jasmine rice 5kg.",
       "Running low: Fresh eggs, 1.5 days left; suggested order 3 cartons.",

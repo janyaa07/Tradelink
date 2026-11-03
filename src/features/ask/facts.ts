@@ -60,7 +60,7 @@ function supplierFact(record: SupplierRecord): string {
 /** Read-only facts about the buyer's own business, numbered F1, F2 and so on, for an open question. */
 export function buildFacts(sources: FactSources): Fact[] {
   const texts = [
-    `Business: ${sources.businessName}. Ask can only see this business's orders and prices.`,
+    `Business: ${sources.businessName}. Tradelink Assistant can only see this business's orders and prices.`,
     spendFact(sources.spentCents, sources.budgetCents),
   ];
   if (sources.openOrders.length === 0) texts.push("Open orders: none.");

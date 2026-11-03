@@ -48,6 +48,14 @@ describe("to do", () => {
     expect(todos[2]?.detail).toBe("Harbour Dry Goods will credit S$8.40.");
   });
 
+  it("asks the buyer to mark a promised credit received, and only says OK to other replies", () => {
+    const todos = buildTodos({ priceChanges: [], partials: [], replies: [credit, dispute] }, true);
+    expect(todos.map((todo) => todo.action)).toEqual([
+      { kind: "reply", id: "i1" },
+      { kind: "credit", id: "i2" },
+    ]);
+  });
+
   it("has no reply item for open or received issues", () => {
     expect(replyText("open", "X", "1.00")).toBeNull();
     expect(replyText("credit_received", "X", "1.00")).toBeNull();

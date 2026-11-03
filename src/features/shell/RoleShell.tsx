@@ -2,8 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { signOut } from "@/features/auth/actions";
 import { AppShell } from "@/ui/shell/AppShell";
-import type { CartSummary, ShellRole } from "@/ui/shell/types";
+import type { ShellRole } from "@/ui/shell/types";
 import { NAV, activeHrefFor } from "./nav";
 
 type Props = {
@@ -12,16 +13,18 @@ type Props = {
   orgName: string;
   /** Counts keyed by nav href, for example { "/admin/attention": 4 }. */
   counts?: Record<string, number>;
-  cart?: CartSummary | null;
+  /** The number on the bell. For buyers: unread notifications plus alerts that need action. */
+  bellCount: number;
+  /** Buyers only: the number of lines in the cart. */
+  cartCount?: number;
   children: ReactNode;
 };
 
-/** Wires the app shell to the current route: active tab, home layout and the cart bar. */
-export function RoleShell({ role, userName, orgName, counts = {}, cart, children }: Props) {
+/** Wires the app shell to the current route: active tab, home layout, the bell, the cart and sign out. */
+export function RoleShell({ role, userName, orgName, counts = {}, bellCount, cartCount, children }: Props) {
   const pathname = usePathname();
   const home = NAV[role][0]?.href ?? "/";
   const navItems = NAV[role].map((item) => ({ ...item, count: counts[item.href] || undefined }));
-  const onReview = pathname.startsWith("/buyer/order");
   return (
     <AppShell
       role={role}
@@ -29,8 +32,11 @@ export function RoleShell({ role, userName, orgName, counts = {}, cart, children
       orgName={orgName}
       navItems={navItems}
       activeHref={activeHrefFor(role, pathname)}
+      pathname={pathname}
       isHome={pathname === home}
-      cart={onReview ? null : cart}
+      bell={{ href: `/${role}/notifications`, count: bellCount }}
+      cart={role === "buyer" ? { href: "/buyer/cart", count: cartCount ?? 0 } : null}
+      signOutAction={signOut}
     >
       {children}
     </AppShell>

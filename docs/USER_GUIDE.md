@@ -41,22 +41,18 @@ Two-factor sign-in is switched off for now (owner decision, 3 November 2026).
 
 ## Buyer walkthrough (Mei's Noodle House)
 
-1. **Sign in** as Mei. Home shows what to do first:
-   - **To do**: price changes, part deliveries and replies to problems.
-   - **Ready for tomorrow**: usual items that will run out within 3 days.
-   - **Arriving and to check**.
-2. **Order**: type an order the way you would text a supplier, for example `2 ctn eggs, 10kg jasmine rice, oil x 2`, and tap **Read my order**. You can also tap your usual items, or add items by hand.
-3. **Review**: every line shows what Tradelink understood:
-   - **Matched**: the product is clear.
-   - **Check this**: pick the right product.
-   - **Not in catalogue**: choose a product, add it to the catalogue, or remove the line.
+The top bar always shows the bell (alerts), the cart and your logo. Tap your logo to sign out.
 
-   Fix any lines with too much quantity, then check the split by supplier and the cut-off times. Nothing is sent until you tap **Confirm and reserve stock**.
-4. **Orders**: track each order. When a delivery comes, tap **All here**, **Report a problem** or **Not here yet**.
-5. **Ask**: ask about prices, deliveries, spending or which supplier is most reliable, or type an order. Ask only sees your own business, and an order typed there goes to review; Ask never sends it.
-6. **Insights**: weekly spend against your budget, spend by supplier, each supplier's on-time record, and price changes on your usual items.
-7. **Availability**: browse and search your suppliers' products.
-8. **Settings**: set the weekly budget, the alerts and your usual items.
+1. **Home** shows this week's spend, budget left, deliveries to check and alerts, then:
+   - **Ready for tomorrow**: usual items running low, with **Add to cart**.
+   - **Arriving**: deliveries on the way.
+2. **Assistant** (or tap "What do you need to order?" on Home): type an order the way you would text a supplier, for example `2 ctn eggs and 3 tins coconut milk tmr`. You can also ask about prices, deliveries, spending or suppliers. The assistant shows what it read, and **Add to cart** puts the lines in your cart. It never places an order itself.
+3. **Products**: browse products with pictures. **Add to cart** turns into a quantity stepper, and the cart icon updates.
+4. **Cart**: lines are grouped by supplier, with cut-off times and the total. Fix any line marked **Check this** or **Not in catalogue**, adjust quantities, then tap **Place order**. Stock is reserved at that moment, one order per supplier.
+5. **Orders**: find orders with the filters (Active, To check, Delivered, Problems, Cancelled) or search. Open an order to tap **All here**, **Report a problem**, **Not here yet** or **Cancel order**, and to follow any problem and the supplier's answer.
+6. **Alerts** (the bell): things that need you, such as price changes, part deliveries, replies to problems and credits, plus your notifications.
+7. **Insights**: spend against budget, week on week, spend by supplier, supplier on-time ratings and price changes.
+8. **Settings**: under **App settings**, your account and alerts. Under **Shop settings**, your weekly budget and usual items.
 
 The live app is at https://tradelink-nine.vercel.app.
 

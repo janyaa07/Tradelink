@@ -2,17 +2,17 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/ui/Button";
-import { FieldGrid, SelectField, TextField } from "@/ui/Field";
+import { SelectField, TextField } from "@/ui/Field";
 import { FormError } from "@/ui/FormError";
-import { Panel } from "@/ui/Panel";
 import { useToast } from "@/ui/Toast";
 import { setUsualItemAction } from "./settings-actions";
 
 type Option = { id: string; label: string };
 
-/** Adds any product the buyer can see as a usual item (BUY-46). */
+/** "Add a usual item": opens a short form for any product the buyer can see (BUY-46). */
 export function AddUsualForm({ options }: { options: Option[] }) {
   const { show } = useToast();
+  const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
   const [usualQty, setUsualQty] = useState("1");
   const [usePerDay, setUsePerDay] = useState("1");
@@ -40,32 +40,55 @@ export function AddUsualForm({ options }: { options: Option[] }) {
       const name = options.find((option) => option.id === productId)?.label ?? "Product";
       setProductId("");
       setError(null);
+      setOpen(false);
       show(`${name} added to your usual items.`);
     });
   };
 
   if (options.length === 0) return null;
+  if (!open) {
+    return (
+      <Button aria-expanded={false} onClick={() => setOpen(true)} className="self-start">
+        Add a usual item
+      </Button>
+    );
+  }
   return (
-    <Panel title="Add a usual item">
-      <form onSubmit={submit} className="flex flex-col gap-2.5" noValidate>
-        <FieldGrid>
-          <SelectField label="Product" value={productId} onChange={(event) => setProductId(event.currentTarget.value)}>
-            <option value="">Choose a product</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <TextField label="Usual order" type="number" min="1" step="1" value={usualQty} onChange={(event) => setUsualQty(event.currentTarget.value)} />
-          <TextField label="Use per day" type="number" min="0" step="any" value={usePerDay} onChange={(event) => setUsePerDay(event.currentTarget.value)} />
-          <TextField label="In your shop" type="number" min="0" step="any" value={inShop} onChange={(event) => setInShop(event.currentTarget.value)} />
-        </FieldGrid>
-        <FormError>{error}</FormError>
-        <Button type="submit" variant="primary" className="self-start" disabled={busy}>
+    <form
+      onSubmit={submit}
+      noValidate
+      aria-label="Add a usual item"
+      className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3.5 shadow-card"
+    >
+      <h3 className="font-semibold">Add a usual item</h3>
+      <SelectField label="Product" value={productId} onChange={(event) => setProductId(event.currentTarget.value)}>
+        <option value="">Choose a product</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </SelectField>
+      <div className="grid grid-cols-3 gap-2">
+        <TextField label="Usual order" type="number" min="1" step="1" value={usualQty} onChange={(event) => setUsualQty(event.currentTarget.value)} />
+        <TextField label="In your shop" type="number" min="0" step="any" value={inShop} onChange={(event) => setInShop(event.currentTarget.value)} />
+        <TextField label="Use per day" type="number" min="0" step="any" value={usePerDay} onChange={(event) => setUsePerDay(event.currentTarget.value)} />
+      </div>
+      <FormError>{error}</FormError>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="primary" disabled={busy}>
           Add usual item
         </Button>
-      </form>
-    </Panel>
+        <Button
+          disabled={busy}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }

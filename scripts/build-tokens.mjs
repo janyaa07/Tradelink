@@ -38,9 +38,9 @@ ${shadow("dark")}
 ${themeColors}
 ${themeRadius}
   --shadow-card: var(--tl-shadow-card);
-  --font-sans: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
-  --font-brand: var(--font-sora), var(--font-jakarta), sans-serif;
+  --font-brand: var(--font-sora), var(--font-inter), sans-serif;
 }
 `;
 

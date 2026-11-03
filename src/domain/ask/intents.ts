@@ -1,5 +1,5 @@
 /**
- * Deterministic intent router for Ask (BUY-48, BUY-50.1). Ports the prototype's reply() rules,
+ * Deterministic intent router for Tradelink Assistant (BUY-48, BUY-50.1). Ports the prototype's reply() rules,
  * checked in the same order, so common questions never need the model.
  */
 export type AskIntent =
@@ -18,7 +18,7 @@ const OTHER_SHOPS =
 const ORDER_NUMBER = /\bord(?:er)?\s*(?:-|#|no\.?|number)\s*#?\s*(\d{1,12})\b|\bord\s*(\d{1,12})\b/;
 const SPEND = /\bspen[dt]|\bspending\b|\bbudget/;
 const DELIVERIES = /\barriv|\bdeliver|\bcoming\b|\bon the way\b/;
-const RESTOCK = /\brunning low\b|\bwhat should i order\b|\bneed to order\b|\bwhat do i need\b|\blow\b/;
+const RESTOCK = /\brunning low\b|\bwhat should i (?:re)?order\b|\bneed to order\b|\bwhat do i need\b|\blow\b/;
 const USUAL = /\busual\b|\breorder\b|\bsame as\b/;
 const RELIABILITY = /\breliab|\bon time\b|\bbest supplier\b|\blate\b/;
 const SUPPLIER = /\bsuppliers?\b/;

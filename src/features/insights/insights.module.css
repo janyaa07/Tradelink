@@ -1,0 +1,75 @@
+/*
+ * Chart colours for the Insights dashboard. Status colours (good, warn, bad) come from the design
+ * tokens; these are the chart-only roles. The categorical order is the validated default from the
+ * data-viz method, checked against Tradelink's surfaces (#FFFFFF light, #1B201E dark): every adjacent
+ * pair clears the colour-blind separation target in both modes. Three light slots sit below 3:1 on
+ * white, so every chart carries visible labels and a table.
+ */
+.viz {
+  --viz-1: #2a78d6; /* blue */
+  --viz-2: #eb6834; /* orange */
+  --viz-3: #1baf7a; /* aqua */
+  --viz-4: #eda100; /* yellow */
+  --viz-5: #e87ba4; /* magenta */
+  --viz-6: #008300; /* green */
+  --viz-7: #6250d6; /* violet */
+  --viz-8: #e34948; /* red */
+  --viz-other: #a9aaa4;
+
+  /* Weekly spend: one series, this week strong and earlier weeks a lighter step of the same hue. */
+  --viz-bar: #2a78d6;
+  --viz-bar-past: #86b6ef;
+  --viz-over: var(--bad);
+  --viz-over-past: #e5a3a2;
+  --viz-budget: var(--ink);
+  --viz-grid: var(--line);
+  --viz-gap: var(--surface);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .viz {
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-3: #199e70;
+    --viz-4: #c98500;
+    --viz-5: #d55181;
+    --viz-6: #008300;
+    --viz-7: #9085e9;
+    --viz-8: #e66767;
+    --viz-other: #6b6c67;
+    --viz-bar: #3987e5;
+    --viz-bar-past: #1c5cab;
+    --viz-over-past: #8a3a37;
+  }
+}
+
+:root[data-theme="dark"] .viz {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-7: #9085e9;
+  --viz-8: #e66767;
+  --viz-other: #6b6c67;
+  --viz-bar: #3987e5;
+  --viz-bar-past: #1c5cab;
+  --viz-over-past: #8a3a37;
+}
+
+/* Chart marks keep their colours in forced-colours mode, set below to system colours. */
+.mark {
+  forced-color-adjust: none;
+}
+
+/* Windows high contrast: keep the marks visible with system colours. */
+@media (forced-colors: active) {
+  .viz {
+    --viz-bar: CanvasText;
+    --viz-bar-past: GrayText;
+    --viz-over: Highlight;
+    --viz-over-past: Highlight;
+    --viz-budget: CanvasText;
+  }
+}

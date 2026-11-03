@@ -26,26 +26,26 @@
   body {
     background: var(--bg);
     color: var(--ink);
-    font-family: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
+    font-family: var(--font-sans);
     font-size: 15px;
-    line-height: 1.45;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   h1 {
-    font-size: 1.6rem;
-    font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.022em;
     text-wrap: balance;
   }
 
   h2 {
-    font-size: 1.08rem;
-    font-weight: 700;
-    line-height: 1.25;
-    letter-spacing: -0.01em;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.011em;
     text-wrap: balance;
   }
 

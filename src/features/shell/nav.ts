@@ -1,15 +1,16 @@
 import type { NavItem, ShellRole } from "@/ui/shell/types";
 
-/** Navigation for each role, in prototype order. The first four show as bottom tabs on phone. */
+/**
+ * Navigation for each role. The first four show as bottom tabs on phone, the rest under More.
+ * Alerts are reached from the bell in the top bar, so buyers and suppliers have no Alerts item.
+ */
 export const NAV: Record<ShellRole, NavItem[]> = {
   buyer: [
     { href: "/buyer", label: "Home", icon: "home" },
-    { href: "/buyer/order", label: "Order", icon: "order" },
-    { href: "/buyer/ask", label: "Ask", icon: "chat" },
+    { href: "/buyer/assistant", label: "Assistant", icon: "chat" },
     { href: "/buyer/orders", label: "Orders", icon: "list" },
+    { href: "/buyer/products", label: "Products", icon: "box" },
     { href: "/buyer/insights", label: "Insights", icon: "trend" },
-    { href: "/buyer/availability", label: "Availability", icon: "stock" },
-    { href: "/buyer/notifications", label: "Alerts", icon: "bell" },
     { href: "/buyer/settings", label: "Settings", icon: "gear" },
   ],
   supplier: [
@@ -18,7 +19,6 @@ export const NAV: Record<ShellRole, NavItem[]> = {
     { href: "/supplier/inventory", label: "Inventory", icon: "stock" },
     { href: "/supplier/activity", label: "Activity", icon: "pulse" },
     { href: "/supplier/stock-history", label: "Stock history", icon: "history" },
-    { href: "/supplier/notifications", label: "Alerts", icon: "bell" },
     { href: "/supplier/settings", label: "Settings", icon: "gear" },
   ],
   admin: [
@@ -34,8 +34,13 @@ export const NAV: Record<ShellRole, NavItem[]> = {
   ],
 };
 
-/** The nav item a path belongs to: the longest matching href. */
+/**
+ * The nav item a path belongs to: the longest matching href. Home matches only itself, so pages
+ * outside the nav, such as the cart or alerts, highlight nothing ("").
+ */
 export function activeHrefFor(role: ShellRole, pathname: string): string {
-  const matches = NAV[role].filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-  return matches.sort((a, b) => b.href.length - a.href.length)[0]?.href ?? NAV[role][0]?.href ?? "/";
+  const [home, ...sections] = NAV[role];
+  if (home && pathname === home.href) return home.href;
+  const matches = sections.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  return matches.sort((a, b) => b.href.length - a.href.length)[0]?.href ?? "";
 }

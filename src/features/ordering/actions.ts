@@ -16,7 +16,7 @@ const READ_LIMIT_PER_HOUR = 30;
 
 export type ReadOrderData = { lines: DraftLine[]; readBy: "ai" | "rules"; requestedDeliveryDate: string | null };
 
-/** Reads a typed order into review lines. Nothing is sent to a supplier (BUY-10, BUY-11). */
+/** Reads a typed order into cart lines for the assistant. Nothing is sent to a supplier (BUY-10, BUY-11). */
 export async function readOrderAction(text: string): Promise<ActionResult<ReadOrderData>> {
   await requireRole("buyer");
   const parsed = z.string().trim().min(1).max(4000).safeParse(text);
@@ -68,7 +68,7 @@ const placeSchema = z.object({
 
 export type PlacedOrders = { orders: { id: string; number: number; supplierName: string }[] };
 
-/** Confirms the review: one order per supplier, stock reserved in one transaction (BUY-22). */
+/** Place order from the cart: one order per supplier, stock reserved in one transaction (BUY-22). */
 export async function placeOrdersAction(input: z.infer<typeof placeSchema>): Promise<ActionResult<PlacedOrders>> {
   await requireRole("buyer");
   const parsed = placeSchema.safeParse(input);

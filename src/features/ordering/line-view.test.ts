@@ -55,29 +55,39 @@ function context(overrides: Partial<LineContext> = {}): LineContext {
   };
 }
 
-describe("review line", () => {
-  it("shows quantity, total, stock, supplier and the kg conversion", () => {
+describe("cart line", () => {
+  it("shows the unit price, the line total and the kg conversion, with no pill for a matched line", () => {
     const view = lineView(line(), context());
-    expect(view.pill).toEqual({ label: "Matched", tone: "good" });
-    expect(view.details.join(" · ")).toBe("2 bags · S$24.80 · 8 available · Harbour Dry Goods · 10kg rounded to full bags");
+    expect(view.attention).toBeNull();
+    expect(view.unitPrice).toBe("S$12.40 per bag");
+    expect(view.totalCents).toBe(2480);
+    expect(view.notes).toEqual(["10kg rounded to full bags"]);
   });
 
-  it("explains lines without a product", () => {
+  it("explains lines without a product and flags them for attention", () => {
     expect(lineView(line({ productId: null, state: "check" }), context())).toMatchObject({
+      attention: { label: "Check this", tone: "warn" },
       border: "warn",
       message: "More than one product fits. Choose the right one.",
+      totalCents: null,
       canAddToCatalogue: false,
     });
     expect(lineView(line({ productId: null, state: "not_found" }), context())).toMatchObject({
       border: "bad",
-      pill: { label: "Not in catalogue", tone: "bad" },
+      attention: { label: "Not in catalogue", tone: "bad" },
       canAddToCatalogue: true,
     });
+  });
+
+  it("keeps Check this on a line whose product is a guess", () => {
+    expect(lineView(line({ state: "check" }), context()).attention).toEqual({ label: "Check this", tone: "warn" });
+    expect(lineView(line({ state: "suggested" }), context()).attention).toBeNull();
   });
 
   it("blocks too much quantity and offers a substitute with stock", () => {
     const view = lineView(line({ qty: 20, kg: null }), context({ over: new Set([RICE]) }));
     expect(view.message).toBe("Only 8 available. Reduce the quantity.");
+    expect(view.border).toBe("bad");
     expect(view.substitute?.id).toBe(RICE_2);
   });
 
@@ -87,13 +97,12 @@ describe("review line", () => {
       line({ kg: null, qtyAssumed: true, state: "added" }),
       context({ byId: new Map([[RICE, pending]]), invitedSuppliers: new Set(["s1"]) }),
     );
-    expect(view.details.join(" · ")).toBe(
-      "2 bags · S$24.80 estimated · stock to be confirmed · Harbour Dry Goods · waits for supplier to accept invitation · quantity assumed",
-    );
+    expect(view.estimated).toBe(true);
+    expect(view.notes).toEqual(["Stock to be confirmed", "Waits for the supplier to accept your invitation", "Quantity assumed"]);
   });
 
   it("warns when the price is more than 2% above the last price paid", () => {
-    expect(lineView(line(), context({ lastPaid: new Map([[RICE, "11.90"]]) })).lastPaidNote).toBe("you last paid S$11.90");
+    expect(lineView(line(), context({ lastPaid: new Map([[RICE, "11.90"]]) })).lastPaidNote).toBe("You last paid S$11.90");
     expect(lineView(line(), context({ lastPaid: new Map([[RICE, "12.30"]]) })).lastPaidNote).toBeNull();
   });
 });

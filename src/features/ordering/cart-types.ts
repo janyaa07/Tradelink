@@ -4,10 +4,11 @@ import type { Draft } from "./draft";
 /** A connected supplier the buyer can order from. */
 export type SupplierOption = { id: string; name: string; status: "active" | "invited" };
 
-export type UsualOption = { productId: string; usualQty: number; lastPaid: string | null };
+/** What the buyer last paid for a usual item, for the price warning (BUY-17). */
+export type UsualOption = { productId: string; lastPaid: string | null };
 
-/** Everything the Order page needs, read on the server through the buyer's own session. */
-export type OrderPageData = {
+/** Everything the cart needs, read on the server through the buyer's own session. */
+export type CartPageData = {
   draft: Draft;
   catalogue: CatalogueItem[];
   usuals: UsualOption[];

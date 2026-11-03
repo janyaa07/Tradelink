@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
+import { IBM_Plex_Mono, Inter, Sora } from "next/font/google";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/ui/Toast";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-jakarta",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -55,7 +55,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html
       lang="en"
       data-theme={theme}
-      className={`${jakarta.variable} ${plexMono.variable} ${sora.variable}`}
+      className={`${inter.variable} ${plexMono.variable} ${sora.variable}`}
       suppressHydrationWarning
     >
       <body>

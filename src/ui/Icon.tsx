@@ -102,6 +102,19 @@ const ICONS = {
     </>
   ),
   flag: <path d="M5 21V4h13l-3 4.5L18 13H5" />,
+  cart: (
+    <>
+      <path d="M3 4h2.2l2.3 11h10.9L21 7.5H6.3" />
+      <circle cx="9.5" cy="19.5" r="1.5" />
+      <circle cx="17" cy="19.5" r="1.5" />
+    </>
+  ),
+  logout: (
+    <>
+      <path d="M14 4h5v16h-5" />
+      <path d="M10 8l-4 4 4 4M6 12h10" />
+    </>
+  ),
   headset: (
     <>
       <path d="M4 14v-2a8 8 0 0 1 16 0v2" />

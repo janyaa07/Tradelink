@@ -1,16 +1,18 @@
-import type { CatalogueItem } from "@/domain/catalogue";
+import { plural, type CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, type Cents } from "@/domain/money";
 import type { AskReply, ReadLineStatus } from "./types";
 
-/** Fixed Ask copy from BUY-47 to BUY-50. */
+/** Fixed Tradelink Assistant copy (BUY-47 to BUY-50, renamed from Ask). */
 export const ASK_COPY = {
   fallback: "I did not catch that. Type your order as you would text a supplier, or ask about prices, deliveries or spending.",
-  unavailable: "Ask is not available right now. You can still order from the Order page.",
+  unavailable: "The assistant is not available right now. You can still add products to your cart from Products.",
   orderNotFound: "I cannot find that order on your account.",
   nothingOnTheWay: "Nothing is on the way right now.",
   enoughStock: "You have enough stock for the next few days.",
   productNotFound: "I could not find that product in the catalogue.",
-  usual: "I can load your usual items for you to review.",
+  usual: "Here are your usual items.",
+  noUsuals: "You have no usual items yet. Add them in Settings.",
+  enoughStockUsual: "You have enough stock for the next few days. Here are your usual items.",
   readOrder: "Here is what I read. Nothing has been sent.",
   noSupplierRecord: "None of your suppliers has delivered an order yet, so there is no on-time record to compare.",
   rateLimited: "Too many requests. Try again in a few minutes.",
@@ -22,7 +24,12 @@ export function textReply(text: string): AskReply {
 }
 
 export function greetingText(firstName: string): string {
-  return `Hi ${firstName}. Type an order the way you'd text a supplier, or ask me about prices, deliveries and spending.`;
+  return `Hi ${firstName}, what do you need today?`;
+}
+
+/** The chat's confirmation after Add to cart. */
+export function addedToCartText(count: number): string {
+  return `Added ${plural(count, "item")} to your cart.`;
 }
 
 export function otherShopsText(businessName: string): string {
@@ -55,6 +62,11 @@ export function priceText(item: Pick<CatalogueItem, "name" | "price" | "unit">):
 
 export function reliabilityText(supplierName: string, percent: number): string {
   return `${supplierName} has your best record, at ${percent}% on time.`;
+}
+
+/** "S$38.50 per tin". */
+export function unitPriceLabel(item: Pick<CatalogueItem, "price" | "unit">): string {
+  return `${formatMoney(item.price)} per ${item.unit}`;
 }
 
 /** The prototype's price card availability: "To confirm", "Out of stock", "Only {n} left" or "{n} available". */

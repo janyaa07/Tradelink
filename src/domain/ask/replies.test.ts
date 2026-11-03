@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addedToCartText,
   ASK_COPY,
   availabilityLabel,
   deliveriesText,
@@ -10,21 +11,27 @@ import {
   reliabilityText,
   restockText,
   spendText,
+  unitPriceLabel,
 } from "./replies";
 
-describe("Ask copy (BUY-47, BUY-48, BUY-50)", () => {
+describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
   it("greets the buyer by first name", () => {
-    expect(greetingText("Mei")).toBe(
-      "Hi Mei. Type an order the way you'd text a supplier, or ask me about prices, deliveries and spending.",
-    );
+    expect(greetingText("Mei")).toBe("Hi Mei, what do you need today?");
   });
 
   it("keeps the fixed copy exact", () => {
     expect(ASK_COPY.fallback).toBe(
       "I did not catch that. Type your order as you would text a supplier, or ask about prices, deliveries or spending.",
     );
-    expect(ASK_COPY.unavailable).toBe("Ask is not available right now. You can still order from the Order page.");
+    expect(ASK_COPY.unavailable).toBe(
+      "The assistant is not available right now. You can still add products to your cart from Products.",
+    );
     expect(ASK_COPY.readOrder).toBe("Here is what I read. Nothing has been sent.");
+  });
+
+  it("confirms what Add to cart added", () => {
+    expect(addedToCartText(1)).toBe("Added 1 item to your cart.");
+    expect(addedToCartText(3)).toBe("Added 3 items to your cart.");
   });
 
   it("names only the buyer's own business for other shops", () => {
@@ -45,6 +52,7 @@ describe("Ask copy (BUY-47, BUY-48, BUY-50)", () => {
 
   it("states price per unit and the best supplier", () => {
     expect(priceText({ name: "Cooking oil 18L", price: "38.50", unit: "tin" })).toBe("Cooking oil 18L is S$38.50 per tin.");
+    expect(unitPriceLabel({ price: "38.50", unit: "tin" })).toBe("S$38.50 per tin");
     expect(reliabilityText("Harbour Dry Goods", 96)).toBe("Harbour Dry Goods has your best record, at 96% on time.");
   });
 

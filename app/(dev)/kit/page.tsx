@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ART_KINDS } from "@/domain/catalogue";
 import { formatMoney } from "@/domain/money";
+import { signOut } from "@/features/auth/actions";
 import { BusinessLogo } from "@/ui/BusinessLogo";
 import { Button } from "@/ui/Button";
 import { Chip, ChipRow } from "@/ui/Chip";
@@ -89,8 +90,11 @@ export default function KitPage() {
       orgName="Tradelink Operations"
       navItems={NAV}
       activeHref="/kit"
+      pathname="/kit"
       isHome={false}
-      cart={{ count: 3, totalLabel: formatMoney("184.50"), href: "/kit#orders" }}
+      bell={{ href: "/kit#todo", count: 4 }}
+      cart={{ count: 3, href: "/kit#orders" }}
+      signOutAction={signOut}
     >
       <div className="flex flex-col gap-[3px]">
         <h1>Component kit</h1>

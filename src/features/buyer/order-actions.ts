@@ -63,3 +63,15 @@ export async function reportProblemAction(input: z.infer<typeof problemInput>): 
   if (result.ok) revalidatePath("/buyer", "layout");
   return result;
 }
+
+const creditInput = z.object({ issueId: z.uuid(), key: z.uuid() });
+
+/** Mark credit received: a promised credit becomes received (BUY-04). */
+export async function markCreditReceivedAction(input: z.infer<typeof creditInput>): Promise<ActionResult<{ id: string }>> {
+  await requireRole("buyer");
+  const parsed = creditInput.safeParse(input);
+  if (!parsed.success) return INVALID;
+  const result = await callRpc<{ id: string }>("mark_credit_received", { p_issue: parsed.data.issueId, p_key: parsed.data.key });
+  if (result.ok) revalidatePath("/buyer", "layout");
+  return result;
+}

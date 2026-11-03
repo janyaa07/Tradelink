@@ -2,6 +2,17 @@
 
 All notable changes are listed here. The format follows Keep a Changelog, and versions follow semantic versioning.
 
+## [0.4.0] - 2026-11-03
+
+### Changed (buyer redesign, owner feedback; see `docs/BUYER_REDESIGN.md`)
+- **Look and font:** Inter across the app, with a cleaner, simpler layout.
+- **Top bar:** on every page, with the theme toggle, the alerts bell, the cart icon and a user menu with Sign out (also on the sidebar logo).
+- **Ordering:** happens in the chat-style **Tradelink Assistant** (renamed from Ask) and in **Products**, which has illustrated pictures and add-to-cart steppers. The new **Cart** page is where you review and place orders. The separate Order page and the Alerts tab are gone.
+- **Orders:** compact rows with filters, counts and search, a detail page per order, and problems explained and clickable.
+- **Home:** centred icons, each summary card going somewhere different, and no To do panel. Actionable alerts moved to the bell.
+- **Insights:** a colour-coded dashboard with trends, budget progress, spend by supplier and supplier ratings.
+- **Settings:** split into App settings and Shop settings, with a tidy usual-items table. The Appearance section and "What Tradelink can do" are removed.
+
 ## [0.3.0] - 2026-11-03
 
 ### Added

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import { ART_KINDS, UNITS } from "@/domain/catalogue";
 import { toCents } from "@/domain/money";
@@ -100,21 +101,81 @@ function toView(row: z.infer<typeof rowSchema>): OrderView {
   };
 }
 
+export type CheckStatus = OrderView["checkStatus"];
+
+/** An order number, or part of a supplier name (letters, digits, spaces and & ' . - only). */
+export type OrderSearch = { kind: "number"; number: number } | { kind: "supplier"; text: string };
+
 export type OrderFilter = {
   buyerOrgId?: string;
   supplierOrgId?: string;
   statuses?: OrderStatus[];
+  checkStatuses?: CheckStatus[];
+  /** Out for delivery, or delivered and not yet checked (BUY-09). */
+  toCheck?: boolean;
+  search?: OrderSearch;
   limit?: number;
+  /** Rows to skip before the first one returned, for paging. */
+  offset?: number;
 };
+
+/** The supplier join must be inner when searching by its name, so non-matching orders drop out. */
+const SUPPLIER_JOIN = "supplier:organisations!orders_supplier_org_id_fkey(id, name)";
+const SUPPLIER_INNER_JOIN = "supplier:organisations!orders_supplier_org_id_fkey!inner(id, name)";
+
+type Filterable<Q> = {
+  eq(column: string, value: string | number): Q;
+  in(column: string, values: readonly string[]): Q;
+  or(filters: string): Q;
+  ilike(column: string, pattern: string): Q;
+};
+
+function applyFilter<Q extends Filterable<Q>>(start: Q, filter: OrderFilter): Q {
+  let query = start;
+  if (filter.buyerOrgId) query = query.eq("buyer_org_id", filter.buyerOrgId);
+  if (filter.supplierOrgId) query = query.eq("supplier_org_id", filter.supplierOrgId);
+  if (filter.statuses) query = query.in("status", filter.statuses);
+  if (filter.checkStatuses) query = query.in("check_status", filter.checkStatuses);
+  if (filter.toCheck) query = query.or("status.eq.out_for_delivery,and(status.eq.delivered,check_status.eq.unchecked)");
+  if (filter.search?.kind === "number") query = query.eq("number", filter.search.number);
+  if (filter.search?.kind === "supplier") query = query.ilike("supplier.name", `%${filter.search.text}%`);
+  return query;
+}
+
+function selectFor(filter: OrderFilter): string {
+  return filter.search?.kind === "supplier" ? SELECT.replace(SUPPLIER_JOIN, SUPPLIER_INNER_JOIN) : SELECT;
+}
 
 /** Orders visible to the signed-in user (RLS), newest first. */
 export async function getOrders(filter: OrderFilter = {}): Promise<OrderView[]> {
   const supabase = await createSupabaseServerClient();
-  let query = supabase.from("orders").select(SELECT).order("created_at", { ascending: false }).limit(filter.limit ?? 50);
-  if (filter.buyerOrgId) query = query.eq("buyer_org_id", filter.buyerOrgId);
-  if (filter.supplierOrgId) query = query.eq("supplier_org_id", filter.supplierOrgId);
-  if (filter.statuses) query = query.in("status", filter.statuses);
-  const { data, error } = await query;
+  const limit = filter.limit ?? 50;
+  const ordered = supabase.from("orders").select(selectFor(filter)).order("created_at", { ascending: false });
+  const paged = filter.offset ? ordered.range(filter.offset, filter.offset + limit - 1) : ordered.limit(limit);
+  const { data, error } = await applyFilter(paged, filter);
   if (error) throw new Error(`Could not load orders: ${error.message}`);
   return z.array(rowSchema).parse(data).map(toView);
 }
+
+/** How many orders match the filter (limit and offset are ignored). */
+export async function countOrders(filter: OrderFilter = {}): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const columns: string = filter.search?.kind === "supplier" ? `id, ${SUPPLIER_INNER_JOIN}` : "id";
+  // An exact count ignores the limit; the limit only keeps the builder type shallow enough for applyFilter.
+  const { count, error } = await applyFilter(supabase.from("orders").select(columns, { count: "exact", head: true }).limit(1), filter);
+  if (error) throw new Error(`Could not count orders: ${error.message}`);
+  return count ?? 0;
+}
+
+/**
+ * One order visible to the signed-in user, or null when RLS hides it or it does not exist.
+ * Pass the buyer's organisation to also hide orders the user sees for another reason. Cached per request.
+ */
+export const getOrderById = cache(async (id: string, buyerOrgId?: string): Promise<OrderView | null> => {
+  if (!z.uuid().safeParse(id).success) return null;
+  const supabase = await createSupabaseServerClient();
+  const byId = supabase.from("orders").select(SELECT).eq("id", id);
+  const { data, error } = await (buyerOrgId ? byId.eq("buyer_org_id", buyerOrgId) : byId).maybeSingle();
+  if (error) throw new Error(`Could not load the order: ${error.message}`);
+  return data === null ? null : toView(rowSchema.parse(data));
+});

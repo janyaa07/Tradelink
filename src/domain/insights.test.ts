@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   budgetLeft,
+  budgetUse,
+  changeDirection,
   countsAsSpend,
+  onTimeLevel,
   onTimePercent,
   overchargesCaughtCents,
+  percentChange,
+  priceChangeSplit,
+  sharePercents,
   spendBySupplier,
+  supplierSlices,
   weekStarts,
   weeklySpend,
   type SpendOrder,
@@ -148,5 +155,118 @@ describe("budget", () => {
     expect(budgetLeft(90000, 30000)).toEqual({ left: 60000, over: false });
     expect(budgetLeft(90000, 90000)).toEqual({ left: 0, over: false });
     expect(budgetLeft(90000, 95000)).toEqual({ left: 0, over: true });
+  });
+});
+
+describe("week on week", () => {
+  it("gives the direction and the size of the change", () => {
+    expect(changeDirection(1000, 1120)).toBe("up");
+    expect(changeDirection(1000, 880)).toBe("down");
+    expect(changeDirection(1000, 1000)).toBe("same");
+    expect(percentChange(1000, 1120)).toBe(12);
+    expect(percentChange(1000, 880)).toBe(12);
+    expect(percentChange(30000, 30100)).toBe(0.3);
+  });
+
+  it("has no percentage when there was nothing last week", () => {
+    expect(percentChange(0, 5000)).toBeNull();
+    expect(percentChange(0, 0)).toBeNull();
+  });
+});
+
+describe("budget use", () => {
+  it("is good below 75%, warn from 75% to the budget and bad over it", () => {
+    expect(budgetUse(90000, 67499)).toEqual({ percent: 75, level: "good" });
+    expect(budgetUse(90000, 67500)).toEqual({ percent: 75, level: "warn" });
+    expect(budgetUse(90000, 90000)).toEqual({ percent: 100, level: "warn" });
+    expect(budgetUse(90000, 90001)).toEqual({ percent: 100, level: "bad" });
+    expect(budgetUse(90000, 0)).toEqual({ percent: 0, level: "good" });
+  });
+
+  it("is null without a budget", () => {
+    expect(budgetUse(0, 5000)).toBeNull();
+  });
+});
+
+describe("on time level", () => {
+  it("is good at 95% or more, warn from 85% and bad below", () => {
+    expect(onTimeLevel(100)).toBe("good");
+    expect(onTimeLevel(95)).toBe("good");
+    expect(onTimeLevel(94)).toBe("warn");
+    expect(onTimeLevel(85)).toBe("warn");
+    expect(onTimeLevel(84)).toBe("bad");
+    expect(onTimeLevel(null)).toBeNull();
+  });
+});
+
+describe("price change split", () => {
+  it("counts rises and drops and ignores unchanged prices", () => {
+    expect(
+      priceChangeSplit([
+        { oldPrice: "4.20", newPrice: "4.50" },
+        { oldPrice: "4.50", newPrice: "4.30" },
+        { oldPrice: "2.00", newPrice: "2.10" },
+        { oldPrice: "3.00", newPrice: "3.00" },
+      ]),
+    ).toEqual({ up: 2, down: 1 });
+  });
+});
+
+describe("supplier shares", () => {
+  it("rounds to whole percentages that add up to 100", () => {
+    expect(sharePercents([1, 1, 1])).toEqual([34, 33, 33]);
+    expect(sharePercents([5000, 3000, 2000])).toEqual([50, 30, 20]);
+    expect(sharePercents([0, 0])).toEqual([0, 0]);
+  });
+
+  it("keeps each supplier's colour slot when the ranking changes", () => {
+    const order = ["a", "b", "c"];
+    const before = supplierSlices(
+      [
+        { supplierId: "a", cents: 500 },
+        { supplierId: "b", cents: 300 },
+        { supplierId: "c", cents: 200 },
+      ],
+      order,
+    );
+    const after = supplierSlices(
+      [
+        { supplierId: "c", cents: 900 },
+        { supplierId: "a", cents: 50 },
+        { supplierId: "b", cents: 50 },
+      ],
+      order,
+    );
+    expect(before.map((slice) => [slice.supplierId, slice.slot, slice.percent])).toEqual([
+      ["a", 0, 50],
+      ["b", 1, 30],
+      ["c", 2, 20],
+    ]);
+    expect(after.map((slice) => [slice.supplierId, slice.slot])).toEqual([
+      ["c", 2],
+      ["a", 0],
+      ["b", 1],
+    ]);
+  });
+
+  it("folds the smallest suppliers into Other past the palette", () => {
+    const rows = ["a", "b", "c", "d"].map((supplierId, index) => ({ supplierId, cents: 400 - index * 100 }));
+    const slices = supplierSlices(rows, ["d", "c", "b", "a"], 3);
+    expect(slices).toEqual([
+      { supplierId: "a", cents: 400, percent: 40, slot: 1 },
+      { supplierId: "b", cents: 300, percent: 30, slot: 0 },
+      { supplierId: null, cents: 300, percent: 30, slot: null },
+    ]);
+  });
+
+  it("puts suppliers missing from the stable order after the known ones", () => {
+    const slices = supplierSlices(
+      [
+        { supplierId: "former", cents: 900 },
+        { supplierId: "a", cents: 100 },
+      ],
+      ["a"],
+    );
+    expect(slices.map((slice) => slice.slot)).toEqual([1, 0]);
   });
 });

@@ -1,3 +1,5 @@
+import type { ArtKind, Category } from "@/domain/catalogue";
+import type { DraftState } from "@/features/ordering/draft";
 import type { OrderStatus } from "@/ui/ProgressSteps";
 
 /** One earlier turn of the session's conversation, kept in client state only (BUY-47.4). */
@@ -13,34 +15,44 @@ export type OrderCardData = {
   totalCents: number;
 };
 
-export type PlanItem = { name: string; daysLeft: string };
-
-export type PriceCardData = { supplierName: string; available: string; lastPaid: string | null };
+export type PriceCardData = {
+  name: string;
+  art: ArtKind;
+  category: Category;
+  /** "S$38.50 per tin". */
+  price: string;
+  supplierName: string;
+  available: string;
+  lastPaid: string | null;
+};
 
 export type ReadLineStatus = "Matched" | "Check this" | "Not found";
 
-export type ReadLineView = { label: string; status: ReadLineStatus };
+/** One row of a lines card: "2 × Fresh eggs", its match state (typed orders only), a note and the line price. */
+export type LineRow = { label: string; status: ReadLineStatus | null; note: string | null; price: string | null };
 
 /** Typed cards the app renders. The model never supplies markup (ADR 0009). */
 export type AskCard =
   | { kind: "order"; order: OrderCardData }
-  | { kind: "plan"; items: PlanItem[] }
   | { kind: "price"; price: PriceCardData }
-  | { kind: "read"; lines: ReadLineView[] };
+  | { kind: "lines"; rows: LineRow[] };
 
-/** A line Ask read from a typed order, ready to move into the draft for review (BUY-49). */
-export type ReviewLine = {
-  productId: string;
+/**
+ * A line the assistant offers to add to the cart, keeping the reader's state and options. A line
+ * with no product stays in the cart for the buyer to resolve. Nothing is placed from chat.
+ */
+export type CartLine = {
+  productId: string | null;
   qty: number;
   sourceText: string;
   options: string[];
-  state: "manual" | "suggested";
+  state: DraftState;
+  kg: number | null;
+  qtyAssumed: boolean;
 };
 
 export type AskAction =
-  | { kind: "link"; label: "Open Insights" | "See all suppliers"; href: string }
-  | { kind: "load_plan" }
-  | { kind: "load_usual" }
-  | { kind: "review_order"; lines: ReviewLine[] };
+  | { kind: "link"; label: "Open Insights" | "See all suppliers" | "View cart"; href: string }
+  | { kind: "add_to_cart"; lines: CartLine[] };
 
 export type AskReply = { text: string; cards: AskCard[]; actions: AskAction[] };

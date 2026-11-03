@@ -52,13 +52,8 @@ function useIsDark(): boolean {
   return useSyncExternalStore(subscribe, readIsDark, () => false);
 }
 
-type ThemeToggleProps = {
-  /** "hero" sits on the green home hero. */
-  variant?: "default" | "hero";
-  className?: string;
-};
-
-export function ThemeToggle({ variant = "default", className }: ThemeToggleProps) {
+/** The one appearance control: switches between light and dark from the top bar. */
+export function ThemeToggle({ className }: { className?: string }) {
   const isDark = useIsDark();
   const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
@@ -69,10 +64,7 @@ export function ThemeToggle({ variant = "default", className }: ThemeToggleProps
       title={label}
       onClick={() => applyTheme(isDark ? "light" : "dark")}
       className={cx(
-        "grid size-9 flex-none place-items-center rounded-full border p-0 transition-colors duration-150",
-        variant === "hero"
-          ? "border-on-hero-2 bg-transparent text-on-hero hover:border-on-hero"
-          : "border-line bg-surface text-accent hover:border-accent",
+        "grid size-9 flex-none place-items-center rounded-full border border-line bg-surface p-0 text-ink transition-colors duration-150 hover:border-accent hover:text-accent",
         className,
       )}
     >

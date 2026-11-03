@@ -21,6 +21,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       userName={session.fullName}
       orgName={session.orgName}
       counts={{ "/admin/attention": attention, "/admin/notifications": unread }}
+      bellCount={unread}
     >
       <PresencePing />
       {children}

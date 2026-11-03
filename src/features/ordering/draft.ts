@@ -3,7 +3,7 @@ import { z } from "zod";
 export const DRAFT_STATES = ["matched", "check", "not_found", "added", "suggested", "manual"] as const;
 export type DraftState = (typeof DRAFT_STATES)[number];
 
-/** One line in the buyer's order review. Saved to order_drafts so CartBar survives reloads. */
+/** One line in the buyer's cart. Saved to order_drafts so the cart survives reloads and devices. */
 export const draftLineSchema = z.object({
   id: z.string().min(1).max(64),
   sourceText: z.string().max(240),

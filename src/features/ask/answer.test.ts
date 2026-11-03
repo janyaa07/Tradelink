@@ -14,7 +14,7 @@ vi.mock("@/integrations/claude/client", () => ({
 const { answerOpenQuestion } = await import("./answer");
 
 const facts = numberFacts([
-  "Business: Mei's Noodle House. Ask can only see this business's orders and prices.",
+  "Business: Mei's Noodle House. Tradelink Assistant can only see this business's orders and prices.",
   "Spend this week (since Monday, Singapore time): S$612.50 of a S$900.00 weekly budget, S$287.50 left.",
   "Open order ORD-1044 from Harbour Dry Goods: Out for delivery, total S$120.00. Items: 2 × Jasmine rice 5kg.",
 ]);

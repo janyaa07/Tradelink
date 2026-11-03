@@ -59,6 +59,8 @@ describe("routeIntent: other intents", () => {
     ["which items are low", "restock"],
     ["same as last time please", "usual"],
     ["load my usual", "usual"],
+    ["Order my usual", "usual"],
+    ["What should I reorder?", "restock"],
     ["Which supplier delivers on time?", "reliability"],
     ["who is always late", "reliability"],
     ["price of jasmine rice", "price"],

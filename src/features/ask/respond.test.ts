@@ -207,22 +207,65 @@ describe("respondToAsk: intents answer from the buyer's own data (BUY-48)", () =
     expect(mocks.getOrders).toHaveBeenCalledWith({ buyerOrgId: ORG, statuses: ["out_for_delivery"], limit: 20 });
   });
 
-  it("lists the restock plan with Review and send, or says there is enough stock", async () => {
-    expect((await respondToAsk(session, "What should I order?", [])).text).toBe("You have enough stock for the next few days.");
+  it("lists the restock plan with prices and Add to cart", async () => {
     mocks.getRestockPlan.mockResolvedValue({
       rows: [{ productId: EGGS, daysLeft: 1.25, want: 3, qty: 3, item: catalogue[0] }],
-      totalCents: 15600,
+      totalCents: 3000,
       cutoffLines: [],
     });
-    const reply = await respondToAsk(session, "What should I order?", []);
+    const reply = await respondToAsk(session, "What should I reorder?", []);
     expect(reply.text).toBe("1 item will run out soon.");
-    expect(reply.cards).toEqual([{ kind: "plan", items: [{ name: "Fresh eggs, 300 pieces", daysLeft: "1.3 days left" }] }]);
-    expect(reply.actions).toEqual([{ kind: "load_plan" }]);
+    expect(reply.cards).toEqual([
+      { kind: "lines", rows: [{ label: "3 × Fresh eggs, 300 pieces", status: null, note: "1.3 days left", price: "S$30.00" }] },
+    ]);
+    expect(reply.actions).toEqual([
+      {
+        kind: "add_to_cart",
+        lines: [
+          {
+            productId: EGGS,
+            qty: 3,
+            sourceText: "Suggested, 1.3 days left",
+            options: [],
+            state: "suggested",
+            kg: null,
+            qtyAssumed: false,
+          },
+        ],
+      },
+    ]);
   });
 
-  it("offers to load the usual items", async () => {
-    const reply = await respondToAsk(session, "Same as last time", []);
-    expect(reply).toEqual({ text: "I can load your usual items for you to review.", cards: [], actions: [{ kind: "load_usual" }] });
+  it("offers the usual items when nothing is running low, or says there is enough stock", async () => {
+    const reply = await respondToAsk(session, "What should I order?", []);
+    expect(reply.text).toBe("You have enough stock for the next few days. Here are your usual items.");
+    expect(reply.actions[0]?.kind).toBe("add_to_cart");
+    mocks.getUsualItems.mockResolvedValue([]);
+    expect(await respondToAsk(session, "What should I order?", [])).toEqual({
+      text: "You have enough stock for the next few days.",
+      cards: [],
+      actions: [],
+    });
+  });
+
+  it("lists the usual items with prices and Add to cart", async () => {
+    const reply = await respondToAsk(session, "Order my usual", []);
+    expect(reply).toEqual({
+      text: "Here are your usual items.",
+      cards: [{ kind: "lines", rows: [{ label: "2 × Cooking oil 18L", status: null, note: null, price: "S$77.00" }] }],
+      actions: [
+        {
+          kind: "add_to_cart",
+          lines: [{ productId: OIL, qty: 2, sourceText: "My usual", options: [], state: "suggested", kg: null, qtyAssumed: false }],
+        },
+      ],
+    });
+    expectOnlyOwnOrganisation();
+  });
+
+  it("says when there are no usual items", async () => {
+    mocks.getUsualItems.mockResolvedValue([]);
+    expect((await respondToAsk(session, "Same as last time", [])).text).toBe("You have no usual items yet. Add them in Settings.");
   });
 
   it("names the most reliable connected supplier", async () => {
@@ -239,7 +282,24 @@ describe("respondToAsk: intents answer from the buyer's own data (BUY-48)", () =
     const reply = await respondToAsk(session, "How much is cooking oil?", []);
     expect(reply.text).toBe("Cooking oil 18L is S$38.50 per tin.");
     expect(reply.cards).toEqual([
-      { kind: "price", price: { supplierName: "Harbour Dry Goods", available: "40 available", lastPaid: "S$37.00" } },
+      {
+        kind: "price",
+        price: {
+          name: "Cooking oil 18L",
+          art: "sack",
+          category: "dry_goods",
+          price: "S$38.50 per tin",
+          supplierName: "Harbour Dry Goods",
+          available: "40 available",
+          lastPaid: "S$37.00",
+        },
+      },
+    ]);
+    expect(reply.actions).toEqual([
+      {
+        kind: "add_to_cart",
+        lines: [{ productId: OIL, qty: 1, sourceText: "Added by you", options: [], state: "manual", kg: null, qtyAssumed: false }],
+      },
     ]);
   });
 
@@ -250,7 +310,7 @@ describe("respondToAsk: intents answer from the buyer's own data (BUY-48)", () =
 });
 
 describe("respondToAsk: typed orders (BUY-49)", () => {
-  it("shows what it read with each status and a Review order action, without sending", async () => {
+  it("shows what it read with each state and price, and adds every line to the cart as read", async () => {
     mocks.readOrderAction.mockResolvedValue({
       ok: true,
       data: {
@@ -267,20 +327,21 @@ describe("respondToAsk: typed orders (BUY-49)", () => {
     expect(reply.text).toBe("Here is what I read. Nothing has been sent.");
     expect(reply.cards).toEqual([
       {
-        kind: "read",
-        lines: [
-          { label: "2 × Fresh eggs, 300 pieces", status: "Matched" },
-          { label: "5 tins milk", status: "Check this" },
-          { label: "1 box wagyu", status: "Not found" },
+        kind: "lines",
+        rows: [
+          { label: "2 × Fresh eggs, 300 pieces", status: "Matched", note: null, price: "S$20.00" },
+          { label: "5 tins milk", status: "Check this", note: null, price: null },
+          { label: "1 box wagyu", status: "Not found", note: null, price: null },
         ],
       },
     ]);
     expect(reply.actions).toEqual([
       {
-        kind: "review_order",
+        kind: "add_to_cart",
         lines: [
-          { productId: EGGS, qty: 2, sourceText: "2 ctn eggs", options: [EGGS], state: "manual" },
-          { productId: MILK, qty: 5, sourceText: "5 tins milk", options: [MILK, OIL], state: "suggested" },
+          { productId: EGGS, qty: 2, sourceText: "2 ctn eggs", options: [EGGS], state: "matched", kg: null, qtyAssumed: false },
+          { productId: null, qty: 5, sourceText: "5 tins milk", options: [MILK, OIL], state: "check", kg: null, qtyAssumed: false },
+          { productId: null, qty: 1, sourceText: "1 box wagyu", options: [], state: "not_found", kg: null, qtyAssumed: false },
         ],
       },
     ]);
@@ -359,13 +420,13 @@ describe("respondToAsk: open questions (BUY-48.8, BUY-50)", () => {
     );
   });
 
-  it("says Ask is not available when the model fails (BUY-50.3)", async () => {
+  it("says the assistant is not available when the model fails (BUY-50.3)", async () => {
     mocks.answerOpenQuestion.mockResolvedValue({
       answer: { kind: "unavailable" },
       usage: { inputTokens: 0, outputTokens: 0, latencyMs: 20000, outcome: "timeout" },
     });
     const reply = await respondToAsk(session, question, []);
-    expect(reply.text).toBe("Ask is not available right now. You can still order from the Order page.");
+    expect(reply.text).toBe("The assistant is not available right now. You can still add products to your cart from Products.");
     expect(mocks.rpc).toHaveBeenCalledWith("record_ai_usage", expect.objectContaining({ p_outcome: "timeout" }));
   });
 

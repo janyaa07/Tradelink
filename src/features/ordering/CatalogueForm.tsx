@@ -7,7 +7,7 @@ import { Button } from "@/ui/Button";
 import { FieldGrid, SelectField, TextField } from "@/ui/Field";
 import { FormError } from "@/ui/FormError";
 import { buyerAddProductAction } from "./actions";
-import type { SupplierOption } from "./review-types";
+import type { SupplierOption } from "./cart-types";
 
 type Props = {
   sourceText: string;

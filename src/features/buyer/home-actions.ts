@@ -34,6 +34,16 @@ export async function markIssueSeenAction(id: string): Promise<ActionResult<unkn
   return done(await callRpc("mark_issue_seen", { p_issue: id }));
 }
 
+const creditInput = z.object({ issueId: z.uuid(), key: z.uuid() });
+
+/** "Mark received" on a promised credit: the problem moves to credit received. */
+export async function markCreditReceivedAction(input: z.infer<typeof creditInput>): Promise<ActionResult<unknown>> {
+  await requireRole("buyer");
+  const parsed = creditInput.safeParse(input);
+  if (!parsed.success) return NOT_AVAILABLE;
+  return done(await callRpc("mark_credit_received", { p_issue: parsed.data.issueId, p_key: parsed.data.key }));
+}
+
 /** "Skip" on a part delivery (BUY-03). */
 export async function skipPartialAction(id: string): Promise<ActionResult<unknown>> {
   await requireRole("buyer");
@@ -50,7 +60,7 @@ const partialRowSchema = z.object({
 });
 
 /**
- * "Order the other {n}": adds the remainder to review. Products from other connected suppliers
+ * "Order the rest": adds the remainder to the cart. Products from other connected suppliers
  * that share a name word and have the stock are offered as best matches (BUY-03).
  */
 export async function orderRemainderAction(id: string): Promise<ActionResult<unknown>> {
@@ -88,7 +98,7 @@ export async function orderRemainderAction(id: string): Promise<ActionResult<unk
   return done(await callRpc("resolve_partial", { p_partial: id, p_choice: "added" }));
 }
 
-/** "Review and send" on Ready for tomorrow: the plan is worked out again on the server (BUY-08). */
+/** "Add to cart" on Ready for tomorrow: the plan is worked out again on the server (BUY-08). */
 export async function loadRestockPlanAction(): Promise<ActionResult<unknown>> {
   const session = await requireRole("buyer");
   const plan = await getRestockPlan(session.orgId);

@@ -6,16 +6,16 @@ import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
 import { loadRestockPlanAction, skipRestockPlanAction } from "./home-actions";
 
-/** "Review and send" and "Not today" on Ready for tomorrow (BUY-08). */
+/** "Add to cart" and "Not today" on Ready for tomorrow (BUY-08). */
 export function PlanActions() {
   const router = useRouter();
   const { show } = useToast();
   const [busy, start] = useTransition();
 
-  const review = () =>
+  const addToCart = () =>
     start(async () => {
       const result = await loadRestockPlanAction();
-      if (result.ok) router.push("/buyer/order");
+      if (result.ok) router.push("/buyer/cart");
       else show(result.error);
     });
 
@@ -27,8 +27,8 @@ export function PlanActions() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button variant="primary" disabled={busy} onClick={review}>
-        Review and send
+      <Button variant="primary" disabled={busy} onClick={addToCart}>
+        Add to cart
       </Button>
       <Button disabled={busy} onClick={skip}>
         Not today

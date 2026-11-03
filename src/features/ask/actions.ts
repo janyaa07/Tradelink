@@ -6,11 +6,13 @@ import { z } from "zod";
 import { requireRole } from "@/data/session";
 import { createSupabaseServerClient } from "@/data/supabase/server";
 import { ASK_COPY, textReply } from "@/domain/ask/replies";
-import type { AskReply, AskTurn, ReviewLine } from "@/domain/ask/types";
+import type { AskReply, AskTurn, CartLine } from "@/domain/ask/types";
 import { getBuyerCatalogue } from "@/features/buyer/queries";
+import { DRAFT_STATES } from "@/features/ordering/draft";
 import { addLinesToDraft } from "@/features/ordering/draft-store";
 import type { ActionResult } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { linesForCatalogue } from "./cart-lines";
 import { respondToAsk } from "./respond";
 
 const MAX_CHARS = 2000;
@@ -23,8 +25,8 @@ const askSchema = z.object({
 });
 
 /**
- * Answers one Ask message (BUY-47 to BUY-50). History lives in the browser for the session only.
- * Ask reads; it never places an order.
+ * Answers one Tradelink Assistant message (BUY-47 to BUY-50). History lives in the browser for the
+ * session only. The assistant reads; it never places an order.
  */
 export async function askAction(message: string, history: AskTurn[]): Promise<AskReply> {
   const session = await requireRole("buyer");
@@ -47,35 +49,34 @@ export async function askAction(message: string, history: AskTurn[]): Promise<As
   }
 }
 
-const reviewSchema = z
+const cartLinesSchema = z
   .array(
     z.object({
-      productId: z.uuid(),
+      productId: z.uuid().nullable(),
       qty: z.number().int().min(1).max(9999),
       sourceText: z.string().max(240),
       options: z.array(z.uuid()).max(5),
-      state: z.enum(["manual", "suggested"]),
+      state: z.enum(DRAFT_STATES),
+      kg: z.number().positive().nullable(),
+      qtyAssumed: z.boolean(),
     }),
   )
   .min(1)
   .max(60);
 
 /**
- * "Review order": adds the lines Ask read to the buyer's draft and leaves sending to the review
- * screen (BUY-49.2). Products outside the buyer's catalogue are dropped.
+ * "Add to cart" under an assistant reply: adds the lines to the buyer's draft with their state and
+ * options, checked against the buyer's own catalogue. Nothing is placed from chat; the buyer places
+ * orders from the cart (BUY-49.2).
  */
-export async function reviewAskOrderAction(lines: ReviewLine[]): Promise<ActionResult<{ version: number }>> {
+export async function addToCartAction(lines: CartLine[]): Promise<ActionResult<{ added: number }>> {
   const session = await requireRole("buyer");
-  const parsed = reviewSchema.safeParse(lines);
+  const parsed = cartLinesSchema.safeParse(lines);
   if (!parsed.success) return { ok: false, error: ASK_COPY.invalidInput };
 
   const visible = new Set((await getBuyerCatalogue()).map((item) => item.id));
-  const usable = parsed.data
-    .filter((line) => visible.has(line.productId))
-    .map((line) => ({ ...line, options: line.options.filter((id) => visible.has(id)) }));
-  if (usable.length === 0) return { ok: false, error: "No items found. Add a quantity and a product name." };
-
-  const result = await addLinesToDraft(session.userId, usable);
-  if (result.ok) revalidatePath("/buyer", "layout");
-  return result;
+  const result = await addLinesToDraft(session.userId, linesForCatalogue(parsed.data, visible));
+  if (!result.ok) return result;
+  revalidatePath("/buyer", "layout");
+  return { ok: true, data: { added: parsed.data.length } };
 }

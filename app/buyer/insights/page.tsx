@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
-import { formatMoney } from "@/domain/money";
+import { periodLabel } from "@/features/insights/format";
+import { InsightsKpis } from "@/features/insights/InsightsKpis";
 import { PriceChangesPanel } from "@/features/insights/PriceChangesPanel";
 import { getInsights } from "@/features/insights/queries";
 import { SupplierRecordList } from "@/features/insights/SupplierRecordList";
 import { SupplierSpendPanel } from "@/features/insights/SupplierSpendPanel";
 import { WeeklySpendChart } from "@/features/insights/WeeklySpendChart";
-import { Tiles } from "@/ui/Tiles";
 
 export const metadata: Metadata = { title: "Insights · Tradelink" };
 
@@ -18,28 +18,36 @@ export default async function BuyerInsightsPage() {
     <>
       <div className="flex flex-col gap-[3px]">
         <h1>Insights</h1>
-        <p className="text-muted">Facts from your own orders, deliveries and credits.</p>
+        <p className="text-muted">
+          Last {insights.weeks.length} weeks, {periodLabel(insights.weeks)}. Weeks run Monday to Sunday, Singapore time
+          (SGT).
+        </p>
       </div>
-      <Tiles
-        items={[
-          { label: "Spent this week", value: formatMoney(insights.spentCents) },
-          {
-            label: `Left of ${formatMoney(insights.budgetCents)} budget`,
-            value: formatMoney(insights.leftCents),
-            alert: insights.overBudget,
-          },
-          { label: "Overcharges caught", value: formatMoney(insights.caughtCents) },
-          { label: "Price changes", value: insights.priceChangeCount },
-        ]}
+
+      <InsightsKpis
+        spentCents={insights.spentCents}
+        lastWeekCents={insights.lastWeekCents}
+        budgetCents={insights.budgetCents}
+        leftCents={insights.leftCents}
+        caughtCents={insights.caughtCents}
+        priceChangeCount={insights.priceChangeCount}
+        priceChangesUp={insights.priceChangesUp}
+        priceChangesDown={insights.priceChangesDown}
       />
+
       <div className="@container">
-        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3.5 @min-[860px]:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @min-[820px]:grid-cols-2">
           <WeeklySpendChart weeks={insights.weeks} budgetCents={insights.budgetCents} />
-          <SupplierSpendPanel rows={insights.bySupplier} />
+          <SupplierSpendPanel rows={insights.bySupplier} weeks={insights.weeks.length} />
         </div>
       </div>
-      <SupplierRecordList rows={insights.record} />
-      <PriceChangesPanel changes={insights.priceChanges} total={insights.priceChangeCount} />
+
+      <div className="@container">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @min-[820px]:grid-cols-2">
+          <SupplierRecordList rows={insights.record} />
+          <PriceChangesPanel changes={insights.priceChanges} total={insights.priceChangeCount} />
+        </div>
+      </div>
     </>
   );
 }

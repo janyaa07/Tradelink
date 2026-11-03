@@ -9,7 +9,7 @@ const SAVE_DELAY_MS = 400;
 export type SyncProblem = { message: string; stale: boolean } | null;
 
 /**
- * Saves the review to order_drafts with an optimistic version. Changes are coalesced: only the
+ * Saves the cart to order_drafts with an optimistic version. Changes are coalesced: only the
  * latest lines are sent, one save at a time. A version clash (another tab or device saved first)
  * is reported as stale and saving stops until the page is reloaded.
  */

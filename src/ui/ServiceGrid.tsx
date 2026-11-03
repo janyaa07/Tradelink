@@ -2,17 +2,25 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
+/** Column counts that divide the tile count, so the last row is never lopsided. */
+const COLUMNS = {
+  6: "grid-cols-3 gap-y-4 py-4 rail:grid-cols-6",
+  8: "grid-cols-4 gap-y-3 py-3 rail:grid-cols-8",
+} as const;
+
 type ServiceGridProps = {
   label?: string;
+  /** How many tiles: six show three per row on phone and one row from 760px; eight show four, then one row. */
+  columns?: keyof typeof COLUMNS;
   children: ReactNode;
 };
 
-/** Eight quick actions: four per row on phone, one row of eight from 760px. */
-export function ServiceGrid({ label = "Quick actions", children }: ServiceGridProps) {
+/** Quick actions in centred, even rows. */
+export function ServiceGrid({ label = "Quick actions", columns = 8, children }: ServiceGridProps) {
   return (
     <section
       aria-label={label}
-      className="grid grid-cols-4 gap-x-0.5 gap-y-3 rounded-xl border border-line bg-surface px-1.5 py-3 shadow-card rail:grid-cols-8"
+      className={`grid justify-items-center gap-x-0.5 rounded-xl border border-line bg-surface px-1.5 shadow-card ${COLUMNS[columns]}`}
     >
       {children}
     </section>
@@ -31,7 +39,7 @@ type ServiceTileProps =
   | (TileContent & { href?: undefined } & Omit<ComponentPropsWithoutRef<"button">, "children">);
 
 const tileClass =
-  "flex min-w-0 flex-col items-center gap-[5px] rounded-md p-0.5 text-center text-[.74rem] font-semibold leading-[1.2] text-ink no-underline";
+  "flex w-full min-w-0 max-w-[112px] flex-col items-center gap-1.5 rounded-md p-0.5 text-center text-[.76rem] font-medium leading-[1.2] text-ink no-underline";
 
 function TileBody({ label, icon, count = 0 }: TileContent) {
   return (

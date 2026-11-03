@@ -10,10 +10,10 @@ import {
   getWeekSpendCents,
 } from "@/features/buyer/queries";
 import { getDraft } from "./queries";
-import type { OrderPageData } from "./review-types";
+import type { CartPageData } from "./cart-types";
 
-/** Reads the draft, catalogue, usuals, suppliers, cut-offs and budget for the Order page. */
-export async function getOrderPageData(session: Session): Promise<OrderPageData> {
+/** Reads the draft, catalogue, usuals, suppliers, cut-offs and budget for the cart. */
+export async function getCartPageData(session: Session): Promise<CartPageData> {
   const [draft, catalogue, usuals, suppliers, settings, weekSpentCents] = await Promise.all([
     getDraft(session.userId),
     getBuyerCatalogue(),
@@ -29,7 +29,7 @@ export async function getOrderPageData(session: Session): Promise<OrderPageData>
   return {
     draft,
     catalogue,
-    usuals: usuals.map((usual) => ({ productId: usual.productId, usualQty: usual.usualQty, lastPaid: usual.lastPaid })),
+    usuals: usuals.map((usual) => ({ productId: usual.productId, lastPaid: usual.lastPaid })),
     suppliers,
     cutoffs,
     weekSpentCents,

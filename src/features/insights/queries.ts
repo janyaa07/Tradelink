@@ -5,7 +5,9 @@ import {
   budgetLeft,
   onTimePercent,
   overchargesCaughtCents,
+  priceChangeSplit,
   spendBySupplier,
+  supplierSlices,
   weekStarts,
   weeklySpend,
   type SpendOrder,
@@ -125,16 +127,25 @@ const priceChangeSchema = z.object({
   product: z.object({ name: z.string() }).nullable(),
 });
 
-/** Price changes on the buyer's usual items, newest first, with the full count (BUY-41). */
-async function getPriceChanges(productIds: string[]): Promise<{ total: number; latest: PriceChangeRow[] }> {
-  if (productIds.length === 0) return { total: 0, latest: [] };
+const priceMoveSchema = z.object({ old_price: money, new_price: money });
+
+type PriceChanges = { total: number; up: number; down: number; latest: PriceChangeRow[] };
+
+/** Price changes on the buyer's usual items: the latest, newest first, with the full count and how many went up or down (BUY-41). */
+async function getPriceChanges(productIds: string[]): Promise<PriceChanges> {
+  if (productIds.length === 0) return { total: 0, up: 0, down: 0, latest: [] };
   const supabase = await createSupabaseServerClient();
-  const { data, error, count } = await supabase
-    .from("price_changes")
-    .select("id, old_price, new_price, created_at, product:products(name)", { count: "exact" })
-    .in("product_id", productIds)
-    .order("created_at", { ascending: false })
-    .limit(PRICE_CHANGES_SHOWN);
+  const [{ data, error }, moves] = await Promise.all([
+    supabase
+      .from("price_changes")
+      .select("id, old_price, new_price, created_at, product:products(name)")
+      .in("product_id", productIds)
+      .order("created_at", { ascending: false })
+      .limit(PRICE_CHANGES_SHOWN),
+    readAll("price changes", priceMoveSchema, (from, to) =>
+      supabase.from("price_changes").select("old_price, new_price").in("product_id", productIds).order("id").range(from, to),
+    ),
+  ]);
   if (error) fail("price changes", error.message);
   const latest = z
     .array(priceChangeSchema)
@@ -146,10 +157,20 @@ async function getPriceChanges(productIds: string[]): Promise<{ total: number; l
       oldPrice: row.old_price,
       newPrice: row.new_price,
     }));
-  return { total: count ?? latest.length, latest };
+  const { up, down } = priceChangeSplit(moves.map((move) => ({ oldPrice: move.old_price, newPrice: move.new_price })));
+  return { total: Math.max(moves.length, latest.length), up, down, latest };
 }
 
-export type SupplierSpendRow = { id: string; name: string; cents: Cents };
+export type SupplierSpendRow = {
+  /** Null for "Other", the smallest suppliers folded together. */
+  id: string | null;
+  name: string;
+  cents: Cents;
+  /** Whole percent of the five weeks' spend; the rows add up to 100. */
+  percent: number;
+  /** Categorical colour slot from 0, kept per supplier; null for "Other". */
+  slot: number | null;
+};
 
 export type SupplierRecordRow = {
   id: string;
@@ -163,6 +184,7 @@ export type SupplierRecordRow = {
 
 export type Insights = {
   spentCents: Cents;
+  lastWeekCents: Cents;
   budgetCents: Cents;
   leftCents: Cents;
   overBudget: boolean;
@@ -171,6 +193,8 @@ export type Insights = {
   bySupplier: SupplierSpendRow[];
   record: SupplierRecordRow[];
   priceChangeCount: number;
+  priceChangesUp: number;
+  priceChangesDown: number;
   priceChanges: PriceChangeRow[];
 };
 
@@ -194,6 +218,7 @@ export async function getInsights(orgId: string, now: Date): Promise<Insights> {
 
   const weeks = weeklySpend(window.orders, now);
   const spentCents = weeks.at(-1)?.cents ?? 0;
+  const lastWeekCents = weeks.at(-2)?.cents ?? 0;
   const budgetCents = toCents(settings.weeklyBudget);
   const { left, over } = budgetLeft(budgetCents, spentCents);
 
@@ -213,14 +238,19 @@ export async function getInsights(orgId: string, now: Date): Promise<Insights> {
     }));
 
   const names = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
-  const bySupplier = spendBySupplier(window.orders).map(({ supplierId, cents }) => ({
+  const byName = [...suppliers].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)).map((supplier) => supplier.id);
+  const bySupplier = supplierSlices(spendBySupplier(window.orders), byName).map(({ supplierId, cents, percent, slot }) => ({
     id: supplierId,
-    name: names.get(supplierId) ?? window.supplierNames.get(supplierId) ?? "A former supplier",
+    name:
+      supplierId === null ? "Other suppliers" : (names.get(supplierId) ?? window.supplierNames.get(supplierId) ?? "A former supplier"),
     cents,
+    percent,
+    slot,
   }));
 
   return {
     spentCents,
+    lastWeekCents,
     budgetCents,
     leftCents: left,
     overBudget: over,
@@ -229,6 +259,8 @@ export async function getInsights(orgId: string, now: Date): Promise<Insights> {
     bySupplier,
     record,
     priceChangeCount: priceChanges.total,
+    priceChangesUp: priceChanges.up,
+    priceChangesDown: priceChanges.down,
     priceChanges: priceChanges.latest,
   };
 }

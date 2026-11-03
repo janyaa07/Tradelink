@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
 import { formatMoney, toCents } from "@/domain/money";
-import { BuyerOrderCard } from "@/features/buyer/BuyerOrderCard";
+import { ArrivingPanel } from "@/features/buyer/ArrivingPanel";
 import { MyUsualTile } from "@/features/buyer/MyUsualTile";
 import { getBuyerSettings, getDeliveriesToCheck, getWeekSpendCents } from "@/features/buyer/queries";
 import { ReadyPanel } from "@/features/buyer/ReadyPanel";
 import { getRestockPlan } from "@/features/buyer/restock-plan";
 import { getTodos } from "@/features/buyer/todo-queries";
-import { TodoPanel } from "@/features/buyer/TodoPanel";
-import { countUnreadNotifications } from "@/features/notifications/queries";
 import { greeting } from "@/ui/format";
 import { HomeHero } from "@/ui/HomeHero";
-import { RecordList } from "@/ui/RecordCard";
 import { ServiceGrid, ServiceTile } from "@/ui/ServiceGrid";
 import { StatCard, StatGrid } from "@/ui/StatCard";
 
@@ -19,13 +16,12 @@ export const metadata: Metadata = { title: "Home · Tradelink" };
 
 export default async function BuyerHomePage() {
   const session = await requireRole("buyer");
-  const [todos, plan, deliveries, spentCents, settings, unread] = await Promise.all([
+  const [todos, plan, deliveries, spentCents, settings] = await Promise.all([
     getTodos(session.orgId),
     getRestockPlan(session.orgId),
     getDeliveriesToCheck(session.orgId),
     getWeekSpendCents(session.orgId),
     getBuyerSettings(session.orgId),
-    countUnreadNotifications(),
   ]);
   const budgetCents = toCents(settings.weeklyBudget);
   const firstName = session.fullName.split(" ")[0] ?? session.fullName;
@@ -36,44 +32,34 @@ export default async function BuyerHomePage() {
       firstName={firstName}
       orgName={session.orgName}
       prompt="What do you need to order?"
-      promptHref="/buyer/order"
+      promptHref="/buyer/assistant"
+      promptIcon="chat"
     >
-      <ServiceGrid>
+      <ServiceGrid columns={6}>
+        <ServiceTile label="Assistant" icon="chat" href="/buyer/assistant" />
         <MyUsualTile />
-        <ServiceTile label="New order" icon="order" href="/buyer/order" />
-        <ServiceTile label="Track" icon="truck" href="/buyer/orders" count={deliveries.length} />
-        <ServiceTile label="Availability" icon="stock" href="/buyer/availability" />
-        <ServiceTile label="Alerts" icon="bell" href="/buyer/notifications" count={unread} />
+        <ServiceTile label="Products" icon="box" href="/buyer/products" />
+        <ServiceTile label="Orders" icon="list" href="/buyer/orders" />
         <ServiceTile label="Insights" icon="trend" href="/buyer/insights" />
         <ServiceTile label="Settings" icon="gear" href="/buyer/settings" />
       </ServiceGrid>
       <StatGrid>
-        <StatCard href="/buyer/orders" value={formatMoney(spentCents)} label="Spent this week" />
+        <StatCard href="/buyer/insights" value={formatMoney(spentCents)} label="Spent this week" />
         <StatCard
-          href="/buyer/settings"
+          href="/buyer/insights"
           value={formatMoney(Math.max(0, budgetCents - spentCents))}
           label="Left of budget"
           alert={spentCents > budgetCents}
         />
-        <StatCard href="/buyer/orders" value={deliveries.length} label="Deliveries to check" />
-        <StatCard href="#todo" value={todos.length} label="Things to do" alert={todos.length > 0} />
+        <StatCard href="/buyer/orders?filter=to_check" value={deliveries.length} label="Deliveries to check" />
+        <StatCard href="/buyer/notifications" value={todos.length} label="Alerts" alert={todos.length > 0} />
       </StatGrid>
       <div className="@container">
-        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3.5 @min-[860px]:grid-cols-2">
-          <TodoPanel todos={todos} />
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3.5 @min-[760px]:grid-cols-2">
           <ReadyPanel plan={plan} />
+          <ArrivingPanel deliveries={deliveries} />
         </div>
       </div>
-      {deliveries.length > 0 ? (
-        <section aria-labelledby="arriving-title" className="flex flex-col gap-2.5">
-          <h2 id="arriving-title">Arriving and to check</h2>
-          <RecordList>
-            {deliveries.map((order) => (
-              <BuyerOrderCard key={order.id} order={order} />
-            ))}
-          </RecordList>
-        </section>
-      ) : null}
     </HomeHero>
   );
 }

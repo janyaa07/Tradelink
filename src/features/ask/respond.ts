@@ -10,14 +10,14 @@ import {
   orderFoundText,
   otherShopsText,
   priceText,
-  readLineStatus,
   reliabilityText,
   restockText,
   spendText,
   textReply,
+  unitPriceLabel,
 } from "@/domain/ask/replies";
 import { bestRecord } from "@/domain/ask/supplier-record";
-import type { AskReply, AskTurn, ReviewLine } from "@/domain/ask/types";
+import type { AskReply, AskTurn } from "@/domain/ask/types";
 import type { CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, toCents } from "@/domain/money";
 import { readOrderWithRules } from "@/domain/reader/rules";
@@ -35,6 +35,7 @@ import { getOrders, OPEN_STATUSES } from "@/features/orders/queries";
 import { claudeModel, isClaudeConfigured } from "@/integrations/claude/client";
 import { orderNumber } from "@/ui/format";
 import { answerOpenQuestion, type AnswerUsage } from "./answer";
+import { hasUsableLine, lineRow, productCartLine, readRows, toCartLine } from "./cart-lines";
 import { buildFacts } from "./facts";
 import { getOrderCardByNumber, getSupplierRecords, toOrderCard } from "./queries";
 
@@ -67,18 +68,36 @@ async function deliveriesReply(orgId: string): Promise<AskReply> {
   };
 }
 
+type UsualCopy = { text: string; empty: string };
+
+/** "Order my usual": every usual item still in the catalogue at its usual quantity, with Add to cart. */
+async function usualReply(orgId: string, copy: UsualCopy): Promise<AskReply> {
+  const [usuals, catalogue] = await Promise.all([getUsualItems(orgId), getBuyerCatalogue()]);
+  const byId = new Map(catalogue.map((item) => [item.id, item]));
+  const lines = usuals
+    .filter((usual) => byId.has(usual.productId))
+    .map((usual) => productCartLine(usual.productId, usual.usualQty, "My usual", "suggested"));
+  if (lines.length === 0) return textReply(copy.empty);
+  return {
+    text: copy.text,
+    cards: [{ kind: "lines", rows: lines.map((line) => lineRow(line, byId, null)) }],
+    actions: [{ kind: "add_to_cart", lines }],
+  };
+}
+
+/** "What should I reorder?": the restock plan with Add to cart, else the usual items. */
 async function restockReply(orgId: string): Promise<AskReply> {
   const plan = await getRestockPlan(orgId);
-  if (plan.rows.length === 0) return textReply(ASK_COPY.enoughStock);
+  if (plan.rows.length === 0) return usualReply(orgId, { text: ASK_COPY.enoughStockUsual, empty: ASK_COPY.enoughStock });
+  const byId = new Map(plan.rows.map((row) => [row.productId, row.item]));
+  const suggested = plan.rows.map((row) => {
+    const daysLeft = `${formatDaysLeft(row.daysLeft)} days left`;
+    return { daysLeft, line: productCartLine(row.productId, row.qty, `Suggested, ${daysLeft}`, "suggested") };
+  });
   return {
     text: restockText(plan.rows.length),
-    cards: [
-      {
-        kind: "plan",
-        items: plan.rows.map((row) => ({ name: row.item.name, daysLeft: `${formatDaysLeft(row.daysLeft)} days left` })),
-      },
-    ],
-    actions: [{ kind: "load_plan" }],
+    cards: [{ kind: "lines", rows: suggested.map(({ line, daysLeft }) => lineRow(line, byId, daysLeft)) }],
+    actions: [{ kind: "add_to_cart", lines: suggested.map(({ line }) => line) }],
   };
 }
 
@@ -96,53 +115,35 @@ async function priceReply(orgId: string, query: string): Promise<AskReply> {
   const item = findPriceProduct(query, catalogue);
   if (!item) return textReply(ASK_COPY.productNotFound);
   const lastPaid = usuals.find((usual) => usual.productId === item.id)?.lastPaid ?? null;
+  const soldOut = item.status === "active" && item.available <= 0;
   return {
     text: priceText(item),
     cards: [
       {
         kind: "price",
         price: {
+          name: item.name,
+          art: item.art,
+          category: item.category,
+          price: unitPriceLabel(item),
           supplierName: item.supplierName,
           available: availabilityLabel(item),
           lastPaid: lastPaid ? formatMoney(lastPaid) : null,
         },
       },
     ],
-    actions: [],
+    actions: soldOut ? [] : [{ kind: "add_to_cart", lines: [productCartLine(item.id, 1, "Added by you", "manual")] }],
   };
 }
 
-function toReviewLine(line: DraftLine): ReviewLine[] {
-  const productId = line.productId ?? line.options[0];
-  if (!productId) return [];
-  return [
-    {
-      productId,
-      qty: line.qty,
-      sourceText: line.sourceText,
-      options: line.options,
-      state: line.state === "matched" ? "manual" : "suggested",
-    },
-  ];
-}
-
-/** "Here is what I read. Nothing has been sent." when at least one line matched or has options (BUY-49). */
+/** "Here is what I read" with each line's state and price, when at least one line matched or has options (BUY-49). */
 function readOrderReply(lines: DraftLine[], catalogue: CatalogueItem[]): AskReply | null {
-  const review = lines.flatMap(toReviewLine);
-  if (review.length === 0) return null;
-  const names = new Map(catalogue.map((item) => [item.id, item.name]));
+  if (!hasUsableLine(lines)) return null;
+  const byId = new Map(catalogue.map((item) => [item.id, item]));
   return {
     text: ASK_COPY.readOrder,
-    cards: [
-      {
-        kind: "read",
-        lines: lines.map((line) => {
-          const name = line.productId ? names.get(line.productId) : undefined;
-          return { label: name ? `${line.qty} × ${name}` : line.sourceText, status: readLineStatus(line.state) };
-        }),
-      },
-    ],
-    actions: [{ kind: "review_order", lines: review }],
+    cards: [{ kind: "lines", rows: readRows(lines, byId) }],
+    actions: [{ kind: "add_to_cart", lines: lines.map(toCartLine) }],
   };
 }
 
@@ -209,7 +210,7 @@ async function unmatchedReply(session: Session, message: string, history: AskTur
   return openQuestionReply(session, message, history, catalogue);
 }
 
-/** Answers one Ask message for the signed-in buyer; every query runs as the user, so RLS applies. */
+/** Answers one Tradelink Assistant message for the signed-in buyer; every query runs as the user, so RLS applies. */
 export async function respondToAsk(session: Session, message: string, history: AskTurn[]): Promise<AskReply> {
   const intent = routeIntent(message);
   switch (intent.kind) {
@@ -224,7 +225,7 @@ export async function respondToAsk(session: Session, message: string, history: A
     case "restock":
       return restockReply(session.orgId);
     case "usual":
-      return { text: ASK_COPY.usual, cards: [], actions: [{ kind: "load_usual" }] };
+      return usualReply(session.orgId, { text: ASK_COPY.usual, empty: ASK_COPY.noUsuals });
     case "reliability":
       return reliabilityReply(session.orgId);
     case "price":
