@@ -34,19 +34,7 @@ export type AppShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({
-  role,
-  userName,
-  orgName,
-  navItems,
-  activeHref,
-  pathname,
-  bell,
-  bellPanel,
-  cart,
-  signOutAction,
-  children,
-}: AppShellProps) {
+export function AppShell({ role, userName, orgName, navItems, activeHref, pathname, bell, bellPanel, cart, signOutAction, children }: AppShellProps) {
   const homeHref = navItems[0]?.href ?? "/";
   const roleLabel = ROLE_LABELS[role];
   const settingsHref = `/${role}/settings`;
@@ -61,12 +49,7 @@ export function AppShell({
       >
         Skip to content
       </a>
-      <header
-        className={cx(
-          styles.top,
-          "z-20 flex items-center gap-2 border-b border-line bg-surface px-3.5 py-2.5 text-ink rail:px-8 rail:py-3",
-        )}
-      >
+      <header className={cx(styles.top, "z-20 flex items-center gap-2 border-b border-line bg-surface px-3.5 py-2.5 text-ink rail:px-8 rail:py-3")}>
         <Brand href={homeHref} />
         <TopNav items={navItems} activeHref={activeHref} />
         <span className="flex-1" />
@@ -74,14 +57,7 @@ export function AppShell({
         {bellPanel ? (
           <AlertsPopover count={bell.count}>{bellPanel}</AlertsPopover>
         ) : (
-          <TopBarLink
-            href={bell.href}
-            icon="bell"
-            label="Alerts"
-            countLabel="new"
-            count={bell.count}
-            current={pathname === bell.href}
-          />
+          <TopBarLink href={bell.href} icon="bell" label="Alerts" countLabel="new" count={bell.count} current={pathname === bell.href} />
         )}
         {cart ? (
           <TopBarLink
@@ -93,17 +69,19 @@ export function AppShell({
             current={pathname === cart.href}
           />
         ) : null}
-        <UserMenu
-          userName={userName}
-          orgName={orgName}
-          roleLabel={roleLabel}
-          settingsHref={settingsHref}
-          signOutAction={signOutAction}
-        />
+        <UserMenu userName={userName} orgName={orgName} roleLabel={roleLabel} settingsHref={settingsHref} signOutAction={signOutAction} />
       </header>
       <ShellNav items={navItems} activeHref={activeHref} className={styles.nav} />
-      <main id="main" tabIndex={-1} className={cx(styles.main, "relative px-4 pt-5 pb-8 outline-none rail:px-8 rail:pt-8 rail:pb-12")}>
-        <div className="mx-auto flex max-w-[1080px] flex-col gap-5">{children}</div>
+      <main
+        id="main"
+        tabIndex={-1}
+        className={cx(
+          styles.main,
+          // A page marked data-fill (Tradelink AI) fills the space and scrolls inside itself.
+          "relative px-4 pt-5 pb-8 outline-none has-[[data-fill]]:p-0 rail:px-8 rail:pt-8 rail:pb-12 rail:has-[[data-fill]]:px-8 rail:has-[[data-fill]]:py-6",
+        )}
+      >
+        <div className="mx-auto flex max-w-[1080px] flex-col gap-5 has-[[data-fill]]:h-full">{children}</div>
       </main>
     </div>
   );

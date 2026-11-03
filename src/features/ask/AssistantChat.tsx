@@ -13,7 +13,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { addedToCartText, ASK_COPY, greetingText, placeCartLabel, placedText, textReply } from "@/domain/ask/replies";
+import { addedToCartText, ASK_COPY, placeCartLabel, placedText, textReply } from "@/domain/ask/replies";
 import type { AiCard, AiProposal, AskAction, AskCard, AskReply, AskTurn, CartLine, LineRow, ReadLineStatus } from "@/domain/ask/types";
 import { formatMoney } from "@/domain/money";
 import { StatusPill } from "@/features/orders/OrderCard";
@@ -26,6 +26,7 @@ import { Pill, type PillTone } from "@/ui/Pill";
 import { ProductImage } from "@/ui/ProductImage";
 import { executeAiAction } from "@/features/ai/execute";
 import { AiCardView } from "@/features/ai/ui/AiCards";
+import type { StepTone } from "@/features/home/HomeParts";
 import { parseReply, plainReply } from "@/features/ai/ui/reply-blocks";
 import { addToCartAction, placeCartAction } from "./actions";
 import styles from "./assistant.module.css";
@@ -43,31 +44,73 @@ import {
 
 export type AiRole = "buyer" | "supplier";
 
-const SUGGESTIONS: Record<AiRole, { text: string; icon: IconName }[]> = {
+const SUGGESTIONS: Record<AiRole, { text: string; hint: string; icon: IconName }[]> = {
   buyer: [
-    { text: "Order my usual", icon: "repeat" },
-    { text: "What's arriving today?", icon: "truck" },
-    { text: "How much did I spend this week?", icon: "receipt" },
-    { text: "What's in my cart?", icon: "cart" },
+    {
+      text: "Order my usual",
+      hint: "Put your usual items in the cart",
+      icon: "repeat",
+    },
+    {
+      text: "What's arriving today?",
+      hint: "Deliveries on the way and to check",
+      icon: "truck",
+    },
+    {
+      text: "How much did I spend this week?",
+      hint: "Spend against your budget",
+      icon: "receipt",
+    },
+    {
+      text: "What's in my cart?",
+      hint: "Lines, totals and cut-offs",
+      icon: "cart",
+    },
   ],
   supplier: [
-    { text: "What new orders do I have?", icon: "list" },
-    { text: "What's low in stock?", icon: "stock" },
-    { text: "Any problems I need to answer?", icon: "flag" },
-    { text: "What goes out for delivery today?", icon: "truck" },
+    {
+      text: "What new orders do I have?",
+      hint: "Accept or reject them",
+      icon: "list",
+    },
+    {
+      text: "What's low in stock?",
+      hint: "At or below the reorder level",
+      icon: "stock",
+    },
+    {
+      text: "Any problems I need to answer?",
+      hint: "Credit, replace or reply",
+      icon: "flag",
+    },
+    {
+      text: "What goes out for delivery today?",
+      hint: "Today's pick list",
+      icon: "truck",
+    },
   ],
 };
 
 const PLACEHOLDER = "Ask anything, or tell me what to do";
 
 const INTRO: Record<AiRole, string> = {
-  buyer: "Ask about orders, stock and spend, or tell it what to order.",
-  supplier: "Ask about orders, stock and problems, or tell it what to do.",
+  buyer: "Ask about orders, stock and spend, or tell me what to order. I check with you before anything changes.",
+  supplier: "Ask about orders, stock and buyers, or tell me what to do. I check with you before anything changes.",
+};
+
+/** Card tags such as [[ORD-1061]], left out when an answer is copied. */
+const CARD_TAG = /\[\[[^\]]*\]\]\n?/g;
+
+const FACT_DOTS: Record<StepTone, string> = {
+  bad: "bg-bad",
+  warn: "bg-[#C98A1A]",
+  info: "bg-info",
+  good: "bg-good",
 };
 
 type StreamEvent =
   | { type: "text"; delta: string }
-  | { type: "status"; text: string }
+  | { type: "status"; text: string; done: string }
   | { type: "cards"; cards: AskCard[] }
   | { type: "proposal"; proposal: AiProposal }
   | { type: "error"; message: string }
@@ -96,11 +139,15 @@ const WAITING: Record<AiRole, string[]> = {
 const WAITING_STEP_MS = 1600;
 const QUIET_AFTER_TEXT_MS = 900;
 
-
 /** Where the person goes next after a confirmed change. */
 function linkAfter(role: AiRole, tool: string): AskAction | null {
   if (role === "supplier") {
-    if (tool === "update_terms") return { kind: "link", label: "Open settings", href: "/supplier/settings" };
+    if (tool === "update_terms")
+      return {
+        kind: "link",
+        label: "Open settings",
+        href: "/supplier/settings",
+      };
     return ["receive_stock", "change_price", "confirm_stock", "adjust_stock"].includes(tool)
       ? { kind: "link", label: "Open inventory", href: "/supplier/inventory" }
       : { kind: "link", label: "View orders", href: "/supplier/orders" };
@@ -116,9 +163,17 @@ const MAX_CHARS = 2000;
 const MAX_HISTORY = 20;
 const MAX_INPUT_HEIGHT = 200;
 
-const REVIEW_CART: AskAction = { kind: "link", label: "Review cart", href: "/buyer/cart" };
+const REVIEW_CART: AskAction = {
+  kind: "link",
+  label: "Review cart",
+  href: "/buyer/cart",
+};
 
-const STATUS_TONES: Record<ReadLineStatus, PillTone> = { Matched: "good", "Check this": "warn", "Not found": "bad" };
+const STATUS_TONES: Record<ReadLineStatus, PillTone> = {
+  Matched: "good",
+  "Check this": "warn",
+  "Not found": "bad",
+};
 
 const cardClass = "flex w-full max-w-[520px] flex-col rounded-lg border border-line bg-surface";
 const rowClass = "flex items-center justify-between gap-3 px-3.5 py-2.5 text-[.92rem]";
@@ -225,46 +280,43 @@ function CardView({ card }: { card: AskCard }) {
 type ReplyHandlers = {
   onAdd: (lines: CartLine[]) => Promise<void>;
   onPlace: (draftVersion: number) => Promise<void>;
-  onConfirm: (proposal: AiProposal) => Promise<void>;
+  /** Resolves true when the change went through. */
+  onConfirm: (proposal: AiProposal) => Promise<boolean>;
   onSkip: (proposal: AiProposal) => void;
 };
 
 /** A change Tradelink AI wants to make. Nothing happens until the person taps the button. */
-function ConfirmCard({
-  proposal,
-  state,
-  handlers,
-}: {
-  proposal: AiProposal;
-  state: "done" | "skipped" | undefined;
-  handlers: ReplyHandlers;
-}) {
+function ConfirmCard({ proposal, state, handlers }: { proposal: AiProposal; state: "done" | "skipped" | undefined; handlers: ReplyHandlers }) {
   const [busy, start] = useTransition();
   return (
     <div
       className={cx(
-        "w-full max-w-[520px] overflow-hidden rounded-lg border bg-surface shadow-card",
-        state === "done" ? "border-good/40" : state === "skipped" ? "border-line opacity-70" : "border-accent/50",
+        "w-full max-w-[560px] overflow-hidden rounded-xl",
+        state === "done" ? "border border-good/40 bg-surface" : state === "skipped" ? "border border-line bg-surface opacity-70" : "ai-ring",
       )}
     >
       <div className="flex items-start gap-3 px-3.5 pt-3">
-        <span
-          className={cx(
-            "mt-0.5 grid size-8 flex-none place-items-center rounded-full",
-            state === "done" ? "bg-good-soft text-good" : "bg-accent-soft text-accent",
-          )}
-        >
-          <Icon name={state === "done" ? "check" : "spark"} size={16} />
-        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[.72rem] font-semibold uppercase tracking-wide text-muted">
-            {state === "done" ? "Done" : state === "skipped" ? "Not now" : "Needs your OK"}
+          <p className="flex items-center gap-1.5 text-[.75rem] font-semibold">
+            {state === "done" ? (
+              <span className="flex items-center gap-1 text-good">
+                <Icon name="check" size={14} />
+                Done
+              </span>
+            ) : state === "skipped" ? (
+              <span className="text-muted">Not now</span>
+            ) : (
+              <>
+                <span aria-hidden="true" className="ai-spark size-3.5" />
+                <span className="ai-text">Needs your OK</span>
+              </>
+            )}
           </p>
           <b className="block leading-snug [overflow-wrap:anywhere]">{proposal.title}</b>
         </div>
       </div>
       {proposal.details.length > 0 ? (
-        <ul className="mx-3.5 mt-2 flex flex-col gap-0.5 rounded-xl bg-sunken px-3 py-2 text-[.875rem]">
+        <ul className="mx-3.5 mt-2 flex flex-col gap-0.5 rounded-lg bg-sunken px-3 py-2 text-[.85rem]">
           {proposal.details.map((detail, index) => (
             <li key={index} className="[overflow-wrap:anywhere]">
               {detail}
@@ -272,9 +324,20 @@ function ConfirmCard({
           ))}
         </ul>
       ) : null}
-      {state ? <div className="h-3" /> : (
+      {state ? (
+        <div className="h-3" />
+      ) : (
         <div className="flex flex-wrap gap-2 px-3.5 pt-3 pb-3.5">
-          <Button variant="primary" aria-busy={busy || undefined} disabled={busy} onClick={() => start(() => handlers.onConfirm(proposal))}>
+          <Button
+            variant="primary"
+            aria-busy={busy || undefined}
+            disabled={busy}
+            onClick={() =>
+              start(async () => {
+                await handlers.onConfirm(proposal);
+              })
+            }
+          >
             {busy ? "Working..." : proposal.confirmLabel}
           </Button>
           <Button disabled={busy} onClick={() => handlers.onSkip(proposal)}>
@@ -282,6 +345,70 @@ function ConfirmCard({
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Several changes in one answer: one card with numbered steps, run in order with one tap. */
+function ConfirmGroup({
+  proposals,
+  resolved,
+  handlers,
+}: {
+  proposals: AiProposal[];
+  resolved: Record<string, "done" | "skipped">;
+  handlers: ReplyHandlers;
+}) {
+  const [busy, start] = useTransition();
+  const open = proposals.filter((proposal) => !resolved[proposal.id]);
+  return (
+    <div className={cx("w-full max-w-[560px] overflow-hidden rounded-xl px-3.5 py-3", open.length > 0 ? "ai-ring" : "border border-line bg-surface")}>
+      <p className="flex items-center gap-1.5 text-[.75rem] font-semibold">
+        <span aria-hidden="true" className="ai-spark size-3.5" />
+        <span className="ai-text">{open.length > 0 ? "Needs your OK" : "All done"}</span>
+      </p>
+      <ol className="mt-2.5 flex flex-col gap-2">
+        {proposals.map((proposal, index) => {
+          const state = resolved[proposal.id];
+          return (
+            <li key={proposal.id} className="flex items-start gap-2.5 text-[.875rem]">
+              <span
+                className={cx(
+                  "grid size-[22px] flex-none place-items-center rounded-full text-[.72rem] font-semibold tabular-nums",
+                  state === "done" ? "bg-good-soft text-good" : "bg-sunken text-ink",
+                )}
+              >
+                {state === "done" ? <Icon name="check" size={13} /> : index + 1}
+              </span>
+              <span className={cx("min-w-0 flex-1", state === "skipped" && "text-muted line-through")}>
+                <b className="font-semibold">{proposal.title}</b>
+                {proposal.details[0] ? <span className="text-muted"> · {proposal.details[0]}</span> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {open.length > 0 ? (
+        <div className="mt-3.5 flex flex-wrap gap-2">
+          <Button
+            variant="primary"
+            aria-busy={busy || undefined}
+            disabled={busy}
+            onClick={() =>
+              start(async () => {
+                for (const proposal of open) {
+                  if (!(await handlers.onConfirm(proposal))) break;
+                }
+              })
+            }
+          >
+            {busy ? "Working..." : open.length === 2 ? "Do both" : `Do all ${open.length}`}
+          </Button>
+          <Button disabled={busy} onClick={() => open.forEach((proposal) => handlers.onSkip(proposal))}>
+            Not now
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -302,14 +429,16 @@ function ReplyActions({
   handlers: ReplyHandlers;
 }) {
   const [busy, start] = useTransition();
+  const confirms = actions.flatMap((action) => (action.kind === "confirm" ? [action.proposal] : []));
+  const grouped = confirms.length > 1;
   return (
     <div className="flex w-full flex-wrap gap-2">
+      {grouped ? <ConfirmGroup proposals={confirms} resolved={resolved} handlers={handlers} /> : null}
       {actions.map((action) => {
         switch (action.kind) {
           case "confirm":
-            return (
-              <ConfirmCard key={action.proposal.id} proposal={action.proposal} state={resolved[action.proposal.id]} handlers={handlers} />
-            );
+            if (grouped) return null;
+            return <ConfirmCard key={action.proposal.id} proposal={action.proposal} state={resolved[action.proposal.id]} handlers={handlers} />;
           case "link":
             return (
               <LinkButton key={action.label} href={action.href}>
@@ -354,32 +483,61 @@ function AiReply({
   onAsk,
   onCard,
   waiting,
+  onRetry,
 }: {
   message: ChatMessage;
   handlers: ReplyHandlers;
   streaming: boolean;
   onAsk: ((text: string) => void) | null;
   onCard: (card: AiCard) => void;
+  /** Ask the question behind this answer again; the last answer only. */
+  onRetry: (() => void) | null;
   /** The rotating line shown while Tradelink AI works, inside this reply so there is one avatar. */
   waiting: ReactNode;
 }) {
   const { blocks, asks } = parseReply(message.reply.text, streaming);
-  const cards = new Map(
-    message.reply.cards.filter((card): card is AiCard => card.kind.startsWith("ai_")).map((card) => [card.key, card]),
-  );
+  const cards = new Map(message.reply.cards.filter((card): card is AiCard => card.kind.startsWith("ai_")).map((card) => [card.key, card]));
+  const [copied, setCopied] = useState(false);
+  const steps = message.steps ?? [];
+  const trail =
+    steps.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-1.5" aria-label="What Tradelink AI checked">
+        <span className="mr-0.5 text-[.75rem] text-muted">
+          {streaming || message.workedMs === undefined ? "Working" : `Worked for ${Math.max(1, Math.round(message.workedMs / 1000))}s`}
+        </span>
+        {steps.map((step) => (
+          <span key={step} className="inline-flex h-6 items-center gap-1 rounded-full bg-sunken px-2.5 text-[.75rem] font-medium text-ink/80">
+            <Icon name="check" size={12} className="text-good" />
+            {step}
+          </span>
+        ))}
+      </div>
+    ) : null;
   if (blocks.length === 0 && message.reply.actions.length === 0) {
     return waiting ? (
-      <div className="flex items-center gap-3">
+      <div className="flex gap-3">
         <AssistantAvatar />
-        {waiting}
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-2 pt-1">
+          {trail}
+          {waiting}
+        </div>
       </div>
     ) : null;
   }
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(plainReply(message.reply.text).replace(CARD_TAG, "").trim());
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
   return (
     <div className="flex gap-3">
       <AssistantAvatar />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-2.5 pt-1">
         <span className="sr-only">Tradelink AI: </span>
+        {trail}
         {blocks.map((block, index) => {
           if (block.kind === "text") {
             return (
@@ -390,7 +548,7 @@ function AiReply({
           }
           if (block.kind === "list") {
             return (
-              <ul key={index} className="flex list-disc flex-col gap-1 pl-5 leading-relaxed marker:text-accent">
+              <ul key={index} className="flex list-disc flex-col gap-1 pl-5 leading-relaxed marker:text-[var(--ai-2)]">
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex}>{item}</li>
                 ))}
@@ -411,12 +569,36 @@ function AiReply({
                 key={ask}
                 type="button"
                 onClick={() => onAsk(ask)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[.85rem] font-medium text-ink transition-colors duration-150 hover:border-accent hover:text-accent"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[.82rem] font-medium text-ink transition-colors duration-150 hover:border-[var(--ai-2)] hover:text-accent"
               >
-                <Icon name="spark" size={14} className="text-accent" />
+                <span aria-hidden="true" className="ai-spark size-3" />
                 {ask}
               </button>
             ))}
+          </div>
+        ) : null}
+        {!streaming && message.reply.text.trim() ? (
+          <div className="-ml-1.5 flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => void copy()}
+              aria-label={copied ? "Copied" : "Copy answer"}
+              title={copied ? "Copied" : "Copy answer"}
+              className="grid size-7 place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-sunken hover:text-ink"
+            >
+              <Icon name={copied ? "check" : "copy"} size={15} />
+            </button>
+            {onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                aria-label="Ask again"
+                title="Ask again"
+                className="grid size-7 place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-sunken hover:text-ink"
+              >
+                <Icon name="repeat" size={15} />
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -476,9 +658,7 @@ function MessageView({ message, handlers }: { message: ChatMessage; handlers: Re
         {cards.map((card, index) => (
           <CardView key={index} card={card} />
         ))}
-        {actions.length > 0 ? (
-          <ReplyActions actions={actions} done={message.done} resolved={message.resolved ?? {}} handlers={handlers} />
-        ) : null}
+        {actions.length > 0 ? <ReplyActions actions={actions} done={message.done} resolved={message.resolved ?? {}} handlers={handlers} /> : null}
       </div>
     </div>
   );
@@ -489,53 +669,86 @@ type HistoryProps = {
   currentId: string;
   locked: boolean;
   now: Date;
+  onNew: () => void;
   onOpen: (conversation: Conversation) => void;
   onDelete: (conversation: Conversation) => void;
 };
 
-/** The saved chats, newest first. Used in the laptop column and the phone sheet. */
-function HistoryPanel({ conversations, currentId, locked, now, onOpen, onDelete }: HistoryProps) {
-  const headingId = useId();
+/** New chat, a search and the saved chats grouped by day. Used in the laptop column and the phone sheet. */
+function HistoryPanel({ conversations, currentId, locked, now, onNew, onOpen, onDelete }: HistoryProps) {
+  const [query, setQuery] = useState("");
+  const words = query.trim().toLowerCase();
+  const shown = words ? conversations.filter((conversation) => conversation.title.toLowerCase().includes(words)) : conversations;
+  const groups = new Map<string, Conversation[]>();
+  for (const conversation of shown) {
+    const day = relativeDay(conversation.updatedAt, now);
+    const label = day === "Today" || day === "Yesterday" ? day : "Earlier";
+    groups.set(label, [...(groups.get(label) ?? []), conversation]);
+  }
   return (
     <div className="flex min-h-0 w-full flex-col gap-2">
-      <h2 id={headingId} className="px-1">
-        Recent chats
-      </h2>
+      <button
+        type="button"
+        onClick={onNew}
+        disabled={locked}
+        className="ai-ring flex h-10 items-center gap-2 rounded-xl px-3 text-[.875rem] font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span aria-hidden="true" className="ai-spark size-4" />
+        New chat
+      </button>
+      <label className="flex h-9 items-center gap-2 rounded-lg bg-sunken px-2.5 text-muted">
+        <Icon name="search" size={15} />
+        <span className="sr-only">Search chats</span>
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search chats"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[.84rem] text-ink outline-none placeholder:text-muted"
+        />
+      </label>
       {conversations.length === 0 ? (
-        <p className="px-1 text-[.875rem] text-muted">Your chats are saved on this device and show here.</p>
+        <p className="px-1 pt-2 text-[.84rem] text-muted">Your chats are saved on this device and show here.</p>
+      ) : shown.length === 0 ? (
+        <p className="px-1 pt-2 text-[.84rem] text-muted">No chats match.</p>
       ) : (
-        <ul aria-labelledby={headingId} className="-mx-1 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-          {conversations.map((conversation) => {
-            const current = conversation.id === currentId;
-            return (
-              <li key={conversation.id} className="relative">
-                <button
-                  type="button"
-                  onClick={() => onOpen(conversation)}
-                  disabled={locked}
-                  aria-current={current ? "true" : undefined}
-                  className={cx(
-                    "flex w-full min-w-0 flex-col rounded-md border-0 py-2 pr-10 pl-3 text-left transition-colors duration-150 disabled:cursor-not-allowed",
-                    current ? "bg-accent-soft text-ink" : "bg-transparent text-ink hover:bg-sunken",
-                  )}
-                >
-                  <span className="truncate text-[.9rem] font-medium">{conversation.title}</span>
-                  <span className="text-[.75rem] text-muted">{relativeDay(conversation.updatedAt, now)}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(conversation)}
-                  disabled={locked}
-                  aria-label={`Delete chat: ${conversation.title}`}
-                  title="Delete chat"
-                  className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full border-0 bg-transparent text-muted hover:bg-surface hover:text-bad disabled:cursor-not-allowed"
-                >
-                  <StrokeIcon d={CLOSE} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="-mx-1 flex min-h-0 flex-col overflow-y-auto">
+          {[...groups].map(([label, items]) => (
+            <section key={label} aria-label={label}>
+              <h2 className="px-2 pt-3 pb-1 text-[.72rem] font-semibold text-muted">{label}</h2>
+              <ul className="flex flex-col gap-0.5">
+                {items.map((conversation) => {
+                  const current = conversation.id === currentId;
+                  return (
+                    <li key={conversation.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => onOpen(conversation)}
+                        disabled={locked}
+                        aria-current={current ? "true" : undefined}
+                        className={cx(
+                          "flex w-full min-w-0 rounded-md border-0 py-1.5 pr-9 pl-2.5 text-left transition-colors duration-150 disabled:cursor-not-allowed",
+                          current ? "bg-sunken font-semibold text-ink" : "bg-transparent text-ink/85 hover:bg-sunken",
+                        )}
+                      >
+                        <span className="truncate text-[.84rem]">{conversation.title}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(conversation)}
+                        disabled={locked}
+                        aria-label={`Delete chat: ${conversation.title}`}
+                        title="Delete chat"
+                        className="absolute top-1/2 right-1 grid size-7 -translate-y-1/2 place-items-center rounded-md border-0 bg-transparent text-muted opacity-60 hover:bg-surface hover:text-bad hover:opacity-100 disabled:cursor-not-allowed"
+                      >
+                        <StrokeIcon d={CLOSE} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -579,14 +792,17 @@ function newConversationId(): string {
  * to it; only the open chat's last turns go to the server, as context for the next answer.
  */
 type AssistantChatProps = {
-  firstName: string;
+  /** "Good evening, Siti", worked out on the server so it matches the person's clock. */
+  hello: string;
   userId: string;
   role?: AiRole;
   /** A question asked from Home (?q=&t=), sent as soon as the chat opens. */
   initialQuestion?: { text: string; stamp: string };
+  /** What needs the person right now, shown on a new chat (the same list as Home's Next up). */
+  facts: { tone: StepTone; text: string }[];
 };
 
-export function AssistantChat({ firstName, userId, role = "buyer", initialQuestion }: AssistantChatProps) {
+export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, facts }: AssistantChatProps) {
   const router = useRouter();
   const inputId = useId();
   const [now] = useState(() => new Date());
@@ -613,7 +829,6 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDialogElement>(null);
-  const greeting = greetingText(firstName);
   /** No switching chats while a reply or a cart action is on its way, so it lands in the right chat. */
   const locked = thinking || working;
 
@@ -675,8 +890,7 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
     }
   };
 
-  const append = (from: ChatMessage["from"], reply: AskReply) =>
-    commit([...messagesRef.current, { id: nextId.current++, from, reply, done: false }]);
+  const append = (from: ChatMessage["from"], reply: AskReply) => commit([...messagesRef.current, { id: nextId.current++, from, reply, done: false }]);
 
   /** Streaming updates to the reply being written: shown at once, saved when the reply ends. */
   const patch = (messageId: number, change: (message: ChatMessage) => ChatMessage) => {
@@ -687,7 +901,12 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
   const resolve = (messageId: number, proposalId: string, state: "done" | "skipped") =>
     commit(
       messagesRef.current.map((message) =>
-        message.id === messageId ? { ...message, resolved: { ...message.resolved, [proposalId]: state } } : message,
+        message.id === messageId
+          ? {
+              ...message,
+              resolved: { ...message.resolved, [proposalId]: state },
+            }
+          : message,
       ),
     );
 
@@ -737,9 +956,10 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
     const question = text.trim().slice(0, MAX_CHARS);
     if (question === "" || pending.current) return;
     pending.current = true;
-    const history: AskTurn[] = messagesRef.current
-      .slice(-MAX_HISTORY)
-      .map((message) => ({ role: message.from, text: (message.ai ? plainReply(message.reply.text) : message.reply.text).slice(0, MAX_CHARS) }));
+    const history: AskTurn[] = messagesRef.current.slice(-MAX_HISTORY).map((message) => ({
+      role: message.from,
+      text: (message.ai ? plainReply(message.reply.text) : message.reply.text).slice(0, MAX_CHARS),
+    }));
     append("buyer", textReply(question));
     setDraft("");
     setThinking(true);
@@ -749,14 +969,24 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
     const replyId = nextId.current++;
     commit([
       ...messagesRef.current,
-      { id: replyId, ai: true, from: "tradelink", reply: { text: "", cards: [], actions: [] }, done: false },
+      {
+        id: replyId,
+        ai: true,
+        from: "tradelink",
+        reply: { text: "", cards: [], actions: [] },
+        done: false,
+      },
     ]);
     let newParagraph = false;
+    const started = Date.now();
     const held: AskAction[] = [];
     const addText = (text: string) => {
       lastTextAt.current = Date.now();
       const joiner = newParagraph ? "\n\n" : "";
-      patch(replyId, (message) => ({ ...message, reply: { ...message.reply, text: message.reply.text + joiner + text } }));
+      patch(replyId, (message) => ({
+        ...message,
+        reply: { ...message.reply, text: message.reply.text + joiner + text },
+      }));
       newParagraph = false;
     };
     try {
@@ -784,11 +1014,21 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
           } else if (event.type === "status") {
             setStatus(event.text);
             setWaitStep(0);
+            patch(replyId, (message) => {
+              const steps = message.steps ?? [];
+              return steps.includes(event.done) ? message : { ...message, steps: [...steps, event.done].slice(0, 12) };
+            });
           } else if (event.type === "break") newParagraph = true;
           else if (event.type === "error") addText(event.message);
           else if (event.type === "cards") {
             // Ready for the answer to place; only the cards it tags are drawn.
-            patch(replyId, (message) => ({ ...message, reply: { ...message.reply, cards: [...message.reply.cards, ...event.cards] } }));
+            patch(replyId, (message) => ({
+              ...message,
+              reply: {
+                ...message.reply,
+                cards: [...message.reply.cards, ...event.cards],
+              },
+            }));
           } else if (event.type === "proposal") held.push({ kind: "confirm", proposal: event.proposal });
         }
       }
@@ -796,7 +1036,15 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
       addText(ASK_COPY.unavailable);
     }
     // Confirm cards follow the answer, so nothing jumps while it is written.
-    if (held.length > 0) patch(replyId, (message) => ({ ...message, reply: { ...message.reply, actions: [...message.reply.actions, ...held] } }));
+    if (held.length > 0)
+      patch(replyId, (message) => ({
+        ...message,
+        reply: {
+          ...message.reply,
+          actions: [...message.reply.actions, ...held],
+        },
+      }));
+    patch(replyId, (message) => (message.steps ? { ...message, workedMs: Date.now() - started } : message));
     const reply = messagesRef.current.find((message) => message.id === replyId);
     if (reply && !reply.reply.text.trim() && reply.reply.cards.length === 0 && reply.reply.actions.length === 0) addText(ASK_COPY.unavailable);
     commit(messagesRef.current);
@@ -811,19 +1059,28 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
       setWorking(true);
       let result: Awaited<ReturnType<typeof executeAiAction>>;
       try {
-        result = await executeAiAction({ id: proposal.id, tool: proposal.tool, args: proposal.args });
+        result = await executeAiAction({
+          id: proposal.id,
+          tool: proposal.tool,
+          args: proposal.args,
+        });
       } catch {
         result = { ok: false, error: ASK_COPY.unavailable };
       }
       setWorking(false);
       if (!result.ok) {
         append("tradelink", textReply(result.error));
-        return;
+        return false;
       }
       resolve(messageId, proposal.id, "done");
       const link = linkAfter(role, proposal.tool);
-      append("tradelink", { text: result.data, cards: [], actions: link ? [link] : [] });
+      append("tradelink", {
+        text: result.data,
+        cards: [],
+        actions: link ? [link] : [],
+      });
       router.refresh();
+      return true;
     },
     onSkip: (proposal) => {
       resolve(messageId, proposal.id, "skipped");
@@ -863,13 +1120,20 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
       }
       setWorking(false);
       if (!result.ok) {
-        append("tradelink", { text: result.error, cards: [], actions: [REVIEW_CART] });
+        append("tradelink", {
+          text: result.error,
+          cards: [],
+          actions: [REVIEW_CART],
+        });
         return;
       }
       markDone(messageId);
       append("tradelink", {
         text: placedText(
-          result.data.orders.map((order) => ({ number: orderNumber(order.number), supplierName: order.supplierName })),
+          result.data.orders.map((order) => ({
+            number: orderNumber(order.number),
+            supplierName: order.supplierName,
+          })),
         ),
         cards: [],
         actions: [{ kind: "link", label: "View orders", href: "/buyer/orders" }],
@@ -890,133 +1154,177 @@ export function AssistantChat({ firstName, userId, role = "buyer", initialQuesti
   }
 
   const empty = messages.length === 0 && !thinking;
+  const current = conversations.find((conversation) => conversation.id === currentId);
+  const title = current?.title ?? messages.find((message) => !message.ai)?.reply.text ?? "New chat";
   const historyPanel = (
     <HistoryPanel
       conversations={conversations}
       currentId={currentId}
       locked={locked}
       now={now}
-      onOpen={(conversation) => openConversation(conversation.id, conversation.messages)}
+      onNew={() => {
+        sheetRef.current?.close();
+        startNewChat();
+      }}
+      onOpen={(conversation) => {
+        sheetRef.current?.close();
+        openConversation(conversation.id, conversation.messages);
+      }}
       onDelete={deleteConversation}
     />
   );
+  const composer = (
+    <form
+      onSubmit={onSubmit}
+      aria-busy={thinking || undefined}
+      className={cx("ai-ring flex flex-col gap-1.5 rounded-2xl", empty ? "px-4 pt-3 pb-2.5" : "px-3.5 pt-2 pb-2")}
+    >
+      <label htmlFor={inputId} className="sr-only">
+        Message Tradelink AI
+      </label>
+      <textarea
+        id={inputId}
+        ref={inputRef}
+        rows={empty ? 2 : 1}
+        value={draft}
+        maxLength={MAX_CHARS}
+        autoComplete="off"
+        enterKeyHint="send"
+        placeholder={PLACEHOLDER}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={onKeyDown}
+        className="max-h-[200px] min-w-0 resize-none border-0 bg-transparent py-1 text-[.95rem] leading-6 text-ink outline-none placeholder:text-muted"
+      />
+      <div className="flex items-center gap-2">
+        <span className="hidden text-[.72rem] text-muted rail:inline">Tradelink AI checks with you before it changes anything</span>
+        <span className="flex-1" />
+        <span className="hidden text-[.72rem] text-muted rail:inline">Enter to send</span>
+        <button
+          type="submit"
+          aria-label="Send message"
+          disabled={thinking || draft.trim() === ""}
+          className="ai-fill grid size-9 flex-none place-items-center rounded-[10px] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <SendIcon />
+        </button>
+      </div>
+    </form>
+  );
 
   return (
-    <>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-[3px]">
-          <h1 className="ai-text self-start">Tradelink AI</h1>
-          <p className="text-muted">{INTRO[role]}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => sheetRef.current?.showModal()} className="min-[900px]:hidden">
-            <Icon name="history" size={18} />
-            History
+    <div
+      data-fill
+      className="grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden bg-surface rail:rounded-lg rail:border rail:border-line rail:shadow-card min-[900px]:grid-cols-[248px_minmax(0,1fr)]"
+    >
+      <aside aria-label="Chats" className="hidden min-h-0 border-r border-line p-3 min-[900px]:flex">
+        {historyPanel}
+      </aside>
+      <HistorySheet sheetRef={sheetRef}>{historyPanel}</HistorySheet>
+      <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-col">
+        <div className={cx("flex h-12 flex-none items-center gap-2 border-b border-line px-3.5 rail:px-5", empty && "min-[900px]:hidden")}>
+          <Button size="small" onClick={() => sheetRef.current?.showModal()} className="min-[900px]:hidden" aria-label="Chats">
+            <Icon name="history" size={16} />
           </Button>
-          <Button onClick={startNewChat} disabled={locked || empty}>
-            <StrokeIcon d={PLUS} />
-            New chat
-          </Button>
+          {empty ? (
+            <p className="ai-text font-semibold">Tradelink AI</p>
+          ) : (
+            <h1 className="min-w-0 truncate text-[.92rem] font-semibold">
+              {title}
+              {current ? <span className="font-normal text-muted"> · {relativeDay(current.updatedAt, now)}</span> : null}
+            </h1>
+          )}
+          <span className="flex-1" />
+          {empty ? null : (
+            <Button size="small" onClick={startNewChat} disabled={locked}>
+              <StrokeIcon d={PLUS} />
+              New chat
+            </Button>
+          )}
         </div>
-      </div>
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 min-[900px]:grid-cols-[248px_minmax(0,1fr)]">
-        <aside
-          aria-label="Chat history"
-          className="sticky top-0 hidden max-h-[calc(100dvh-12rem)] overflow-hidden rounded-lg border border-line bg-surface p-3 shadow-card min-[900px]:flex"
-        >
-          {historyPanel}
-        </aside>
-        <HistorySheet sheetRef={sheetRef}>{historyPanel}</HistorySheet>
-        <section
-          aria-label="Chat"
-          className="flex min-h-[calc(100dvh-15rem)] min-w-0 flex-col rounded-lg border border-line bg-surface shadow-card"
-        >
-          <div className="flex flex-1 flex-col px-3.5 pt-4 rail:px-5">
-            {empty ? (
-              <div className="flex flex-1 flex-col justify-center gap-5 py-6">
-                <div className="flex items-center gap-3">
-                  <span aria-hidden="true" className="ai-tint grid size-11 flex-none place-items-center rounded-full">
-                    <span className="ai-spark size-[22px]" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="ai-text text-[1.4rem] font-semibold leading-tight tracking-[-0.02em]">{greeting.hello}</p>
-                    <p className="text-muted">{greeting.ask}</p>
-                  </div>
-                </div>
-                <div role="group" aria-label="Suggestions" className="grid grid-cols-1 gap-2 min-[560px]:grid-cols-2">
-                  {SUGGESTIONS[role].map((suggestion) => (
-                    <button
-                      key={suggestion.text}
-                      type="button"
-                      onClick={() => void send(suggestion.text)}
-                      className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 text-left text-[.92rem] font-medium text-ink transition-colors duration-150 hover:border-accent hover:bg-sunken/50"
-                    >
-                      <span className="grid size-9 flex-none place-items-center rounded-xl bg-accent-soft text-accent">
-                        <Icon name={suggestion.icon} size={18} />
-                      </span>
-                      <span className="min-w-0 flex-1">{suggestion.text}</span>
-                      <Icon name="arrow" size={16} className="text-muted" />
-                    </button>
-                  ))}
-                </div>
+        {empty ? (
+          <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pt-10 pb-8 rail:px-8 rail:pt-16">
+            <div aria-hidden="true" className="ai-glow pointer-events-none absolute inset-x-0 top-0 h-80" />
+            <div className="relative flex w-full max-w-[720px] flex-col gap-5">
+              <div className="flex flex-col items-center gap-2.5 text-center">
+                <span aria-hidden="true" className="ai-spark size-9" />
+                <h1 className="ai-text text-[1.6rem] font-semibold tracking-[-0.025em] rail:text-[1.85rem]">{hello}</h1>
+                <p className="max-w-[520px] text-[.92rem] text-muted">{INTRO[role]}</p>
               </div>
-            ) : null}
-            <div role="log" aria-live="polite" aria-label="Conversation with Tradelink AI" className={cx("flex flex-col gap-6", !empty && "pb-4")}>
-              {messages.map((message, index) =>
-                message.ai ? (
-                  <AiReply
-                    key={message.id}
-                    message={message}
-                    handlers={handlersFor(message.id)}
-                    streaming={thinking && index === messages.length - 1}
-                    onAsk={!thinking && index === messages.length - 1 ? (ask) => void send(ask) : null}
-                    onCard={(card) => updateCard(message.id, card)}
-                    waiting={
-                      thinking && index === messages.length - 1 && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
-                        <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
-                          {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}...
-                        </p>
-                      ) : null
-                    }
-                  />
-                ) : (
-                  <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
-                ),
-              )}
+              {composer}
+              <div role="group" aria-label="Suggestions" className="grid grid-cols-1 gap-2.5 min-[560px]:grid-cols-2">
+                {SUGGESTIONS[role].map((suggestion) => (
+                  <button
+                    key={suggestion.text}
+                    type="button"
+                    onClick={() => void send(suggestion.text)}
+                    className="flex items-start gap-3 rounded-xl border border-line bg-surface p-3.5 text-left text-ink transition-colors duration-150 hover:border-[var(--ai-2)]"
+                  >
+                    <span className="grid size-8 flex-none place-items-center rounded-[9px] bg-sunken text-ink/80">
+                      <Icon name={suggestion.icon} size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b className="block text-[.85rem] font-semibold">{suggestion.text}</b>
+                      <span className="text-[.8rem] text-muted">{suggestion.hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {facts.length > 0 ? (
+                <section aria-label="What Tradelink AI can see" className="ai-tint flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-4 py-3">
+                  <span className="ai-text text-[.75rem] font-semibold">What I can see right now</span>
+                  {facts.map((fact) => (
+                    <span key={fact.text} className="flex items-center gap-2 text-[.8rem] text-ink/80">
+                      <span aria-hidden="true" className={cx("size-[7px] flex-none rounded-full", FACT_DOTS[fact.tone])} />
+                      {fact.text}
+                    </span>
+                  ))}
+                </section>
+              ) : null}
             </div>
-            <div ref={endRef} aria-hidden="true" className="scroll-mb-32" />
           </div>
-          <div className="sticky bottom-0 z-10 rounded-b-lg border-t border-line bg-surface px-3.5 pt-3 pb-2.5 rail:px-5">
-            <form onSubmit={onSubmit} aria-busy={thinking || undefined} className="ai-ring flex items-end gap-2 rounded-2xl p-1.5 pl-4">
-              <label htmlFor={inputId} className="sr-only">
-                Message Tradelink AI
-              </label>
-              <textarea
-                id={inputId}
-                ref={inputRef}
-                rows={1}
-                value={draft}
-                maxLength={MAX_CHARS}
-                autoComplete="off"
-                enterKeyHint="send"
-                placeholder={PLACEHOLDER}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={onKeyDown}
-                className="max-h-[200px] min-w-0 flex-1 resize-none self-center border-0 bg-transparent py-2 text-[.95rem] leading-6 text-ink outline-none placeholder:text-muted"
-              />
-              <button
-                type="submit"
-                aria-label="Send message"
-                disabled={thinking || draft.trim() === ""}
-                className="ai-fill grid size-10 flex-none place-items-center rounded-xl transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+        ) : (
+          <>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pt-6 rail:px-8">
+              <div
+                role="log"
+                aria-live="polite"
+                aria-label="Conversation with Tradelink AI"
+                className="mx-auto flex w-full max-w-[720px] flex-col gap-6 pb-4"
               >
-                <SendIcon />
-              </button>
-            </form>
-            <p className="mt-1.5 text-[.75rem] text-muted">Tradelink AI asks you to confirm before it changes anything.</p>
-          </div>
-        </section>
-      </div>
-    </>
+                {messages.map((message, index) => {
+                  const last = index === messages.length - 1;
+                  const question = messages[index - 1];
+                  return message.ai ? (
+                    <AiReply
+                      key={message.id}
+                      message={message}
+                      handlers={handlersFor(message.id)}
+                      streaming={thinking && last}
+                      onAsk={!thinking && last ? (ask) => void send(ask) : null}
+                      onCard={(card) => updateCard(message.id, card)}
+                      onRetry={!thinking && last && question && !question.ai ? () => void send(question.reply.text) : null}
+                      waiting={
+                        thinking && last && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
+                          <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
+                            {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}
+                            ...
+                          </p>
+                        ) : null
+                      }
+                    />
+                  ) : (
+                    <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
+                  );
+                })}
+              </div>
+              <div ref={endRef} aria-hidden="true" className="scroll-mb-6" />
+            </div>
+            <div className="flex-none px-3.5 pt-2 pb-3 rail:px-8 rail:pb-4">
+              <div className="mx-auto w-full max-w-[720px]">{composer}</div>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
   );
 }

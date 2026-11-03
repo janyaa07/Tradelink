@@ -2,7 +2,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import { cx } from "./cx";
 
 export type ButtonVariant = "default" | "primary" | "danger";
-export type ButtonSize = "default" | "big";
+export type ButtonSize = "default" | "small" | "big";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   default: "border-line bg-surface text-ink hover:bg-sunken",
@@ -12,6 +12,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 const SIZES: Record<ButtonSize, string> = {
   default: "px-3.5 py-[7px]",
+  small: "gap-1.5 px-2.5 py-[5px] text-[.84rem]",
   big: "w-full min-h-11 px-3.5 py-[11px]",
 };
 

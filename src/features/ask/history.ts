@@ -103,6 +103,9 @@ const messageSchema = z.object({
   /** Tradelink AI replies: text, cards and confirm cards in the order they arrived. */
   /** A Tradelink AI reply: words with card tags, cards drawn where the words place them. */
   ai: z.boolean().optional(),
+  /** The lookups Tradelink AI ran for this answer, and how long it worked. */
+  steps: z.array(z.string().max(60)).max(12).optional(),
+  workedMs: z.number().int().min(0).optional(),
   segments: z
     .array(
       z.discriminatedUnion("kind", [
@@ -129,6 +132,8 @@ export type ChatMessage = {
   reply: AskReply;
   done: boolean;
   resolved?: Record<string, "done" | "skipped">;
+  steps?: string[];
+  workedMs?: number;
   segments?: Segment[];
 };
 
@@ -213,12 +218,7 @@ export function conversationTitle(messages: ChatMessage[]): string {
 }
 
 /** Puts the open chat first with its new messages, keeping at most MAX_CONVERSATIONS. */
-export function upsertConversation(
-  conversations: Conversation[],
-  id: string,
-  messages: ChatMessage[],
-  now: Date,
-): Conversation[] {
+export function upsertConversation(conversations: Conversation[], id: string, messages: ChatMessage[], now: Date): Conversation[] {
   const updated: Conversation = {
     id,
     title: conversationTitle(messages),

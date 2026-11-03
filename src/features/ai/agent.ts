@@ -11,7 +11,8 @@ import { SUPPLIER_TOOLS } from "./supplier-tools";
 
 export type AiStreamEvent =
   | { type: "text"; delta: string }
-  | { type: "status"; text: string }
+  /** A lookup started: text while it runs, done once it has run. */
+  | { type: "status"; text: string; done: string }
   | { type: "cards"; cards: AskCard[] }
   | { type: "proposal"; proposal: AiProposal }
   | { type: "error"; message: string }
@@ -26,20 +27,21 @@ export function toolsFor(role: AiContext["role"]): AiTool[] {
   return role === "buyer" ? BUYER_TOOLS : SUPPLIER_TOOLS;
 }
 
-const STATUS: Record<string, string> = {
-  find_products: "Searching products",
-  list_orders: "Checking orders",
-  get_order: "Opening the order",
-  get_cart: "Checking the cart",
-  get_spending: "Adding up spend",
-  get_alerts: "Checking alerts",
-  get_usual_items: "Checking usual items",
-  get_suppliers: "Checking suppliers",
-  get_inventory: "Checking stock",
-  get_problems: "Checking problems",
-  get_business_profile: "Checking your terms",
-  new_product_form: "Filling in the form",
-  new_supplier_form: "Filling in the form",
+/** What each lookup says while it runs, and once it is done (the step trail under an answer). */
+const STATUS: Record<string, [string, string]> = {
+  find_products: ["Searching products", "Searched products"],
+  list_orders: ["Checking orders", "Checked orders"],
+  get_order: ["Opening the order", "Opened the order"],
+  get_cart: ["Checking the cart", "Checked the cart"],
+  get_spending: ["Adding up spend", "Added up spend"],
+  get_alerts: ["Checking alerts", "Checked alerts"],
+  get_usual_items: ["Checking usual items", "Checked usual items"],
+  get_suppliers: ["Checking suppliers", "Checked suppliers"],
+  get_inventory: ["Checking stock", "Checked stock"],
+  get_problems: ["Checking problems", "Checked problems"],
+  get_business_profile: ["Checking your terms", "Checked your terms"],
+  new_product_form: ["Filling in the form", "Filled in the form"],
+  new_supplier_form: ["Filling in the form", "Filled in the form"],
 };
 
 /** The same for every request, so it is cached with the tools (prompt caching keeps replies fast). */
@@ -143,7 +145,10 @@ export async function runAgent(ctx: AiContext, history: AskTurn[], message: stri
       // Lookups in one turn run side by side; their cards still arrive in the order Claude asked.
       for (const call of calls) {
         const tool = byName.get(call.name);
-        if (tool?.kind === "read") emit({ type: "status", text: STATUS[tool.name] ?? "Looking it up" });
+        if (tool?.kind === "read") {
+          const [text, done] = STATUS[tool.name] ?? ["Looking it up", "Looked it up"];
+          emit({ type: "status", text, done });
+        }
       }
       const settled = await Promise.all(calls.map((call) => runTool(ctx, byName.get(call.name), call.name, call.input)));
       for (const outcome of settled) for (const event of outcome.events) emit(event);

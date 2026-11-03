@@ -1,59 +1,19 @@
 import type { Metadata } from "next";
-import { getCatalogue } from "@/data/catalogue";
 import { requireRole } from "@/data/session";
 import { plural } from "@/domain/catalogue";
-import {
-  briefingLine,
-  customerPulse,
-  minutesToCutoff,
-  pickList,
-  usualDay,
-  type Pulse,
-} from "@/domain/home";
+import { briefingLine, type Pulse } from "@/domain/home";
 import { formatMoney } from "@/domain/money";
-import { singaporeDateOf } from "@/domain/singapore-time";
 import { GlanceTabs } from "@/features/home/GlanceTabs";
-import {
-  AskBar,
-  CompareBar,
-  CutoffRing,
-  GlanceRow,
-  HomeGreeting,
-  LevelBar,
-  StepRow,
-  type StepTone,
-} from "@/features/home/HomeParts";
+import { AskBar, CompareBar, CutoffRing, GlanceRow, HomeGreeting, LevelBar, StepRow } from "@/features/home/HomeParts";
 import { AllClear, NextUp } from "@/features/home/NextUp";
 import { SendOutStepActions } from "@/features/home/StepActions";
-import {
-  getOrders,
-  OPEN_STATUSES,
-  type OrderView,
-} from "@/features/orders/queries";
-import { getBusinessProfile, getOpenIssues } from "@/features/supplier/queries";
-import { inventoryHref, needsReorder } from "@/features/supplier/stock";
+import { loadSupplierSteps, orderDeliveryDate } from "@/features/home/steps";
+import { inventoryHref } from "@/features/supplier/stock";
 import { BusinessLogo } from "@/ui/BusinessLogo";
 import { formatDate, formatLongDate, greeting, orderNumber } from "@/ui/format";
 import { LinkButton } from "@/ui/LinkButton";
 
 export const metadata: Metadata = { title: "Home · Tradelink" };
-
-/** subject: a short noun phrase for the briefing line, such as "today's 3 orders to pack". */
-type Step = {
-  key: string;
-  title: string;
-  subject: string;
-  detail: string;
-  href: string;
-  tone: StepTone;
-} & (
-  | { kind: "accept"; orders: OrderView[] }
-  | { kind: "pack"; orders: OrderView[] }
-  | { kind: "other" }
-);
-
-const deliveryDate = (order: OrderView) =>
-  order.confirmedDeliveryDate ?? order.requestedDeliveryDate ?? "";
 
 function pulseText(pulse: Pulse): { text: string; tone: string } {
   if (pulse.kind === "quiet")
@@ -61,8 +21,7 @@ function pulseText(pulse: Pulse): { text: string; tone: string } {
       text: `${pulse.daysSince} days since their last order, usually ${pulse.usualGap}`,
       tone: "text-warn",
     };
-  if (pulse.kind === "growing")
-    return { text: "Ordering more than last month", tone: "text-good" };
+  if (pulse.kind === "growing") return { text: "Ordering more than last month", tone: "text-good" };
   if (pulse.kind === "steady")
     return {
       text: `Steady, about every ${plural(pulse.usualGap ?? 1, "day")}`,
@@ -71,11 +30,7 @@ function pulseText(pulse: Pulse): { text: string; tone: string } {
   return { text: "New buyer", tone: "text-muted" };
 }
 
-function changeText(
-  today: number,
-  usual: number | null,
-  money: boolean,
-): { text: string; tone: string } {
+function changeText(today: number, usual: number | null, money: boolean): { text: string; tone: string } {
   if (usual === null) return { text: "No history yet", tone: "text-muted" };
   if (usual === 0)
     return {
@@ -84,136 +39,18 @@ function changeText(
     };
   if (!money) {
     const usualText = Math.round(usual * 10) / 10;
-    return today >= usual
-      ? { text: `usually ${usualText} by now`, tone: "text-good" }
-      : { text: `usually ${usualText} by now`, tone: "text-warn" };
+    return today >= usual ? { text: `usually ${usualText} by now`, tone: "text-good" } : { text: `usually ${usualText} by now`, tone: "text-warn" };
   }
   const percent = Math.round(((today - usual) / usual) * 100);
-  return percent >= 0
-    ? { text: `+${percent}% on a usual day`, tone: "text-good" }
-    : { text: `${percent}% on a usual day`, tone: "text-warn" };
+  return percent >= 0 ? { text: `+${percent}% on a usual day`, tone: "text-good" } : { text: `${percent}% on a usual day`, tone: "text-warn" };
 }
 
 /** Supplier Home: beat the cut-off, pack, restock, with Tradelink AI's next step first (SUP-01). */
 export default async function SupplierHomePage() {
   const session = await requireRole("supplier");
-  const [openOrders, recentOrders, catalogue, issues, profile] =
-    await Promise.all([
-      getOrders({
-        supplierOrgId: session.orgId,
-        statuses: OPEN_STATUSES,
-        limit: 200,
-      }),
-      getOrders({ supplierOrgId: session.orgId, limit: 300 }),
-      getCatalogue({ supplierOrgId: session.orgId }),
-      getOpenIssues(session.orgId),
-      getBusinessProfile(session.orgId),
-    ]);
   const now = new Date();
-  const today = singaporeDateOf(now);
   const firstName = session.fullName.split(" ")[0] ?? session.fullName;
-
-  const pending = openOrders.filter((order) => order.status === "pending");
-  const packToday = openOrders.filter(
-    (order) => order.status === "accepted" && deliveryDate(order) <= today,
-  );
-  const comingUp = openOrders.filter(
-    (order) => order.status === "accepted" && deliveryDate(order) > today,
-  );
-  const outOfStock = catalogue.filter((item) => item.health === "out");
-  const lowStock = catalogue.filter(needsReorder);
-  const placed = recentOrders.filter(
-    (order) => order.status !== "cancelled" && order.status !== "rejected",
-  );
-  const pulse = customerPulse(
-    placed.map((order) => ({
-      buyer: order.buyer.name,
-      createdAt: order.createdAt,
-    })),
-    now,
-  );
-  const quiet = pulse.filter((entry) => entry.kind === "quiet");
-  const day = usualDay(
-    placed.map((order) => ({
-      createdAt: order.createdAt,
-      totalCents: order.totalCents,
-    })),
-    now,
-  );
-  const cutoff = profile.cutoff.slice(0, 5);
-  const minutesLeft = minutesToCutoff(profile.cutoff, now);
-  const picks = pickList(
-    packToday.map((order) => ({ buyer: order.buyer.name, lines: order.lines })),
-  );
-  const packCents = packToday.reduce((sum, order) => sum + order.totalCents, 0);
-
-  const steps: Step[] = [
-    ...(pending.length > 0
-      ? [
-          {
-            key: "accept",
-            kind: "accept" as const,
-            orders: pending,
-            title: `Accept ${plural(pending.length, "new order")}`,
-            subject: `${plural(pending.length, "new order")} to accept`,
-            detail: [...new Set(pending.map((order) => order.buyer.name))].join(
-              ", ",
-            ),
-            href: "/supplier/orders",
-            tone: "warn" as const,
-          },
-        ]
-      : []),
-    ...(packToday.length > 0
-      ? [
-          {
-            key: "pack",
-            kind: "pack" as const,
-            orders: packToday,
-            title: `Pack today's ${plural(packToday.length, "order")}`,
-            subject: `today's ${plural(packToday.length, "order")} to pack`,
-            detail: [
-              ...new Set(packToday.map((order) => order.buyer.name)),
-            ].join(", "),
-            href: "/supplier/orders#orders",
-            tone: "info" as const,
-          },
-        ]
-      : []),
-    ...(issues.length > 0
-      ? [
-          {
-            key: "issues",
-            kind: "other" as const,
-            title: `Answer ${plural(issues.length, "problem")}`,
-            subject: `${plural(issues.length, "problem")} to answer`,
-            detail: [...new Set(issues.map((issue) => issue.buyerName))].join(
-              ", ",
-            ),
-            href: "/supplier/orders#problems",
-            tone: "bad" as const,
-          },
-        ]
-      : []),
-    ...outOfStock.map((item) => ({
-      key: `restock-${item.id}`,
-      kind: "other" as const,
-      title: `Restock ${item.name}`,
-      subject: `${item.name} to restock`,
-      detail: `${item.available} free, ${item.reserved} reserved`,
-      href: inventoryHref({ q: item.name }),
-      tone: "bad" as const,
-    })),
-    ...quiet.slice(0, 2).map((entry) => ({
-      key: `quiet-${entry.buyer}`,
-      kind: "other" as const,
-      title: `${entry.buyer} is quiet`,
-      subject: `${entry.buyer} going quiet`,
-      detail: `${entry.daysSince} days since their last order, usually ${entry.usualGap}`,
-      href: "/supplier/orders",
-      tone: "warn" as const,
-    })),
-  ];
+  const { steps, comingUp, lowStock, pulse, day, picks, packCents, cutoff, minutesLeft } = await loadSupplierSteps(session.orgId, now);
   const [first, ...rest] = steps;
 
   const valueScale = Math.max(day.todayCents, day.usualCents ?? 0, 1) * 1.25;
@@ -234,12 +71,7 @@ export default async function SupplierHomePage() {
           <CutoffRing
             minutesLeft={minutesLeft}
             cutoff={cutoff}
-            totalMinutes={Math.max(
-              60,
-              Number(cutoff.slice(0, 2)) * 60 +
-                Number(cutoff.slice(3)) -
-                8 * 60,
-            )}
+            totalMinutes={Math.max(60, Number(cutoff.slice(0, 2)) * 60 + Number(cutoff.slice(3)) - 8 * 60)}
           />
         }
       >
@@ -247,11 +79,7 @@ export default async function SupplierHomePage() {
           action="/supplier/assistant"
           placeholder="Ask anything, or tell Tradelink AI what to do"
           stamp={String(now.getTime())}
-          suggestions={[
-            "Which buyers are ordering less?",
-            "What is low in stock?",
-            "What sold most this week?",
-          ]}
+          suggestions={["Which buyers are ordering less?", "What is low in stock?", "What sold most this week?"]}
         />
       </HomeGreeting>
 
@@ -263,16 +91,11 @@ export default async function SupplierHomePage() {
             detail={
               first.kind === "pack" ? (
                 <>
-                  {first.detail},{" "}
-                  <b className="font-semibold text-ink tabular-nums">
-                    {formatMoney(packCents)}
-                  </b>
-                  .
+                  {first.detail}, <b className="font-semibold text-ink tabular-nums">{formatMoney(packCents)}</b>.
                 </>
               ) : first.kind === "accept" ? (
                 <>
-                  From {first.detail}. Orders accepted before {cutoff} can go on
-                  the next run.
+                  From {first.detail}. Orders accepted before {cutoff} can go on the next run.
                 </>
               ) : (
                 first.detail
@@ -280,9 +103,7 @@ export default async function SupplierHomePage() {
             }
             actions={
               first.kind === "pack" ? (
-                <SendOutStepActions
-                  orderIds={first.orders.map((order) => order.id)}
-                />
+                <SendOutStepActions orderIds={first.orders.map((order) => order.id)} />
               ) : (
                 <LinkButton href={first.href} variant="primary">
                   {first.kind === "accept" ? "Review new orders" : "Open"}
@@ -297,13 +118,7 @@ export default async function SupplierHomePage() {
                   : undefined
             }
             rest={rest.slice(0, 3).map((step) => (
-              <StepRow
-                key={step.key}
-                title={step.title}
-                detail={step.detail}
-                href={step.href}
-                tone={step.tone}
-              />
+              <StepRow key={step.key} title={step.title} detail={step.detail} href={step.href} tone={step.tone} />
             ))}
           >
             {first.kind === "pack" ? (
@@ -313,17 +128,12 @@ export default async function SupplierHomePage() {
                     key={line.productId}
                     className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-3 border-t border-line py-2.5 rail:grid-cols-[52px_minmax(0,1fr)_auto]"
                   >
-                    <span className="grid h-9 place-items-center rounded-[10px] bg-sunken text-[.95rem] font-semibold tabular-nums">
-                      {line.qty}
-                    </span>
+                    <span className="grid h-9 place-items-center rounded-[10px] bg-sunken text-[.95rem] font-semibold tabular-nums">{line.qty}</span>
                     <span className="min-w-0 text-[.92rem]">
-                      <b className="font-semibold">{line.name}</b>{" "}
-                      <span className="text-muted">{line.unit}s</span>
+                      <b className="font-semibold">{line.name}</b> <span className="text-muted">{line.unit}s</span>
                     </span>
                     <span className="col-start-2 text-[.8rem] text-muted rail:col-start-auto">
-                      {line.buyers
-                        .map((buyer) => `${buyer.name} ${buyer.qty}`)
-                        .join(" · ")}
+                      {line.buyers.map((buyer) => `${buyer.name} ${buyer.qty}`).join(" · ")}
                     </span>
                   </li>
                 ))}
@@ -337,11 +147,7 @@ export default async function SupplierHomePage() {
                       lead={<BusinessLogo name={order.buyer.name} size={30} />}
                       title={order.buyer.name}
                       detail={`${orderNumber(order.number)} · ${plural(order.lines.length, "line")}`}
-                      end={
-                        <span className="text-[.84rem] font-semibold tabular-nums">
-                          {formatMoney(order.totalCents)}
-                        </span>
-                      }
+                      end={<span className="text-[.84rem] font-semibold tabular-nums">{formatMoney(order.totalCents)}</span>}
                     />
                   </li>
                 ))}
@@ -352,10 +158,7 @@ export default async function SupplierHomePage() {
           <AllClear text="All caught up. No new orders, nothing to pack and no problems waiting." />
         )}
         <div className="flex min-w-0 flex-col gap-5">
-          <section
-            aria-label="Today against a usual day"
-            className="rounded-lg border border-line bg-surface p-4 shadow-card rail:px-5"
-          >
+          <section aria-label="Today against a usual day" className="rounded-lg border border-line bg-surface p-4 shadow-card rail:px-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2>Today against a usual {formatLongDate(now).split(" ")[0]}</h2>
               <span className="inline-flex items-center gap-1.5 text-[.75rem] text-muted">
@@ -364,48 +167,29 @@ export default async function SupplierHomePage() {
               </span>
             </div>
             <dl className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-x-3 gap-y-3">
-              <dt className="text-[.8rem] font-medium text-muted">
-                Order value
-              </dt>
+              <dt className="text-[.8rem] font-medium text-muted">Order value</dt>
               <dd className="contents">
                 <CompareBar
                   percent={(day.todayCents / valueScale) * 100}
-                  usualPercent={
-                    day.usualCents === null
-                      ? null
-                      : (day.usualCents / valueScale) * 100
-                  }
+                  usualPercent={day.usualCents === null ? null : (day.usualCents / valueScale) * 100}
                   tone="accent"
                   label={`${formatMoney(day.todayCents)} today, ${day.usualCents === null ? "no history yet" : `${formatMoney(day.usualCents)} on a usual day by now`}`}
                 />
                 <span className="-mt-1 text-[.85rem]">
-                  <b className="font-semibold tabular-nums">
-                    {formatMoney(day.todayCents)}
-                  </b>{" "}
+                  <b className="font-semibold tabular-nums">{formatMoney(day.todayCents)}</b>{" "}
                   <span className={valueChange.tone}>{valueChange.text}</span>
                 </span>
               </dd>
-              <dt className="text-[.8rem] font-medium text-muted">
-                New orders
-              </dt>
+              <dt className="text-[.8rem] font-medium text-muted">New orders</dt>
               <dd className="contents">
                 <CompareBar
                   percent={(day.todayCount / countScale) * 100}
-                  usualPercent={
-                    day.usualCount === null
-                      ? null
-                      : (day.usualCount / countScale) * 100
-                  }
-                  tone={
-                    day.usualCount !== null && day.todayCount < day.usualCount
-                      ? "warn"
-                      : "accent"
-                  }
+                  usualPercent={day.usualCount === null ? null : (day.usualCount / countScale) * 100}
+                  tone={day.usualCount !== null && day.todayCount < day.usualCount ? "warn" : "accent"}
                   label={`${day.todayCount} today, ${day.usualCount === null ? "no history yet" : `${day.usualCount} on a usual day by now`}`}
                 />
                 <span className="-mt-1 text-[.85rem]">
-                  <b className="font-semibold tabular-nums">{day.todayCount}</b>{" "}
-                  <span className={countChange.tone}>{countChange.text}</span>
+                  <b className="font-semibold tabular-nums">{day.todayCount}</b> <span className={countChange.tone}>{countChange.text}</span>
                 </span>
               </dd>
             </dl>
@@ -419,9 +203,7 @@ export default async function SupplierHomePage() {
                 count: pulse.length,
                 content:
                   pulse.length === 0 ? (
-                    <p className="py-3 text-muted">
-                      Buyers show here once they order.
-                    </p>
+                    <p className="py-3 text-muted">Buyers show here once they order.</p>
                   ) : (
                     pulse.slice(0, 5).map((entry) => {
                       const text = pulseText(entry);
@@ -430,11 +212,7 @@ export default async function SupplierHomePage() {
                           key={entry.buyer}
                           lead={<BusinessLogo name={entry.buyer} size={30} />}
                           title={entry.buyer}
-                          end={
-                            <span className={`text-[.84rem] ${text.tone}`}>
-                              {text.text}
-                            </span>
-                          }
+                          end={<span className={`text-[.84rem] ${text.tone}`}>{text.text}</span>}
                         />
                       );
                     })
@@ -446,9 +224,7 @@ export default async function SupplierHomePage() {
                 count: lowStock.length,
                 content:
                   lowStock.length === 0 ? (
-                    <p className="py-3 text-muted">
-                      Every product is above its reorder level.
-                    </p>
+                    <p className="py-3 text-muted">Every product is above its reorder level.</p>
                   ) : (
                     lowStock.slice(0, 6).map((item) => (
                       <GlanceRow
@@ -458,16 +234,10 @@ export default async function SupplierHomePage() {
                         end={
                           <span className="flex w-[45%] items-center gap-3">
                             <LevelBar
-                              percent={
-                                (item.available /
-                                  Math.max(1, item.reorderLevel * 2)) *
-                                100
-                              }
+                              percent={(item.available / Math.max(1, item.reorderLevel * 2)) * 100}
                               tone={item.available <= 0 ? "bad" : "warn"}
                             />
-                            <span className="w-[64px] flex-none text-right text-[.84rem] text-muted tabular-nums">
-                              {item.available} free
-                            </span>
+                            <span className="w-[64px] flex-none text-right text-[.84rem] text-muted tabular-nums">{item.available} free</span>
                           </span>
                         }
                       />
@@ -480,9 +250,7 @@ export default async function SupplierHomePage() {
                 count: comingUp.length,
                 content:
                   comingUp.length === 0 ? (
-                    <p className="py-3 text-muted">
-                      No accepted orders for later days.
-                    </p>
+                    <p className="py-3 text-muted">No accepted orders for later days.</p>
                   ) : (
                     comingUp
                       .slice(0, 5)
@@ -490,16 +258,10 @@ export default async function SupplierHomePage() {
                         <GlanceRow
                           key={order.id}
                           href={`/supplier/orders#order-${order.number}`}
-                          lead={
-                            <BusinessLogo name={order.buyer.name} size={30} />
-                          }
+                          lead={<BusinessLogo name={order.buyer.name} size={30} />}
                           title={order.buyer.name}
-                          detail={`${orderNumber(order.number)} · ${formatDate(deliveryDate(order))}`}
-                          end={
-                            <span className="text-[.84rem] tabular-nums text-muted">
-                              {formatMoney(order.totalCents)}
-                            </span>
-                          }
+                          detail={`${orderNumber(order.number)} · ${formatDate(orderDeliveryDate(order))}`}
+                          end={<span className="text-[.84rem] tabular-nums text-muted">{formatMoney(order.totalCents)}</span>}
                         />
                       ))
                   ),

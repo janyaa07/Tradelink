@@ -7,7 +7,6 @@ import {
   cartReadyText,
   cartText,
   deliveriesText,
-  greetingText,
   otherShopsText,
   placeCartLabel,
   placedText,
@@ -20,17 +19,11 @@ import {
 } from "./replies";
 
 describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
-  it("greets the buyer by first name", () => {
-    expect(greetingText("Mei")).toEqual({ hello: "Hi Mei", ask: "What do you need today?" });
-  });
-
   it("keeps the fixed copy exact", () => {
     expect(ASK_COPY.fallback).toBe(
       "I did not catch that. Type your order as you would text a supplier, or ask about prices, deliveries or spending.",
     );
-    expect(ASK_COPY.unavailable).toBe(
-      "The assistant is not available right now. You can still add products to your cart from Products.",
-    );
+    expect(ASK_COPY.unavailable).toBe("The assistant is not available right now. You can still add products to your cart from Products.");
     expect(ASK_COPY.readOrder).toBe("Here is what I read. Nothing has been sent.");
   });
 
@@ -62,7 +55,13 @@ describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
   });
 
   it("labels availability like the prototype price card", () => {
-    expect(availabilityLabel({ status: "unconfirmed", available: 0, health: "unconfirmed" })).toBe("To confirm");
+    expect(
+      availabilityLabel({
+        status: "unconfirmed",
+        available: 0,
+        health: "unconfirmed",
+      }),
+    ).toBe("To confirm");
     expect(availabilityLabel({ status: "active", available: 0, health: "out" })).toBe("Out of stock");
     expect(availabilityLabel({ status: "active", available: 3, health: "low" })).toBe("Only 3 left");
     expect(availabilityLabel({ status: "active", available: 40, health: "healthy" })).toBe("40 available");
@@ -74,7 +73,6 @@ describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
     expect(readLineStatus("not_found")).toBe("Not found");
   });
 });
-
 
 describe("Tradelink Assistant cart copy", () => {
   it("sums up the cart", () => {

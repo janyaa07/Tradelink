@@ -27,11 +27,6 @@ export function textReply(text: string): AskReply {
   return { text, cards: [], actions: [] };
 }
 
-/** The empty chat's greeting, in two lines: "Hi Mei" and the question. */
-export function greetingText(firstName: string): { hello: string; ask: string } {
-  return { hello: `Hi ${firstName}`, ask: "What do you need today?" };
-}
-
 /** The chat's confirmation after Add to cart. */
 export function addedToCartText(count: number): string {
   return `Added ${plural(count, "item")} to your cart.`;
@@ -80,10 +75,7 @@ export function orderFoundText(orderNumber: string): string {
 }
 
 export function spendText(spentCents: Cents, budgetCents: Cents): string {
-  const difference =
-    spentCents > budgetCents
-      ? `${formatMoney(spentCents - budgetCents)} over`
-      : `${formatMoney(budgetCents - spentCents)} under`;
+  const difference = spentCents > budgetCents ? `${formatMoney(spentCents - budgetCents)} over` : `${formatMoney(budgetCents - spentCents)} under`;
   return `You have spent ${formatMoney(spentCents)} this week, ${difference} your ${formatMoney(budgetCents)} budget.`;
 }
 
