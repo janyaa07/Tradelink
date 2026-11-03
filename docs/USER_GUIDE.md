@@ -16,16 +16,14 @@ All demo accounts use the password `Tradelink-demo-2026`. They exist only for de
 
 ### Two-factor sign-in for admins
 
-Admins must use two-factor sign-in. The demo admin (`hannah@tradelink.example`) is already enrolled with this **demo-only** authenticator secret:
-
-`ONGB725AO77LRT3ONS4BJWS7LROEB2HC`
+Admins must use two-factor sign-in. The demo admin (`hannah@tradelink.example`) is already enrolled with a demo-only authenticator secret. The secret is not stored in this repository: the project owner keeps it in `.env.local` as `DEMO_ADMIN_TOTP_SECRET` and shares it privately with people testing the demo.
 
 To sign in as Hannah:
-1. In any authenticator app (Google Authenticator, Microsoft Authenticator, 1Password and others), add an account by entering this setup key manually, as a time-based code.
+1. In any authenticator app (Google Authenticator, Microsoft Authenticator, 1Password and others), add an account by entering the shared setup key manually, as a time-based code.
 2. Sign in with the email and password above.
 3. Enter the 6-digit code the app shows.
 
-Because this secret is published, the demo admin account offers no real protection. Remove or re-enrol it before any real business uses Tradelink. The other admin accounts are asked to set up their own authenticator the first time they sign in.
+Anyone with the shared secret can pass the demo admin's second step, so remove or re-enrol that account before any real business uses Tradelink. The other admin accounts are asked to set up their own authenticator the first time they sign in. To re-enrol a demo admin, run `scripts/enrol-demo-admin-mfa.mjs` (see the comments in the file).
 
 ## Buyer walkthrough (Mei's Noodle House)
 

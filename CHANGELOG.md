@@ -2,6 +2,19 @@
 
 All notable changes are listed here. The format follows Keep a Changelog, and versions follow semantic versioning.
 
+## [0.2.0] - 2026-11-03
+
+### Added
+- **Ask Tradelink**: answers about orders, deliveries, spend, prices and suppliers from the buyer's own data. Typed orders go to review. Open questions are answered by Claude from cited facts (ADR 0023).
+- **Insights**: weekly spend, spend by supplier, each supplier's on-time record and price changes.
+- **Password reset**: "Forgot your password?" sends a single-use link that leads to setting a new password.
+- **Two-factor sign-in for admins**: an authenticator app (TOTP) is required. The database refuses admin access to any session without two-factor (`aal2`).
+
+### Fixed
+- Products on a business's own orders stay visible after the product is hidden.
+- The admin home, suppliers and users pages loaded inviting organisations with a query Supabase does not support, which broke them in production.
+- Claude read failures are now logged with their error type and status.
+
 ## [0.1.0] - 2026-11-03
 
 ### Added

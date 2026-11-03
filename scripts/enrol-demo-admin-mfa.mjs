@@ -1,13 +1,15 @@
 // Enrols the demo admin in two-factor sign-in (TOTP) so the shared demo account stays usable.
 // The secret is printed once so it can be recorded in docs/USER_GUIDE.md for demo users.
-// Usage: node --experimental-websocket scripts/enrol-demo-admin-mfa.mjs <email> <password>
-// Never run this for a real admin account: a published secret defeats two-factor sign-in.
+// Usage: node --experimental-websocket scripts/enrol-demo-admin-mfa.mjs <email> <password> [current-secret]
+// Pass the current secret to rotate: the old factor is removed (which needs a two-factor session)
+// and a new one is enrolled. Never run this for a real admin account: a shared secret defeats
+// two-factor sign-in.
 import { createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-const [email, password] = process.argv.slice(2);
+const [email, password, currentSecret] = process.argv.slice(2);
 if (!url || !key || !email || !password) {
   console.error("Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, and pass <email> <password>.");
   process.exit(1);
@@ -45,9 +47,16 @@ if (factors.error) throw new Error(factors.error.message);
 for (const factor of factors.data.all) {
   if (factor.status !== "verified") await supabase.auth.mfa.unenroll({ factorId: factor.id });
 }
-if (factors.data.totp.some((factor) => factor.status === "verified")) {
-  console.log("A verified authenticator factor already exists; nothing to do.");
+const verifiedFactors = factors.data.totp.filter((factor) => factor.status === "verified");
+if (verifiedFactors.length > 0 && !currentSecret) {
+  console.log("A verified authenticator factor already exists. Pass the current secret to rotate it.");
   process.exit(0);
+}
+for (const factor of verifiedFactors) {
+  const stepUp = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code: totp(currentSecret) });
+  if (stepUp.error) throw new Error(`Could not verify the current secret: ${stepUp.error.message}`);
+  const removed = await supabase.auth.mfa.unenroll({ factorId: factor.id });
+  if (removed.error) throw new Error(`Could not remove the old factor: ${removed.error.message}`);
 }
 
 const enrolled = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "Demo authenticator" });
