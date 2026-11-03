@@ -15,7 +15,7 @@ const orgSchema = z.object({
   address: z.string().nullable(),
   joined_at: z.string().nullable(),
   created_at: z.string(),
-  inviter: z.object({ name: z.string() }).nullable(),
+  invited_by_org_id: z.uuid().nullable(),
 });
 
 export type Organisation = {
@@ -33,9 +33,9 @@ export type Organisation = {
 };
 
 const ORG_SELECT =
-  "id, kind, name, status, contact_name, phone, email, address, joined_at, created_at, inviter:organisations!organisations_invited_by_org_id_fkey(name)";
+  "id, kind, name, status, contact_name, phone, email, address, joined_at, created_at, invited_by_org_id";
 
-function toOrganisation(row: z.infer<typeof orgSchema>): Organisation {
+function toOrganisation(row: z.infer<typeof orgSchema>, inviterNames: Map<string, string>): Organisation {
   return {
     id: row.id,
     kind: row.kind,
@@ -47,8 +47,18 @@ function toOrganisation(row: z.infer<typeof orgSchema>): Organisation {
     address: row.address,
     joinedAt: row.joined_at,
     createdAt: row.created_at,
-    invitedBy: row.inviter?.name ?? null,
+    invitedBy: row.invited_by_org_id ? (inviterNames.get(row.invited_by_org_id) ?? null) : null,
   };
+}
+
+/** Names of the organisations that invited these rows, in one query (a self-referencing embed is not supported). */
+async function inviterNamesFor(rows: z.infer<typeof orgSchema>[]): Promise<Map<string, string>> {
+  const ids = [...new Set(rows.map((row) => row.invited_by_org_id).filter((id): id is string => id !== null))];
+  if (ids.length === 0) return new Map();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("organisations").select("id, name").in("id", ids);
+  if (error) throw new Error(`Could not load inviting organisations: ${error.message}`);
+  return new Map(data.map((row) => [row.id, row.name]));
 }
 
 /** Organisations visible to the admin (RLS), by name. Optionally one kind. */
@@ -58,7 +68,8 @@ export async function getOrganisations(kind?: OrgKind): Promise<Organisation[]> 
     const query = supabase.from("organisations").select(ORG_SELECT).order("name").range(from, to);
     return kind ? query.eq("kind", kind) : query;
   });
-  return rows.map(toOrganisation);
+  const inviterNames = await inviterNamesFor(rows);
+  return rows.map((row) => toOrganisation(row, inviterNames));
 }
 
 export async function getOrganisation(id: string, kind: OrgKind): Promise<Organisation | null> {
@@ -68,7 +79,7 @@ export async function getOrganisation(id: string, kind: OrgKind): Promise<Organi
     "the organisation",
     supabase.from("organisations").select(ORG_SELECT).eq("id", id).eq("kind", kind).maybeSingle(),
   );
-  return row ? toOrganisation(row) : null;
+  return row ? toOrganisation(row, await inviterNamesFor([row])) : null;
 }
 
 const supplierProfileSchema = z.object({
