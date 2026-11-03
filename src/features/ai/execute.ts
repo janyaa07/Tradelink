@@ -6,6 +6,7 @@ import { getSession, roleOf } from "@/data/session";
 import type { ActionResult } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { toolsFor } from "./agent";
+import { cardKeys } from "./cards";
 
 const proposalInput = z.object({
   id: z.uuid(),
@@ -32,7 +33,7 @@ export async function executeAiAction(input: z.infer<typeof proposalInput>): Pro
   const orderId = z.uuid().optional().safeParse(parsed.data.args.order_id);
 
   const result = await tool.exec(
-    { session, role, now: new Date() },
+    { session, role, now: new Date(), cardKey: cardKeys() },
     { ...(args.data as Record<string, unknown>), ...(orderId.success && orderId.data ? { order_id: orderId.data } : {}) },
     parsed.data.id,
   );

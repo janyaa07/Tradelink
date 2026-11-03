@@ -5,7 +5,13 @@ import type { AskCard } from "@/domain/ask/types";
 import type { ActionResult } from "@/lib/errors";
 
 /** Who is asking. Every tool runs as this person, so RLS and the database functions decide. */
-export type AiContext = { session: Session; role: "buyer" | "supplier"; now: Date };
+export type AiContext = {
+  session: Session;
+  role: "buyer" | "supplier";
+  now: Date;
+  /** The next short card key for a prefix, such as "P3". */
+  cardKey: (prefix: string) => string;
+};
 
 export type ReadResult = {
   /** What the model sees: small, plain JSON from the database. */

@@ -18,15 +18,17 @@ type Props = {
   inCart: Record<string, number>;
   /** The number of lines in the cart, read on the server. */
   cartLines: number;
+  /** Search words to start with, from a link such as a Tradelink AI product card. */
+  initialQuery?: string;
 };
 
 type Change = { productId: string; qty: number };
 
 /** Search, category chips, the product grid and View cart. */
-export function ProductsBrowser({ catalogue, inCart, cartLines }: Props) {
+export function ProductsBrowser({ catalogue, inCart, cartLines, initialQuery = "" }: Props) {
   const router = useRouter();
   const { show } = useToast();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<Category | "all">("all");
   const [, start] = useTransition();
   const [quantities, setQuantity] = useOptimistic(inCart, (state, change: Change) => ({ ...state, [change.productId]: change.qty }));

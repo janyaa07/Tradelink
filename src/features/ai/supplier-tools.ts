@@ -3,15 +3,15 @@ import { z } from "zod";
 import { getCatalogue } from "@/data/catalogue";
 import { callRpc } from "@/data/rpc";
 import { plural } from "@/domain/catalogue";
-import { formatMoney } from "@/domain/money";
-import { toOrderCard } from "@/features/ask/queries";
-import type { AskCard } from "@/domain/ask/types";
-import { getOrders, type OrderView } from "@/features/orders/queries";
+import type { AiCard } from "@/domain/ask/types";
+import { formatMoney, toCents } from "@/domain/money";
+import { getOrders } from "@/features/orders/queries";
 import { ISSUE_ANSWERS } from "@/features/supplier/issues";
 import { getBusinessProfile, getOpenIssues } from "@/features/supplier/queries";
-import { orderNumber } from "@/ui/format";
+import { formatDate, orderNumber } from "@/ui/format";
+import { orderCard, stockCard, tag } from "./cards";
 import { readTool, writeTool, type AiTool } from "./registry";
-import { findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
+import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
 const SUPPLIER_FILTERS = {
   new: { statuses: ["pending" as const] },
@@ -27,11 +27,6 @@ const ANSWER_WORDS: Record<(typeof ISSUE_ANSWERS)[number], string> = {
   on_the_way: "Tell the buyer it is on the way",
   dispute: "Dispute it",
 };
-
-/** The supplier's view of an order card: who ordered it, not their own name. */
-function buyerCard(order: OrderView): AskCard {
-  return { kind: "order", order: { ...toOrderCard(order), supplierName: order.buyer.name } };
-}
 
 async function ownProduct(productId: string) {
   return (await getCatalogue()).find((item) => item.id === productId) ?? null;
@@ -64,11 +59,20 @@ function orderStep(name: string, rpc: string, description: string, title: string
 export const SUPPLIER_TOOLS: AiTool[] = [
   readTool({
     name: "list_orders",
-    description: "Orders from the supplier's buyers, newest first. Filter: new (waiting for accept or reject), accepted, out_for_delivery, delivered or all.",
-    input: z.object({ filter: z.enum(["new", "accepted", "out_for_delivery", "delivered", "all"]), limit: z.number().int().min(1).max(20).default(8) }),
-    run: async (ctx, { filter, limit }) => {
-      const orders = await getOrders({ supplierOrgId: ctx.session.orgId, ...SUPPLIER_FILTERS[filter], limit });
-      return { data: orders.map(orderFacts), cards: orders.slice(0, 4).map(buyerCard) };
+    description:
+      "Orders from the supplier's buyers, newest first. filter: new (waiting for accept or reject), accepted, out_for_delivery, delivered or all. delivery_on narrows to one delivery day: 'today', 'tomorrow' or YYYY-MM-DD. Use it whenever the person names a day.",
+    input: z.object({
+      filter: z.enum(["new", "accepted", "out_for_delivery", "delivered", "all"]),
+      delivery_on: z.string().regex(/^(today|tomorrow|\d{4}-\d{2}-\d{2})$/).optional(),
+      limit: z.number().int().min(1).max(20).default(8),
+    }),
+    run: async (ctx, { filter, delivery_on, limit }) => {
+      const day = deliveryDay(delivery_on, ctx.now);
+      const orders = (await getOrders({ supplierOrgId: ctx.session.orgId, ...SUPPLIER_FILTERS[filter], limit: day ? 60 : limit }))
+        .filter((order) => !day || (order.confirmedDeliveryDate ?? order.requestedDeliveryDate) === day)
+        .slice(0, limit);
+      const cards = orders.map((order) => orderCard(order, "supplier"));
+      return { data: orders.map((order, index) => ({ card: cards[index] ? tag(cards[index]) : null, ...orderFacts(order) })), cards };
     },
   }),
   readTool({
@@ -78,21 +82,25 @@ export const SUPPLIER_TOOLS: AiTool[] = [
     run: async (_ctx, { order_number }) => {
       const order = await findOrder(order_number);
       if (!order) return { data: NOT_FOUND };
-      return { data: orderFacts(order), cards: [buyerCard(order)] };
+      const card = orderCard(order, "supplier");
+      return { data: { card: tag(card), ...orderFacts(order) }, cards: [card] };
     },
   }),
   readTool({
     name: "get_inventory",
-    description: "The supplier's products with price, stock on hand, reserved, available and reorder level. Optional search words; low_only for items at or below their reorder level.",
+    description:
+      "The supplier's products with price, stock on hand, reserved, available and reorder level, each with a card tag (the card has Receive stock and Change price). Optional search words; low_only for items at or below their reorder level.",
     input: z.object({ query: z.string().max(80).optional(), low_only: z.boolean().default(false) }),
-    run: async (_ctx, { query, low_only }) => {
+    run: async (ctx, { query, low_only }) => {
       const words = (query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
       const items = (await getCatalogue())
         .filter((item) => words.every((word) => `${item.name} ${item.sku}`.toLowerCase().includes(word)))
         .filter((item) => !low_only || item.health === "low" || item.health === "out")
         .slice(0, 30);
+      const cards = items.map((item) => stockCard(item, ctx.cardKey("S")));
       return {
-        data: items.map((item) => ({
+        data: items.map((item, index) => ({
+          card: cards[index] ? tag(cards[index]) : null,
           product_id: item.id,
           name: item.name,
           sku: item.sku,
@@ -104,17 +112,33 @@ export const SUPPLIER_TOOLS: AiTool[] = [
           reorder_level: item.reorderLevel,
           health: item.health,
         })),
+        cards,
       };
     },
   }),
   readTool({
     name: "get_problems",
-    description: "Open problems buyers reported on the supplier's deliveries, with issue_id.",
+    description: "Open problems buyers reported on the supplier's deliveries, with issue_id and a card tag (the card has the four answers).",
     input: z.object({}),
     run: async (ctx) => {
       const issues = await getOpenIssues(ctx.session.orgId);
+      const cards: AiCard[] = issues.map((issue) => ({
+        kind: "ai_problem",
+        key: ctx.cardKey("PR"),
+        problem: {
+          id: issue.id,
+          orderNumber: issue.orderNumber,
+          buyer: issue.buyerName,
+          item: issue.productName ?? "Item",
+          type: issue.type,
+          qty: issue.qty,
+          amountCents: toCents(issue.amount),
+          note: issue.note,
+        },
+      }));
       return {
-        data: issues.map((issue) => ({
+        data: issues.map((issue, index) => ({
+          card: cards[index] ? tag(cards[index]) : null,
           issue_id: issue.id,
           order: orderNumber(issue.orderNumber),
           buyer: issue.buyerName,
@@ -124,6 +148,7 @@ export const SUPPLIER_TOOLS: AiTool[] = [
           amount: formatMoney(issue.amount),
           note: issue.note,
         })),
+        cards,
       };
     },
   }),
@@ -151,7 +176,7 @@ export const SUPPLIER_TOOLS: AiTool[] = [
     },
     exec: async (_ctx, args, key) => {
       const result = await callRpc("accept_order", { p_order: String((args as { order_id?: string }).order_id), p_date: args.delivery_date, p_key: key });
-      return result.ok ? { ok: true, data: `Accepted for ${args.delivery_date}. The buyer has been told.` } : result;
+      return result.ok ? { ok: true, data: `Accepted for ${formatDate(args.delivery_date)}. The buyer has been told.` } : result;
     },
   }),
   orderStep("reject_order", "reject_order", "Reject a new order.", "Reject", "Reject order", "Order rejected and the buyer told.", ["pending"]),

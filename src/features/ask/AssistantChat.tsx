@@ -14,7 +14,7 @@ import {
   type RefObject,
 } from "react";
 import { addedToCartText, ASK_COPY, greetingText, placeCartLabel, placedText, textReply } from "@/domain/ask/replies";
-import type { AiProposal, AskAction, AskCard, AskReply, AskTurn, CartLine, LineRow, ReadLineStatus } from "@/domain/ask/types";
+import type { AiCard, AiProposal, AskAction, AskCard, AskReply, AskTurn, CartLine, LineRow, ReadLineStatus } from "@/domain/ask/types";
 import { formatMoney } from "@/domain/money";
 import { StatusPill } from "@/features/orders/OrderCard";
 import { Button } from "@/ui/Button";
@@ -25,6 +25,8 @@ import { LinkButton } from "@/ui/LinkButton";
 import { Pill, type PillTone } from "@/ui/Pill";
 import { ProductImage } from "@/ui/ProductImage";
 import { executeAiAction } from "@/features/ai/execute";
+import { AiCardView } from "@/features/ai/ui/AiCards";
+import { parseReply, plainReply } from "@/features/ai/ui/reply-blocks";
 import { addToCartAction, placeCartAction } from "./actions";
 import styles from "./assistant.module.css";
 import {
@@ -37,7 +39,6 @@ import {
   upsertConversation,
   type ChatMessage,
   type Conversation,
-  type Segment,
 } from "./history";
 
 export type AiRole = "buyer" | "supplier";
@@ -90,27 +91,6 @@ const WAITING: Record<AiRole, string[]> = {
 const WAITING_STEP_MS = 1600;
 const QUIET_AFTER_TEXT_MS = 900;
 
-/** Adds one streamed piece to a reply, keeping text, cards and actions in arrival order. */
-function addPiece(message: ChatMessage, piece: { text: string; newParagraph: boolean } | { card: AskCard } | { action: AskAction }): ChatMessage {
-  const reply = message.reply;
-  const segments: Segment[] = [...(message.segments ?? [])];
-  if ("text" in piece) {
-    const lastSegment = segments.at(-1);
-    if (lastSegment?.kind === "text") {
-      const joiner = piece.newParagraph && lastSegment.text.trim() ? "\n\n" : "";
-      segments[segments.length - 1] = { kind: "text", text: lastSegment.text + joiner + piece.text };
-    } else {
-      segments.push({ kind: "text", text: piece.text });
-    }
-    return { ...message, segments, reply: { ...reply, text: reply.text + (piece.newParagraph ? "\n\n" : "") + piece.text } };
-  }
-  if ("card" in piece) {
-    segments.push({ kind: "card", index: reply.cards.length });
-    return { ...message, segments, reply: { ...reply, cards: [...reply.cards, piece.card] } };
-  }
-  segments.push({ kind: "action", index: reply.actions.length });
-  return { ...message, segments, reply: { ...reply, actions: [...reply.actions, piece.action] } };
-}
 
 /** Where the person goes next after a confirmed change. */
 function linkAfter(role: AiRole, tool: string): AskAction | null {
@@ -260,13 +240,30 @@ function ConfirmCard({
 }) {
   const [busy, start] = useTransition();
   return (
-    <div className={cx(cardClass, "gap-2 p-3.5")}>
-      <div className="flex items-start justify-between gap-3">
-        <b className="[overflow-wrap:anywhere]">{proposal.title}</b>
-        {state ? <Pill tone={state === "done" ? "good" : "plain"}>{state === "done" ? "Done" : "Not now"}</Pill> : null}
+    <div
+      className={cx(
+        "w-full max-w-[520px] overflow-hidden rounded-2xl border bg-surface shadow-card",
+        state === "done" ? "border-good/40" : state === "skipped" ? "border-line opacity-70" : "border-accent/50",
+      )}
+    >
+      <div className="flex items-start gap-3 px-3.5 pt-3">
+        <span
+          className={cx(
+            "mt-0.5 grid size-8 flex-none place-items-center rounded-full",
+            state === "done" ? "bg-good-soft text-good" : "bg-accent-soft text-accent",
+          )}
+        >
+          <Icon name={state === "done" ? "check" : "spark"} size={16} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[.72rem] font-semibold uppercase tracking-wide text-muted">
+            {state === "done" ? "Done" : state === "skipped" ? "Not now" : "Needs your OK"}
+          </p>
+          <b className="block leading-snug [overflow-wrap:anywhere]">{proposal.title}</b>
+        </div>
       </div>
       {proposal.details.length > 0 ? (
-        <ul className="flex flex-col gap-0.5 text-[.875rem] text-muted">
+        <ul className="mx-3.5 mt-2 flex flex-col gap-0.5 rounded-xl bg-sunken px-3 py-2 text-[.875rem]">
           {proposal.details.map((detail, index) => (
             <li key={index} className="[overflow-wrap:anywhere]">
               {detail}
@@ -274,8 +271,8 @@ function ConfirmCard({
           ))}
         </ul>
       ) : null}
-      {state ? null : (
-        <div className="flex flex-wrap gap-2 pt-1">
+      {state ? <div className="h-3" /> : (
+        <div className="flex flex-wrap gap-2 px-3.5 pt-3 pb-3.5">
           <Button variant="primary" aria-busy={busy || undefined} disabled={busy} onClick={() => start(() => handlers.onConfirm(proposal))}>
             {busy ? "Working..." : proposal.confirmLabel}
           </Button>
@@ -344,6 +341,72 @@ function ReplyActions({
             );
         }
       })}
+    </div>
+  );
+}
+
+/** A Tradelink AI reply: short words, the cards they place, then any confirm cards and follow-ups. */
+function AiReply({
+  message,
+  handlers,
+  streaming,
+  onAsk,
+  onCard,
+}: {
+  message: ChatMessage;
+  handlers: ReplyHandlers;
+  streaming: boolean;
+  onAsk: ((text: string) => void) | null;
+  onCard: (card: AiCard) => void;
+}) {
+  const { blocks, asks } = parseReply(message.reply.text, streaming);
+  const cards = new Map(
+    message.reply.cards.filter((card): card is AiCard => card.kind.startsWith("ai_")).map((card) => [card.key, card]),
+  );
+  return (
+    <div className="flex gap-3">
+      <AssistantAvatar />
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-2.5 pt-1">
+        <span className="sr-only">Tradelink AI: </span>
+        {blocks.map((block, index) => {
+          if (block.kind === "text") {
+            return (
+              <p key={index} className="leading-relaxed [overflow-wrap:anywhere]">
+                {block.text}
+              </p>
+            );
+          }
+          if (block.kind === "list") {
+            return (
+              <ul key={index} className="flex list-disc flex-col gap-1 pl-5 leading-relaxed marker:text-accent">
+                {block.items.map((item, itemIndex) => (
+                  <li key={itemIndex}>{item}</li>
+                ))}
+              </ul>
+            );
+          }
+          const card = cards.get(block.key);
+          return card ? <AiCardView key={`${block.key}-${index}`} card={card} onChange={onCard} /> : null;
+        })}
+        {message.reply.actions.length > 0 ? (
+          <ReplyActions actions={message.reply.actions} done={message.done} resolved={message.resolved ?? {}} handlers={handlers} />
+        ) : null}
+        {onAsk && asks.length > 0 ? (
+          <div role="group" aria-label="Suggested next questions" className="flex flex-wrap gap-2 pt-0.5">
+            {asks.map((ask) => (
+              <button
+                key={ask}
+                type="button"
+                onClick={() => onAsk(ask)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[.85rem] font-medium text-ink transition-colors duration-150 hover:border-accent hover:text-accent"
+              >
+                <Icon name="spark" size={14} className="text-accent" />
+                {ask}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -584,6 +647,22 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
       ),
     );
 
+  /** A card changed after one of its buttons (for example, an order now accepted): saved with the chat. */
+  const updateCard = (messageId: number, card: AiCard) =>
+    commit(
+      messagesRef.current.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              reply: {
+                ...message.reply,
+                cards: message.reply.cards.map((entry) => ("key" in entry && entry.key === card.key ? card : entry)),
+              },
+            }
+          : message,
+      ),
+    );
+
   const markDone = (messageId: number) =>
     commit(messagesRef.current.map((message) => (message.id === messageId ? { ...message, done: true } : message)));
 
@@ -616,7 +695,7 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
     pending.current = true;
     const history: AskTurn[] = messagesRef.current
       .slice(-MAX_HISTORY)
-      .map((message) => ({ role: message.from, text: message.reply.text.slice(0, MAX_CHARS) }));
+      .map((message) => ({ role: message.from, text: (message.ai ? plainReply(message.reply.text) : message.reply.text).slice(0, MAX_CHARS) }));
     append("buyer", textReply(question));
     setDraft("");
     setThinking(true);
@@ -626,13 +705,14 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
     const replyId = nextId.current++;
     commit([
       ...messagesRef.current,
-      { id: replyId, from: "tradelink", reply: { text: "", cards: [], actions: [] }, done: false, segments: [] },
+      { id: replyId, ai: true, from: "tradelink", reply: { text: "", cards: [], actions: [] }, done: false },
     ]);
     let newParagraph = false;
-    const held: ({ card: AskCard } | { action: AskAction })[] = [];
+    const held: AskAction[] = [];
     const addText = (text: string) => {
       lastTextAt.current = Date.now();
-      patch(replyId, (message) => addPiece(message, { text, newParagraph }));
+      const joiner = newParagraph ? "\n\n" : "";
+      patch(replyId, (message) => ({ ...message, reply: { ...message.reply, text: message.reply.text + joiner + text } }));
       newParagraph = false;
     };
     try {
@@ -662,15 +742,17 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
             setWaitStep(0);
           } else if (event.type === "break") newParagraph = true;
           else if (event.type === "error") addText(event.message);
-          else if (event.type === "cards") held.push(...event.cards.map((card) => ({ card })));
-          else if (event.type === "proposal") held.push({ action: { kind: "confirm", proposal: event.proposal } });
+          else if (event.type === "cards") {
+            // Ready for the answer to place; only the cards it tags are drawn.
+            patch(replyId, (message) => ({ ...message, reply: { ...message.reply, cards: [...message.reply.cards, ...event.cards] } }));
+          } else if (event.type === "proposal") held.push({ kind: "confirm", proposal: event.proposal });
         }
       }
     } catch {
       addText(ASK_COPY.unavailable);
     }
-    // The answer leads; its cards and confirm cards follow underneath, so nothing jumps while it is written.
-    for (const piece of held) patch(replyId, (message) => addPiece(message, piece));
+    // Confirm cards follow the answer, so nothing jumps while it is written.
+    if (held.length > 0) patch(replyId, (message) => ({ ...message, reply: { ...message.reply, actions: [...message.reply.actions, ...held] } }));
     const reply = messagesRef.current.find((message) => message.id === replyId);
     if (reply && !reply.reply.text.trim() && reply.reply.cards.length === 0 && reply.reply.actions.length === 0) addText(ASK_COPY.unavailable);
     commit(messagesRef.current);
@@ -831,9 +913,20 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
             aria-label="Conversation with Tradelink AI"
             className={cx("flex flex-col gap-6", !empty && "py-4")}
           >
-            {messages.map((message) => (
-              <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
-            ))}
+            {messages.map((message, index) =>
+              message.ai ? (
+                <AiReply
+                  key={message.id}
+                  message={message}
+                  handlers={handlersFor(message.id)}
+                  streaming={thinking && index === messages.length - 1}
+                  onAsk={!thinking && index === messages.length - 1 ? (ask) => void send(ask) : null}
+                  onCard={(card) => updateCard(message.id, card)}
+                />
+              ) : (
+                <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
+              ),
+            )}
             {thinking && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
               <div className="flex items-center gap-3" aria-live="polite">
                 <AssistantAvatar />

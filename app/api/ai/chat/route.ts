@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSession, roleOf } from "@/data/session";
 import { createSupabaseServerClient } from "@/data/supabase/server";
 import { runAgent, type AiStreamEvent } from "@/features/ai/agent";
+import { cardKeys } from "@/features/ai/cards";
 import { isClaudeConfigured } from "@/integrations/claude/client";
 
 export const maxDuration = 60;
@@ -39,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const emit = (event: AiStreamEvent) => controller.enqueue(line(event));
-      await runAgent({ session, role, now: new Date() }, body.data.history, body.data.message, emit);
+      await runAgent({ session, role, now: new Date(), cardKey: cardKeys() }, body.data.history, body.data.message, emit);
       emit({ type: "done" });
       controller.close();
     },

@@ -65,6 +65,8 @@ const cardSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+const aiCardSchema = z.looseObject({ kind: z.string().regex(/^ai_[a-z]+$/), key: z.string().max(20) });
+
 const actionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("link"), label: z.enum(ASK_LINK_LABELS), href: z.string().regex(/^\/(buyer|supplier)(\/|$)/) }),
   z.object({ kind: z.literal("add_to_cart"), lines: z.array(cartLineSchema) }),
@@ -85,12 +87,14 @@ const actionSchema = z.discriminatedUnion("kind", [
 const messageSchema = z.object({
   id: z.number(),
   from: z.enum(["buyer", "tradelink"]),
-  reply: z.object({ text: z.string(), cards: z.array(cardSchema), actions: z.array(actionSchema) }),
+  reply: z.object({ text: z.string(), cards: z.array(z.union([cardSchema, aiCardSchema])), actions: z.array(actionSchema) }),
   /** The reply's button was used: Add to cart added, or Place order placed. */
   done: z.boolean(),
   /** Tradelink AI confirm cards the person answered, by proposal id. */
   resolved: z.record(z.string(), z.enum(["done", "skipped"])).optional(),
   /** Tradelink AI replies: text, cards and confirm cards in the order they arrived. */
+  /** A Tradelink AI reply: words with card tags, cards drawn where the words place them. */
+  ai: z.boolean().optional(),
   segments: z
     .array(
       z.discriminatedUnion("kind", [
@@ -110,6 +114,8 @@ const conversationSchema = z.object({
 });
 
 export type ChatMessage = {
+  /** A Tradelink AI reply: reply.text carries card tags, reply.cards the cards they can show. */
+  ai?: boolean;
   id: number;
   from: "buyer" | "tradelink";
   reply: AskReply;

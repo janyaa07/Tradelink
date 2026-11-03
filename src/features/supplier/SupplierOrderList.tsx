@@ -14,13 +14,14 @@ export function SupplierOrderList({ orders, now, empty }: Props) {
   return (
     <RecordList>
       {orders.map((order) => (
-        <SupplierOrderCard
-          key={order.id}
-          order={order}
-          idemKey={newIdempotencyKey()}
-          minDate={today}
-          defaultDate={defaultDeliveryDate(order.requestedDeliveryDate, now)}
-        />
+        <div key={order.id} id={`order-${order.number}`} className="scroll-mt-20 rounded-lg target:ring-2 target:ring-accent">
+          <SupplierOrderCard
+            order={order}
+            idemKey={newIdempotencyKey()}
+            minDate={today}
+            defaultDate={defaultDeliveryDate(order.requestedDeliveryDate, now)}
+          />
+        </div>
       ))}
     </RecordList>
   );

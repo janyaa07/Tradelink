@@ -5,11 +5,12 @@ import { plural } from "@/domain/catalogue";
 import { formatMoney, toCents } from "@/domain/money";
 import { addToCartAction, placeCartAction } from "@/features/ask/actions";
 import { productCartLine } from "@/features/ask/cart-lines";
-import { getSupplierRecords, toOrderCard } from "@/features/ask/queries";
+import { getSupplierRecords } from "@/features/ask/queries";
 import {
   getBuyerCatalogue,
   getBuyerSettings,
   getConnectedSuppliers,
+  getDeliveryTerms,
   getUsualItems,
   getWeekSpendCents,
 } from "@/features/buyer/queries";
@@ -17,11 +18,16 @@ import { PROBLEM_TYPES } from "@/features/buyer/problem";
 import { getReorderPlan } from "@/features/buyer/reorder-plan";
 import { getTodos } from "@/features/buyer/todo-queries";
 import { getDraft } from "@/features/ordering/queries";
+import { quantitiesByProduct } from "@/features/ordering/line-ops";
 import { getOrders, OPEN_STATUSES } from "@/features/orders/queries";
 import { setCartQuantityAction } from "@/features/products/actions";
 import { orderNumber } from "@/ui/format";
+import type { AiCard } from "@/domain/ask/types";
+import { formatDaysLeft } from "@/domain/reorder";
+import { weekdayName } from "@/domain/singapore-time";
+import { orderCard, productCard, tag } from "./cards";
 import { readTool, writeTool, type AiTool } from "./registry";
-import { findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
+import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
 const productId = z.uuid().describe("product_id from find_products, get_cart or get_order");
 const qty = z.number().int().min(1).max(9999);
@@ -39,40 +45,58 @@ const ORDER_FILTERS = {
   all: {},
 };
 
+async function cartQuantities(userId: string): Promise<Map<string, number>> {
+  return quantitiesByProduct((await getDraft(userId)).lines);
+}
+
 export const BUYER_TOOLS: AiTool[] = [
   readTool({
     name: "find_products",
-    description: "Search the buyer's connected suppliers' catalogue by name, brand or supplier. Returns price, unit, supplier and stock available.",
+    description: "Search the catalogue of the buyer's suppliers by name, brand or supplier. Returns price, unit, supplier, stock available and a card tag for each.",
     input: z.object({ query: z.string().min(1).max(80).describe("Words to search, such as 'eggs' or 'cooking oil'") }),
-    run: async (_ctx, { query }) => {
+    run: async (ctx, { query }) => {
       const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-      const matches = (await getBuyerCatalogue())
+      const [catalogue, inCart] = await Promise.all([getBuyerCatalogue(), cartQuantities(ctx.session.userId)]);
+      const matches = catalogue
         .map((item) => {
           const hay = [item.name, item.sku, item.supplierName, ...item.aliases].join(" ").toLowerCase();
           return { item, score: words.filter((word) => hay.includes(word)).length };
         })
         .filter((match) => match.score > 0)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 10);
+        .slice(0, 8);
+      const cards = matches.map(({ item }) => productCard(item, inCart.get(item.id) ?? 0, ctx.cardKey("P")));
       return {
-        data: matches.map(({ item }) => ({
+        data: matches.map(({ item }, index) => ({
+          card: cards[index] ? tag(cards[index]) : null,
           product_id: item.id,
           name: item.name,
           unit: item.unit,
           price: formatMoney(item.price),
           supplier: item.supplierName,
           available: item.status === "unconfirmed" ? "to be confirmed" : item.available,
+          in_cart: inCart.get(item.id) ?? 0,
         })),
+        cards,
       };
     },
   }),
   readTool({
     name: "list_orders",
-    description: "The buyer's orders, newest first. Filter: active (not yet delivered), to_check (arrived or arriving, not yet checked), delivered, problems, cancelled or all.",
-    input: z.object({ filter: z.enum(["active", "to_check", "delivered", "problems", "cancelled", "all"]), limit: z.number().int().min(1).max(20).default(8) }),
-    run: async (ctx, { filter, limit }) => {
-      const orders = await getOrders({ buyerOrgId: ctx.session.orgId, ...ORDER_FILTERS[filter], limit });
-      return { data: orders.map(orderFacts), cards: orders.slice(0, 4).map((order) => ({ kind: "order", order: toOrderCard(order) })) };
+    description:
+      "The buyer's orders, newest first. filter: active (not yet delivered), to_check (arrived or arriving, not yet checked), delivered, problems, cancelled or all. delivery_on narrows to one delivery day: 'today', 'tomorrow' or YYYY-MM-DD. Use it whenever the person names a day.",
+    input: z.object({
+      filter: z.enum(["active", "to_check", "delivered", "problems", "cancelled", "all"]),
+      delivery_on: z.string().regex(/^(today|tomorrow|\d{4}-\d{2}-\d{2})$/).optional(),
+      limit: z.number().int().min(1).max(20).default(8),
+    }),
+    run: async (ctx, { filter, delivery_on, limit }) => {
+      const day = deliveryDay(delivery_on, ctx.now);
+      const orders = (await getOrders({ buyerOrgId: ctx.session.orgId, ...ORDER_FILTERS[filter], limit: day ? 60 : limit }))
+        .filter((order) => !day || (order.confirmedDeliveryDate ?? order.requestedDeliveryDate) === day)
+        .slice(0, limit);
+      const cards = orders.map((order) => orderCard(order, "buyer"));
+      return { data: orders.map((order, index) => ({ card: cards[index] ? tag(cards[index]) : null, ...orderFacts(order) })), cards };
     },
   }),
   readTool({
@@ -82,57 +106,99 @@ export const BUYER_TOOLS: AiTool[] = [
     run: async (_ctx, { order_number }) => {
       const order = await findOrder(order_number);
       if (!order) return { data: NOT_FOUND };
-      return { data: orderFacts(order), cards: [{ kind: "order", order: toOrderCard(order) }] };
+      const card = orderCard(order, "buyer");
+      return { data: { card: tag(card), ...orderFacts(order) }, cards: [card] };
     },
   }),
   readTool({
     name: "get_cart",
-    description: "What is in the buyer's cart now, with prices and the cart version.",
+    description: "What is in the buyer's cart now, with prices, the cart version and a cart card tag.",
     input: z.object({}),
     run: async (ctx) => {
       const [draft, byId] = await Promise.all([getDraft(ctx.session.userId), catalogueById()]);
       const lines = draft.lines.map((line) => {
         const item = line.productId ? byId.get(line.productId) : undefined;
         return item
-          ? { product_id: item.id, item: item.name, qty: line.qty, unit: item.unit, supplier: item.supplierName, line_total: formatMoney(toCents(item.price) * line.qty) }
-          : { item: line.sourceText, qty: line.qty, needs_choosing: true };
+          ? { product_id: item.id, item: item.name, qty: line.qty, unit: item.unit, supplier: item.supplierName, lineCents: toCents(item.price) * line.qty }
+          : { product_id: null, item: line.sourceText, qty: line.qty, unit: "", supplier: null, lineCents: null };
       });
-      return { data: { version: draft.version, lines } };
+      const card: AiCard = {
+        kind: "ai_cart",
+        key: "CART",
+        cart: {
+          version: draft.version,
+          lines: lines.map((line) => ({ name: line.item, qty: line.qty, unit: line.unit, supplier: line.supplier, lineCents: line.lineCents })),
+          totalCents: lines.reduce((sum, line) => sum + (line.lineCents ?? 0), 0),
+          suppliers: new Set(lines.map((line) => line.supplier).filter(Boolean)).size,
+          unresolved: lines.filter((line) => !line.product_id).length,
+        },
+      };
+      return {
+        data: {
+          card: tag(card),
+          version: draft.version,
+          lines: lines.map((line) => ({ ...line, line_total: line.lineCents === null ? null : formatMoney(line.lineCents), lineCents: undefined })),
+        },
+        cards: [card],
+      };
     },
   }),
   readTool({
     name: "get_spending",
-    description: "Spend this week (Monday to today, Singapore time) against the weekly budget, and the buyer's settings.",
+    description: "Spend this week (Monday to today, Singapore time) against the weekly budget, the buyer's settings and a spend card tag.",
     input: z.object({}),
     run: async (ctx) => {
       const [spent, settings] = await Promise.all([getWeekSpendCents(ctx.session.orgId), getBuyerSettings(ctx.session.orgId)]);
       const budget = toCents(settings.weeklyBudget);
-      return { data: { spent_this_week: formatMoney(spent), weekly_budget: formatMoney(budget), left: formatMoney(Math.max(0, budget - spent)), settings } };
+      const card: AiCard = { kind: "ai_spend", key: "SPEND", spend: { spentCents: spent, budgetCents: budget } };
+      return {
+        data: { card: tag(card), spent_this_week: formatMoney(spent), weekly_budget: formatMoney(budget), left: formatMoney(Math.max(0, budget - spent)), settings },
+        cards: [card],
+      };
     },
   }),
   readTool({
     name: "get_alerts",
-    description: "Things that need the buyer: price changes on usual items (with price_change_id), part deliveries, and supplier replies or promised credits on problems (with issue_id).",
+    description: "Things that need the buyer: price changes on usual items, part deliveries, and supplier replies or promised credits on problems. Each has a card tag with its own buttons.",
     input: z.object({}),
     run: async (ctx) => {
       const todos = await getTodos(ctx.session.orgId);
+      const cards: AiCard[] = todos.map((todo) => ({
+        kind: "ai_alert",
+        key: ctx.cardKey("A"),
+        alert: { id: todo.action.id, kind: todo.action.kind, title: todo.title, detail: todo.detail, tone: todo.tone },
+      }));
       return {
-        data: todos.map((todo) => ({
+        data: todos.map((todo, index) => ({
+          card: cards[index] ? tag(cards[index]) : null,
           title: todo.title,
           detail: todo.detail,
           kind: todo.action.kind,
           ...(todo.action.kind === "price" ? { price_change_id: todo.action.id } : {}),
           ...(todo.action.kind === "credit" || todo.action.kind === "reply" ? { issue_id: todo.action.id } : {}),
         })),
+        cards,
       };
     },
   }),
   readTool({
     name: "get_usual_items",
-    description: "The buyer's usual items (usual quantity, use per day, count in the shop, last price paid) and what is running low and suggested for tomorrow.",
+    description:
+      "The buyer's usual items (usual quantity, use per day, count in the shop, last price paid) and what is running low with a suggested quantity. Running-low items have product card tags with the suggestion filled in.",
     input: z.object({}),
     run: async (ctx) => {
-      const [usuals, plan, byId] = await Promise.all([getUsualItems(ctx.session.orgId), getReorderPlan(ctx.session.orgId), catalogueById()]);
+      const [usuals, plan, byId, inCart] = await Promise.all([
+        getUsualItems(ctx.session.orgId),
+        getReorderPlan(ctx.session.orgId),
+        catalogueById(),
+        cartQuantities(ctx.session.userId),
+      ]);
+      const cards = plan.rows.map((row) => {
+        const card = productCard(row.item, inCart.get(row.productId) ?? 0, ctx.cardKey("P"));
+        return card.kind === "ai_product"
+          ? { ...card, product: { ...card.product, suggestedQty: row.qty, note: `${formatDaysLeft(row.daysLeft)} days left` } }
+          : card;
+      });
       return {
         data: {
           usual: usuals.map((usual) => ({
@@ -143,18 +209,50 @@ export const BUYER_TOOLS: AiTool[] = [
             in_shop: usual.inShop,
             last_paid: usual.lastPaid ? formatMoney(usual.lastPaid) : null,
           })),
-          running_low: plan.rows.map((row) => ({ product_id: row.productId, item: row.item.name, days_left: row.daysLeft, suggested_qty: row.qty })),
+          running_low: plan.rows.map((row, index) => ({
+            card: cards[index] ? tag(cards[index]) : null,
+            product_id: row.productId,
+            item: row.item.name,
+            days_left: row.daysLeft,
+            suggested_qty: row.qty,
+          })),
         },
+        cards,
       };
     },
   }),
   readTool({
     name: "get_suppliers",
-    description: "The buyer's suppliers: on-time record, cut-off times, delivery days and minimum order.",
+    description: "The buyer's suppliers: on-time record, cut-off time and delivery days, each with a card tag.",
     input: z.object({}),
     run: async (ctx) => {
       const [records, suppliers] = await Promise.all([getSupplierRecords(ctx.session.orgId), getConnectedSuppliers(ctx.session.orgId)]);
-      return { data: { suppliers, on_time: records } };
+      const terms = await getDeliveryTerms(suppliers.map((supplier) => supplier.id));
+      const cards: AiCard[] = suppliers.map((supplier) => {
+        const record = records.find((entry) => entry.supplierId === supplier.id);
+        const term = terms.get(supplier.id);
+        return {
+          kind: "ai_supplier",
+          key: ctx.cardKey("SUP"),
+          supplier: {
+            name: supplier.name,
+            onTimePercent: record && record.delivered > 0 ? record.percent : null,
+            deliveries: record?.delivered ?? 0,
+            cutOff: term ? term.cutoffTime.slice(0, 5) : null,
+            deliveryDays: term ? term.deliveryDays.map((day) => weekdayName(day).slice(0, 3)).join(", ") : null,
+          },
+        };
+      });
+      return {
+        data: suppliers.map((supplier, index) => ({
+          card: cards[index] ? tag(cards[index]) : null,
+          supplier: supplier.name,
+          status: supplier.status,
+          on_time: records.find((entry) => entry.supplierId === supplier.id) ?? null,
+          terms: terms.get(supplier.id) ?? null,
+        })),
+        cards,
+      };
     },
   }),
 
@@ -178,7 +276,10 @@ export const BUYER_TOOLS: AiTool[] = [
     },
     exec: async (_ctx, { items }) => {
       const result = await addToCartAction(items.map((entry) => productCartLine(entry.product_id, entry.qty, "Added by Tradelink AI", "manual")));
-      return result.ok ? { ok: true, data: `Added ${result.data.added} to your cart.` } : result;
+      if (!result.ok) return result;
+      const first = items[0];
+      const item = first && items.length === 1 ? (await catalogueById()).get(first.product_id) : undefined;
+      return { ok: true, data: item && first ? `Added ${plural(first.qty, item.unit)} of ${item.name} to your cart.` : `Added ${items.length} items to your cart.` };
     },
   }),
   writeTool({

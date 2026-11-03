@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/data/supabase/server";
 import { formatMoney } from "@/domain/money";
+import { singaporeDateOf } from "@/domain/singapore-time";
 import { getOrderById, type OrderView } from "@/features/orders/queries";
 import { orderNumber } from "@/ui/format";
 
@@ -35,3 +36,11 @@ export function orderFacts(order: OrderView) {
 }
 
 export const NOT_FOUND = { error: "No order with that number. Ask the person to check it." };
+
+/** 'today', 'tomorrow' or a date, as a Singapore calendar date; undefined for no day filter. */
+export function deliveryDay(value: string | undefined, now: Date): string | undefined {
+  if (!value) return undefined;
+  if (value === "today") return singaporeDateOf(now);
+  if (value === "tomorrow") return singaporeDateOf(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+  return value;
+}

@@ -35,7 +35,101 @@ export type LineRow = { label: string; status: ReadLineStatus | null; note: stri
 export type AskCard =
   | { kind: "order"; order: OrderCardData }
   | { kind: "price"; price: PriceCardData }
-  | { kind: "lines"; rows: LineRow[] };
+  | { kind: "lines"; rows: LineRow[] }
+  | AiCard;
+
+/**
+ * Tradelink AI cards. The server builds them from the database; the answer shows one by writing its
+ * key as a tag, so only the cards the answer is about appear, under the sentence they belong to.
+ */
+export type AiCard =
+  | { kind: "ai_order"; key: string; view: "buyer" | "supplier"; order: AiOrder }
+  | { kind: "ai_product"; key: string; product: AiProduct }
+  | { kind: "ai_stock"; key: string; stock: AiStock }
+  | { kind: "ai_problem"; key: string; problem: AiProblem }
+  | { kind: "ai_alert"; key: string; alert: AiAlert }
+  | { kind: "ai_cart"; key: string; cart: AiCart }
+  | { kind: "ai_spend"; key: string; spend: { spentCents: number; budgetCents: number } }
+  | { kind: "ai_supplier"; key: string; supplier: AiSupplier };
+
+export type AiOrder = {
+  id: string;
+  number: number;
+  status: OrderStatus;
+  checkStatus: "unchecked" | "all_here" | "problem";
+  /** The supplier for a buyer, the buyer for a supplier. */
+  counterparty: string;
+  deliveryDate: string | null;
+  placedAt: string;
+  lines: { qty: number; name: string; unit: string }[];
+  totalCents: number;
+};
+
+export type AiProduct = {
+  id: string;
+  name: string;
+  unit: string;
+  priceCents: number;
+  supplier: string;
+  /** Null while the supplier has not confirmed stock. */
+  available: number | null;
+  art: ArtKind;
+  category: Category;
+  inCart: number;
+  /** A suggested quantity from the reorder plan; the person can change it before adding. */
+  suggestedQty?: number;
+  /** "1.3 days left", for items running low. */
+  note?: string;
+};
+
+export type AiStock = {
+  id: string;
+  name: string;
+  sku: string;
+  unit: string;
+  priceCents: number;
+  onHand: number;
+  reserved: number;
+  available: number;
+  reorderLevel: number;
+  health: "healthy" | "low" | "out" | "unconfirmed";
+};
+
+export type AiProblem = {
+  id: string;
+  orderNumber: number;
+  buyer: string;
+  item: string;
+  type: string;
+  qty: number;
+  amountCents: number;
+  note: string | null;
+};
+
+export type AiAlert = {
+  id: string;
+  kind: "price" | "partial" | "reply" | "credit";
+  title: string;
+  detail: string;
+  tone: "good" | "warn" | "bad";
+};
+
+export type AiCart = {
+  version: number;
+  lines: { name: string; qty: number; unit: string; supplier: string | null; lineCents: number | null }[];
+  totalCents: number;
+  suppliers: number;
+  /** Lines that still need a product chosen on the Cart page. */
+  unresolved: number;
+};
+
+export type AiSupplier = {
+  name: string;
+  onTimePercent: number | null;
+  deliveries: number;
+  cutOff: string | null;
+  deliveryDays: string | null;
+};
 
 /**
  * A line the assistant offers to add to the cart, keeping the reader's state and options. A line
