@@ -5,6 +5,7 @@ export const NAV: Record<ShellRole, NavItem[]> = {
   buyer: [
     { href: "/buyer", label: "Home", icon: "home" },
     { href: "/buyer/order", label: "Order", icon: "order" },
+    { href: "/buyer/ask", label: "Ask", icon: "chat" },
     { href: "/buyer/orders", label: "Orders", icon: "list" },
     { href: "/buyer/insights", label: "Insights", icon: "trend" },
     { href: "/buyer/availability", label: "Availability", icon: "stock" },

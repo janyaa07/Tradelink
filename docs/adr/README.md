@@ -28,3 +28,4 @@ Any new dependency or service needs an ADR before it is used. To change a decisi
 | [0020](0020-minimum-order-negotiation.md) | Minimum-order negotiation with buyer approval | Proposed |
 | [0021](0021-bank-detail-fingerprints.md) | Bank detail fingerprints for invoice checks | Proposed |
 | [0022](0022-environments-migrations-ci.md) | Environments, migrations and CI | Proposed |
+| [0023](0023-ask-with-grounded-facts.md) | Ask answers from grounded facts, not a tool runner | Accepted |
