@@ -13,8 +13,18 @@ export const EXPIRED_RESET_PATH = "/forgot-password?expired=1";
 /** Where an expired or already-used sign-up confirmation link lands. */
 export const EXPIRED_LINK_PATH = "/sign-in?link=expired";
 
-/** Open to everyone, signed in or not. */
-const PUBLIC_PATHS = ["/forgot-password", "/auth/callback", "/api/health"] as const;
+/**
+ * Open to everyone, signed in or not. The job runner only runs jobs that are already due. The service
+ * worker caches /offline for every visitor (ADR 0016).
+ */
+const PUBLIC_PATHS = ["/forgot-password", "/auth/callback", "/api/health", "/api/jobs", "/offline"] as const;
+
+/**
+ * The Restock app (M0 onwards). Any signed-in person may open it; RLS and database functions decide
+ * what they see, so a Restock user needs no Tradelink organisation.
+ */
+export const RESTOCK_HOME = "/r";
+const RESTOCK_PATHS = [RESTOCK_HOME, "/api/cards", "/api/push"] as const;
 
 /** For signed-out users only: a signed-in user is sent to their home. */
 const SIGNED_OUT_PATHS = [SIGN_IN_PATH, SIGN_UP_PATH] as const;
@@ -88,10 +98,14 @@ export function decideRoute({ pathname, signedIn, kind }: RouteInput): RouteDeci
   // Set a new password needs a session but no organisation, so a user can always finish a reset.
   if (matches(pathname, PUBLIC_PATHS) || matches(pathname, [RESET_PASSWORD_PATH])) return "allow";
 
+  if (matches(pathname, RESTOCK_PATHS)) return "allow";
+
   const home = homeFor(kind);
   if (!home) {
-    // Signed in without an organisation: only Sign in is useful, and redirecting it to itself would loop.
-    return pathname === SIGN_IN_PATH ? "allow" : SIGN_IN_PATH;
+    // Signed in without a Tradelink organisation: a Restock user, whose home is the Restock app.
+    // Sign in stays reachable, and redirecting it to itself would loop.
+    if (pathname === SIGN_IN_PATH) return "allow";
+    return RESTOCK_HOME;
   }
 
   if (pathname === "/" || matches(pathname, SIGNED_OUT_PATHS)) return home;

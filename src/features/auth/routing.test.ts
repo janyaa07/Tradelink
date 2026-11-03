@@ -7,7 +7,7 @@ const supplier: RouteInput = { ...buyer, pathname: "/supplier", kind: "supplier"
 const admin: RouteInput = { pathname: "/admin", signedIn: true, kind: "platform" };
 
 describe("decideRoute: signed out", () => {
-  it.each(["/sign-in", "/sign-up", "/forgot-password", "/auth/callback", "/api/health", "/api/health/deep"])("allows public %s", (pathname) => {
+  it.each(["/sign-in", "/sign-up", "/forgot-password", "/auth/callback", "/api/health", "/api/health/deep", "/offline"])("allows public %s", (pathname) => {
     expect(decideRoute({ ...signedOut, pathname })).toBe("allow");
   });
 
@@ -90,21 +90,38 @@ describe("decideRoute: buyers and suppliers", () => {
   });
 });
 
-describe("decideRoute: signed in without an organisation", () => {
+describe("decideRoute: signed in without an organisation (a Restock user)", () => {
   const orphan: RouteInput = { ...buyer, kind: null };
 
   it("allows Sign in instead of redirecting it to itself", () => {
     expect(decideRoute({ ...orphan, pathname: "/sign-in" })).toBe("allow");
   });
 
-  it("sends every other page to Sign in", () => {
-    expect(decideRoute({ ...orphan, pathname: "/buyer" })).toBe("/sign-in");
-    expect(decideRoute({ ...orphan, pathname: "/" })).toBe("/sign-in");
-    expect(decideRoute({ ...orphan, pathname: "/sign-up" })).toBe("/sign-in");
+  it("allows the Restock app and its APIs", () => {
+    expect(decideRoute({ ...orphan, pathname: "/r" })).toBe("allow");
+    expect(decideRoute({ ...orphan, pathname: "/r/dev/cards" })).toBe("allow");
+    expect(decideRoute({ ...orphan, pathname: "/api/cards/abc/act" })).toBe("allow");
+  });
+
+  it("sends every other page to the Restock app", () => {
+    expect(decideRoute({ ...orphan, pathname: "/buyer" })).toBe("/r");
+    expect(decideRoute({ ...orphan, pathname: "/" })).toBe("/r");
+    expect(decideRoute({ ...orphan, pathname: "/sign-up" })).toBe("/r");
   });
 
   it("treats an unknown kind like no organisation", () => {
-    expect(decideRoute({ ...orphan, kind: "toString", pathname: "/" })).toBe("/sign-in");
+    expect(decideRoute({ ...orphan, kind: "toString", pathname: "/" })).toBe("/r");
+  });
+});
+
+describe("decideRoute: Restock paths", () => {
+  it("lets Tradelink users open the Restock app too", () => {
+    expect(decideRoute({ ...buyer, pathname: "/r" })).toBe("allow");
+  });
+
+  it("keeps the Restock app behind sign-in but leaves the job runner open", () => {
+    expect(decideRoute({ ...signedOut, pathname: "/r" })).toBe("/sign-in?next=%2Fr");
+    expect(decideRoute({ ...signedOut, pathname: "/api/jobs/run" })).toBe("allow");
   });
 });
 

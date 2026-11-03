@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Sora } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
+import { resolveLanguage } from "@/i18n";
+import { PwaProvider } from "@/pwa/PwaProvider";
+import { UpdateGate } from "@/pwa/UpdateGate";
 import { ToastProvider } from "@/ui/Toast";
 import "./globals.css";
 
@@ -29,7 +32,8 @@ const sora = Sora({
 export const metadata: Metadata = {
   title: "Tradelink",
   description: "Order, deliver and check stock between small food businesses and their suppliers.",
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Restock", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -50,6 +54,8 @@ function parseTheme(value: string | undefined): Theme | undefined {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const theme = parseTheme((await cookies()).get("tl-theme")?.value);
+  // PWA chrome (offline, update) follows the browser language until app_user.language is wired in.
+  const lang = resolveLanguage((await headers()).get("accept-language"));
 
   return (
     <html
@@ -59,7 +65,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       suppressHydrationWarning
     >
       <body>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <PwaProvider lang={lang}>{children}</PwaProvider>
+          <UpdateGate lang={lang} />
+        </ToastProvider>
       </body>
     </html>
   );

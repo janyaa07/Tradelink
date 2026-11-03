@@ -30,3 +30,5 @@ Any new dependency or service needs an ADR before it is used. To change a decisi
 | [0022](0022-environments-migrations-ci.md) | Environments, migrations and CI | Proposed |
 | [0023](0023-ask-with-grounded-facts.md) | Ask answers from grounded facts, not a tool runner | Accepted |
 | [0024](0024-self-sign-up-without-two-factor.md) | Self sign-up for buyers and suppliers; two-factor sign-in removed for now | Accepted |
+| [0025](0025-restock-data-model-beside-tradelink.md) | The Restock data model is built beside the Tradelink tables | Accepted |
+| [0026](0026-cards-jobs-and-pwa.md) | Cards from the database, jobs on pg_cron, and a PWA first | Accepted |
