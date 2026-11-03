@@ -27,7 +27,7 @@ export function orderCard(order: OrderView, view: "buyer" | "supplier"): AiCard 
     counterparty: view === "buyer" ? order.supplier.name : order.buyer.name,
     deliveryDate: order.confirmedDeliveryDate ?? order.requestedDeliveryDate,
     placedAt: order.createdAt,
-    lines: order.lines.map((line) => ({ qty: line.qty, name: line.name, unit: line.unit })),
+    lines: order.lines.map((line) => ({ qty: line.qty, name: line.name, unit: line.unit, productId: line.productId })),
     totalCents: order.totalCents,
   };
   return { kind: "ai_order", key: orderNumber(order.number), view, order: data };

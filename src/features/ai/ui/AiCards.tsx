@@ -50,6 +50,36 @@ function useCardRun(onDone: (message: string, card?: AiCard) => void) {
   return { busy, result, run };
 }
 
+/** A small quantity control for card lines; unlike the cart's Stepper it can go down to a minimum of 0. */
+function MiniStepper({
+  value,
+  min,
+  max,
+  label,
+  busy,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number | null;
+  label: string;
+  busy?: boolean;
+  onChange: (next: number) => void;
+}) {
+  const round = "grid size-7 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-50";
+  return (
+    <span className="inline-flex flex-none items-center rounded-full border border-line bg-surface">
+      <button type="button" aria-label={value === 1 && min === 0 ? `Remove ${label}` : `One less ${label}`} disabled={busy || value <= min} onClick={() => onChange(value - 1)} className={round}>
+        {value === 1 && min === 0 ? "×" : "−"}
+      </button>
+      <span className="min-w-6 text-center text-[.85rem] font-semibold tabular-nums">{value}</span>
+      <button type="button" aria-label={`One more ${label}`} disabled={busy || (max !== null && value >= max)} onClick={() => onChange(value + 1)} className={round}>
+        +
+      </button>
+    </span>
+  );
+}
+
 /** Asks for a second tap before anything that is hard to undo, such as Cancel or Reject. */
 function TwoStepButton({
   label,
@@ -162,7 +192,7 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
   const supplier = card.view === "supplier";
   const update = (next: Partial<AiOrder>) => onChange({ ...card, order: { ...order, ...next } });
   const pendingChange = useRef<Partial<AiOrder>>({});
-  const { busy, result, run } = useCardRun(() => update(pendingChange.current));
+  const { busy, result, run } = useCardRun((_message, next) => (next && next.kind === "ai_order" ? onChange(next) : update(pendingChange.current)));
   const act = (tool: string, change: Partial<AiOrder>, args: Record<string, unknown> = {}) => {
     pendingChange.current = change;
     run(tool, { order_number: order.number, order_id: order.id, ...args });
@@ -171,6 +201,9 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
   const [date, setDate] = useState(order.deliveryDate && order.deliveryDate > tomorrow ? order.deliveryDate : tomorrow);
   const dateChoices = [tomorrow, sgDate(2)];
   const [otherDate, setOtherDate] = useState(false);
+  const [sendQty, setSendQty] = useState<Record<string, number> | null>(null);
+  const canPart = supplier && order.status === "pending" && order.lines.length > 0 && order.lines.every((line) => line.productId);
+  const changed = sendQty ? order.lines.filter((line) => line.productId && sendQty[line.productId] !== line.qty) : [];
 
   let actions: ReactNode = null;
   if (supplier && order.status === "pending") {
@@ -211,9 +244,39 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
             </button>
           )}
         </div>
-        <Button variant="primary" disabled={busy} onClick={() => act("accept_order", { status: "accepted", deliveryDate: date }, { delivery_date: date })}>
-          {busy ? "Accepting..." : `Accept for ${formatDate(date)}`}
-        </Button>
+        {changed.length > 0 && sendQty ? (
+          <Button
+            variant="primary"
+            disabled={busy || order.lines.every((line) => line.productId && sendQty[line.productId] === 0)}
+            onClick={() =>
+              act(
+                "accept_part",
+                {
+                  status: "accepted",
+                  deliveryDate: date,
+                  lines: order.lines
+                    .map((line) => ({ ...line, qty: line.productId ? (sendQty[line.productId] ?? line.qty) : line.qty }))
+                    .filter((line) => line.qty > 0),
+                },
+                {
+                  delivery_date: date,
+                  lines: changed.map((line) => ({ product_id: line.productId, send_qty: line.productId ? sendQty[line.productId] : line.qty })),
+                },
+              )
+            }
+          >
+            {busy ? "Accepting..." : `Accept with changes for ${formatDate(date)}`}
+          </Button>
+        ) : (
+          <Button variant="primary" disabled={busy} onClick={() => act("accept_order", { status: "accepted", deliveryDate: date }, { delivery_date: date })}>
+            {busy ? "Accepting..." : `Accept for ${formatDate(date)}`}
+          </Button>
+        )}
+        {canPart && !sendQty ? (
+          <Button disabled={busy} onClick={() => setSendQty(Object.fromEntries(order.lines.map((line) => [line.productId ?? "", line.qty])))}>
+            Change quantities
+          </Button>
+        ) : null}
         <TwoStepButton label="Reject" confirmLabel="Tap again to reject" busy={busy} onConfirm={() => act("reject_order", { status: "rejected" })} />
       </>
     );
@@ -271,10 +334,33 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
       actions={actions}
       result={result}
     >
-      <div className="flex items-end justify-between gap-3">
-        <Lines lines={order.lines} />
-        <b className="flex-none tabular-nums">{formatMoney(order.totalCents)}</b>
-      </div>
+      {sendQty && order.status === "pending" ? (
+        <ul className="flex flex-col gap-1.5 text-[.9rem]" aria-label="Quantities to send">
+          {order.lines.map((line) => {
+            const id = line.productId ?? "";
+            const send = sendQty[id] ?? line.qty;
+            return (
+              <li key={id} className="flex items-center gap-2">
+                <MiniStepper value={send} min={0} max={line.qty} label={line.name} busy={busy} onChange={(value) => setSendQty({ ...sendQty, [id]: value })} />
+                <span className="min-w-0 flex-1 truncate">{line.name}</span>
+                <span className={cx("flex-none text-[.8rem] tabular-nums", send === line.qty ? "text-muted" : "text-warn")}>
+                  {send === 0 ? "Not sending" : `of ${line.qty}`}
+                </span>
+              </li>
+            );
+          })}
+          <li>
+            <button type="button" onClick={() => setSendQty(null)} className="text-[.8rem] font-semibold text-accent">
+              Send everything
+            </button>
+          </li>
+        </ul>
+      ) : (
+        <div className="flex items-end justify-between gap-3">
+          <Lines lines={order.lines} />
+          <b className="flex-none tabular-nums">{formatMoney(order.totalCents)}</b>
+        </div>
+      )}
       {order.checkStatus === "all_here" ? <p className="mt-1.5 text-[.8rem] text-good">Checked: all here</p> : null}
       {order.checkStatus === "problem" ? <p className="mt-1.5 text-[.8rem] text-bad">A problem was reported</p> : null}
     </Frame>
@@ -347,15 +433,26 @@ const HEALTH: Record<AiStock["health"], { label: string; tone: PillTone }> = {
 };
 
 function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind: "ai_stock" }>; stock: AiStock; onChange: Change }) {
-  const [mode, setMode] = useState<"none" | "receive" | "price">("none");
+  const unconfirmed = stock.health === "unconfirmed";
+  const [mode, setMode] = useState<"none" | "receive" | "price" | "confirm" | "adjust">("none");
   const [value, setValue] = useState("");
+  const [price, setPrice] = useState((stock.priceCents / 100).toFixed(2));
+  const [reason, setReason] = useState<"damaged" | "expired" | "count_correction">("damaged");
+  const [direction, setDirection] = useState<-1 | 1>(-1);
   const change = useRef<Partial<AiStock>>({});
-  const { busy, result, run } = useCardRun(() => onChange({ ...card, stock: { ...stock, ...change.current, added: false } }));
+  const { busy, result, run } = useCardRun((_message, next) =>
+    onChange(next && next.kind === "ai_stock" ? { ...next, key: card.key } : { ...card, stock: { ...stock, ...change.current, added: false } }),
+  );
   const number = Number(value);
-  const valid = mode === "receive" ? Number.isInteger(number) && number > 0 : number > 0;
+  const whole = Number.isInteger(number) && number > 0;
+  const valid = mode === "price" ? number > 0 : mode === "confirm" ? whole && Number(price) > 0 : whole;
   const submit = () => {
     if (!valid) return;
-    if (mode === "receive") {
+    if (mode === "confirm") {
+      run("confirm_stock", { product_id: stock.id, qty: number, price: Number(price), reorder: stock.reorderLevel > 0 ? stock.reorderLevel : 5 });
+    } else if (mode === "adjust") {
+      run("adjust_stock", { product_id: stock.id, change: direction * number, reason });
+    } else if (mode === "receive") {
       change.current = { onHand: stock.onHand + number, available: stock.available + number, health: stock.available + number > stock.reorderLevel ? "healthy" : stock.health };
       run("receive_stock", { product_id: stock.id, qty: number });
     } else {
@@ -377,12 +474,22 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
       notice={stock.added ? "Added to your inventory. Buyers can order it now." : null}
       actions={
         mode === "none" ? (
-          <>
-            <Button variant="primary" onClick={() => setMode("receive")}>
-              Receive stock
-            </Button>
-            <Button onClick={() => setMode("price")}>Change price</Button>
-          </>
+          unconfirmed ? (
+            <>
+              <Button variant="primary" onClick={() => setMode("confirm")}>
+                Confirm price and stock
+              </Button>
+              <span className="text-[.8rem] text-muted">A buyer added this. Confirm it before you accept orders for it.</span>
+            </>
+          ) : (
+            <>
+              <Button variant="primary" onClick={() => setMode("receive")}>
+                Receive stock
+              </Button>
+              <Button onClick={() => setMode("price")}>Change price</Button>
+              <Button onClick={() => setMode("adjust")}>Adjust</Button>
+            </>
+          )
         ) : (
           <form
             className="flex w-full flex-wrap items-center gap-2"
@@ -391,8 +498,42 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
               submit();
             }}
           >
+            {mode === "adjust" ? (
+              <>
+                <select
+                  aria-label="Remove or add"
+                  value={direction}
+                  onChange={(event) => setDirection(event.target.value === "1" ? 1 : -1)}
+                  className="rounded-lg border border-control-line bg-surface px-2 py-1.5 text-[.875rem] text-ink"
+                >
+                  <option value={-1}>Remove</option>
+                  <option value={1}>Add back</option>
+                </select>
+                <select
+                  aria-label="Reason"
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value as typeof reason)}
+                  className="rounded-lg border border-control-line bg-surface px-2 py-1.5 text-[.875rem] text-ink"
+                >
+                  <option value="damaged">Damaged</option>
+                  <option value="expired">Expired</option>
+                  <option value="count_correction">Count correction</option>
+                </select>
+              </>
+            ) : null}
+            {mode === "confirm" ? (
+              <label className="flex items-center gap-2 text-[.875rem]">
+                Price S$
+                <input
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(event) => setPrice(event.target.value)}
+                  className="w-20 rounded-lg border border-control-line bg-surface px-2.5 py-1.5 tabular-nums text-ink"
+                />
+              </label>
+            ) : null}
             <label className="flex items-center gap-2 text-[.875rem]">
-              {mode === "receive" ? `Add ${stock.unit}s` : "New price S$"}
+              {mode === "receive" ? `Add ${stock.unit}s` : mode === "price" ? "New price S$" : mode === "confirm" ? "In stock" : "How many"}
               <input
                 autoFocus
                 inputMode="decimal"
@@ -402,7 +543,7 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
               />
             </label>
             <Button type="submit" variant="primary" disabled={busy || !valid}>
-              {busy ? "Saving..." : mode === "receive" ? "Add stock" : "Save price"}
+              {busy ? "Saving..." : mode === "receive" ? "Add stock" : mode === "price" ? "Save price" : mode === "confirm" ? "Confirm stock" : "Adjust stock"}
             </Button>
             <Button onClick={() => setMode("none")} disabled={busy}>
               Back
@@ -574,27 +715,14 @@ function CartCardView({ card, cart, onChange }: { card: Extract<AiCard, { kind: 
                       <li key={index} className={cx("px-2.5 py-1.5", free !== null && "bg-warn-soft/40")}>
                         <div className="flex items-center gap-2">
                           {line.productId ? (
-                            <span className="inline-flex flex-none items-center rounded-full border border-line bg-surface">
-                              <button
-                                type="button"
-                                aria-label={line.qty === 1 ? `Remove ${line.name}` : `One less ${line.name}`}
-                                disabled={busy}
-                                onClick={() => line.productId && setQty(line.productId, line.qty - 1)}
-                                className="grid size-7 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-50"
-                              >
-                                {line.qty === 1 ? "×" : "−"}
-                              </button>
-                              <span className="min-w-6 text-center text-[.85rem] font-semibold tabular-nums">{line.qty}</span>
-                              <button
-                                type="button"
-                                aria-label={`One more ${line.name}`}
-                                disabled={busy || (line.available !== null && line.qty >= line.available)}
-                                onClick={() => line.productId && setQty(line.productId, line.qty + 1)}
-                                className="grid size-7 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-50"
-                              >
-                                +
-                              </button>
-                            </span>
+                            <MiniStepper
+                              value={line.qty}
+                              min={0}
+                              max={line.available}
+                              label={line.name}
+                              busy={busy}
+                              onChange={(value) => line.productId && setQty(line.productId, value)}
+                            />
                           ) : (
                             <span className="min-w-[4.5rem] text-center text-[.85rem] tabular-nums text-muted">{line.qty}</span>
                           )}

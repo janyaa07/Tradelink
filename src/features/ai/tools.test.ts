@@ -48,6 +48,14 @@ describe("Tradelink AI tools", () => {
     expect(SUPPLIER_TOOLS.some((tool) => tool.name === "new_product_form")).toBe(true);
   });
 
+  it("lets suppliers do from chat what their screens do", () => {
+    const names = new Set(SUPPLIER_TOOLS.map((tool) => tool.name));
+    for (const name of ["accept_part", "confirm_stock", "adjust_stock", "update_terms"]) expect(names.has(name)).toBe(true);
+    const adjust = SUPPLIER_TOOLS.find((tool) => tool.name === "adjust_stock");
+    expect(adjust?.input.safeParse({ product_id: crypto.randomUUID(), change: 0, reason: "damaged" }).success).toBe(false);
+    expect(adjust?.input.safeParse({ product_id: crypto.randomUUID(), change: -2, reason: "damaged" }).success).toBe(true);
+  });
+
   it("places a direct order without the cart version, so the cart is left alone", () => {
     const tool = BUYER_TOOLS.find((entry) => entry.name === "order_now");
     expect(tool?.kind).toBe("write");

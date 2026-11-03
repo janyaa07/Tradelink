@@ -63,7 +63,8 @@ export type AiOrder = {
   counterparty: string;
   deliveryDate: string | null;
   placedAt: string;
-  lines: { qty: number; name: string; unit: string }[];
+  /** productId is missing on cards saved before part accept existed. */
+  lines: { qty: number; name: string; unit: string; productId?: string }[];
   totalCents: number;
 };
 
@@ -191,6 +192,7 @@ export const ASK_LINK_LABELS = [
   "View orders",
   "Open order",
   "Open inventory",
+  "Open settings",
 ] as const;
 export type AskLinkLabel = (typeof ASK_LINK_LABELS)[number];
 

@@ -6,6 +6,7 @@ All notable changes are listed here. The format follows Keep a Changelog, and ve
 
 ### Added
 - **Order now:** "order one bag of rice now" shows one confirm card that orders only that item and leaves the cart as it is. When several products match, Tradelink AI picks the likely one and offers the other as a follow-up. Product cards also have an Order now button, which needs a second tap.
+- **More supplier actions in Tradelink AI:** accept part of an order (Change quantities on the order card, down to 0 for a line), confirm the price and stock of a product a buyer added, adjust stock with a reason (damaged, expired or count correction), and change cut-off, delivery days, lead time and minimum order. Each shows a confirm card or works from its card's own buttons.
 - **New products and suppliers from chat:** buyers get a filled-in form card to add a product, and to add a supplier who is not on Tradelink yet, either with the product or on its own. Suppliers get a form card to add a product with opening stock and a reorder level. Nothing is added until the person taps the card's button. The database function `buyer_add_supplier` is new.
 
 ### Changed

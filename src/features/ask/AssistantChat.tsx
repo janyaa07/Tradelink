@@ -95,12 +95,13 @@ const QUIET_AFTER_TEXT_MS = 900;
 /** Where the person goes next after a confirmed change. */
 function linkAfter(role: AiRole, tool: string): AskAction | null {
   if (role === "supplier") {
-    return ["receive_stock", "change_price"].includes(tool)
+    if (tool === "update_terms") return { kind: "link", label: "Open settings", href: "/supplier/settings" };
+    return ["receive_stock", "change_price", "confirm_stock", "adjust_stock"].includes(tool)
       ? { kind: "link", label: "Open inventory", href: "/supplier/inventory" }
       : { kind: "link", label: "View orders", href: "/supplier/orders" };
   }
   if (["add_to_cart", "set_cart_quantity"].includes(tool)) return { kind: "link", label: "View cart", href: "/buyer/cart" };
-  if (["place_order", "cancel_order", "confirm_delivery", "report_not_here", "report_problem"].includes(tool)) {
+  if (["place_order", "order_now", "cancel_order", "confirm_delivery", "report_not_here", "report_problem"].includes(tool)) {
     return { kind: "link", label: "View orders", href: "/buyer/orders" };
   }
   return null;
