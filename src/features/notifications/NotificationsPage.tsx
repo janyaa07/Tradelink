@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getSession, roleOf, type Role } from "@/data/session";
 import { Button } from "@/ui/Button";
 import { EmptyState } from "@/ui/EmptyState";
 import { formatDateTime } from "@/ui/format";
@@ -15,8 +16,22 @@ function toneOf(kind: string) {
   return "info" as const;
 }
 
+/**
+ * Database notifications carry role-neutral links such as /orders/{id}; map them to the
+ * signed-in role's routes.
+ */
+function routeFor(role: Role, link: string): string {
+  const [, section, id] = link.split("/");
+  if (section === "orders" || section === "issues") return `/${role}/orders`;
+  if (section === "inventory") return role === "supplier" ? "/supplier/inventory" : `/${role}`;
+  if (section === "suppliers" && id) return role === "admin" ? `/admin/suppliers/${id}` : `/${role}`;
+  return `/${role}`;
+}
+
 /** The notifications page shared by every role (SH-09, ADM-08). */
 export async function NotificationsPage({ subtitle }: { subtitle: string }) {
+  const session = await getSession();
+  const role = session ? roleOf(session.kind) : "buyer";
   const notes = await getNotifications();
   const unread = notes.filter((note) => !note.readAt).length;
   return (
@@ -50,7 +65,7 @@ export async function NotificationsPage({ subtitle }: { subtitle: string }) {
               </div>
               <p>{note.body}</p>
               {note.link ? (
-                <Link href={note.link} className="self-start font-bold text-accent">
+                <Link href={routeFor(role, note.link)} className="self-start font-bold text-accent">
                   {note.title}
                 </Link>
               ) : null}
