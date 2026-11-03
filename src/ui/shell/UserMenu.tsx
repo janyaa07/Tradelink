@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { BusinessLogo } from "../BusinessLogo";
 import { cx } from "../cx";
@@ -9,6 +10,8 @@ export type UserMenuProps = {
   userName: string;
   orgName: string;
   roleLabel: string;
+  /** The role's settings page, listed above Sign out. */
+  settingsHref: string;
   /** The sign-out server action. */
   signOutAction: () => Promise<void>;
   /** "avatar" is the round logo in the top bar; "who" is the side rail's name block on laptop. */
@@ -16,15 +19,26 @@ export type UserMenuProps = {
   className?: string;
 };
 
+const itemClass =
+  "flex w-full items-center gap-2.5 rounded-md border-0 bg-transparent px-2.5 py-2 text-left font-medium text-ink no-underline hover:bg-sunken";
+
 /**
- * The account menu: name, business and Sign out. A disclosure: the trigger carries
- * aria-expanded, focus moves to Sign out on open, and Escape or a click outside closes it.
+ * The account menu: name, business, Settings and Sign out. A disclosure: the trigger carries
+ * aria-expanded, focus moves to Settings on open, and Escape or a click outside closes it.
  */
-export function UserMenu({ userName, orgName, roleLabel, signOutAction, variant = "avatar", className }: UserMenuProps) {
+export function UserMenu({
+  userName,
+  orgName,
+  roleLabel,
+  settingsHref,
+  signOutAction,
+  variant = "avatar",
+  className,
+}: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const firstActionRef = useRef<HTMLButtonElement>(null);
+  const firstActionRef = useRef<HTMLAnchorElement>(null);
   const panelId = useId();
 
   useEffect(() => {
@@ -97,13 +111,13 @@ export function UserMenu({ userName, orgName, roleLabel, signOutAction, variant 
             <p className="text-[.75rem] text-muted">{roleLabel}</p>
           </div>
         </div>
-        <div className="border-t border-line pt-1.5">
+        <div className="flex flex-col gap-0.5 border-t border-line pt-1.5">
+          <Link ref={firstActionRef} href={settingsHref} onClick={() => setOpen(false)} className={itemClass}>
+            <Icon name="gear" size={18} className="text-muted" />
+            Settings
+          </Link>
           <form action={signOutAction}>
-            <button
-              ref={firstActionRef}
-              type="submit"
-              className="flex w-full items-center gap-2.5 rounded-md border-0 bg-transparent px-2.5 py-2 text-left font-medium text-ink hover:bg-sunken"
-            >
+            <button type="submit" className={itemClass}>
               <Icon name="logout" size={18} className="text-muted" />
               Sign out
             </button>

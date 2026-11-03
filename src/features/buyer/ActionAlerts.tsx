@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Todo, TodoAction, TodoTone } from "@/domain/todos";
 import { cx } from "@/ui/cx";
 import { Icon, type IconName } from "@/ui/Icon";
@@ -17,11 +18,19 @@ const ICON_TONES: Record<TodoTone, string> = {
   bad: "bg-bad-soft text-bad",
 };
 
-/** One alert card: what happened, in words, and the buttons that settle it. */
-function ActionAlertCard({ todo }: { todo: Todo }) {
+/**
+ * One alert: what happened, in words, the buttons that settle it and, when it is about an order,
+ * an arrow to that order. "card" stands alone on the alerts page; "row" sits in the bell's pop-up.
+ */
+function ActionAlertItem({ todo, variant }: { todo: Todo; variant: "card" | "row" }) {
   const kind = KINDS[todo.action.kind];
   return (
-    <li className="flex min-w-0 gap-3 rounded-lg border border-line bg-surface p-3.5 shadow-card">
+    <li
+      className={cx(
+        "flex min-w-0 gap-3",
+        variant === "card" ? "rounded-2xl border border-line bg-surface p-3.5 shadow-card" : "border-b border-line px-3.5 py-3",
+      )}
+    >
       <span className={cx("grid size-10 flex-none place-items-center rounded-full", ICON_TONES[todo.tone])}>
         <Icon name={kind.icon} size={20} />
       </span>
@@ -37,7 +46,28 @@ function ActionAlertCard({ todo }: { todo: Todo }) {
           <TodoActions action={todo.action} />
         </div>
       </div>
+      {todo.orderId ? (
+        <Link
+          href={`/buyer/orders/${todo.orderId}`}
+          aria-label={`Open the order: ${todo.title}`}
+          title="Open the order"
+          className="grid size-9 flex-none place-items-center self-center rounded-full text-muted no-underline transition-colors duration-150 hover:bg-sunken hover:text-ink"
+        >
+          <Icon name="arrow" size={18} />
+        </Link>
+      ) : null}
     </li>
+  );
+}
+
+/** The alerts that need action as rows, for the bell's pop-up. */
+export function ActionAlertRows({ todos }: { todos: Todo[] }) {
+  return (
+    <ul className="flex flex-col">
+      {todos.map((todo) => (
+        <ActionAlertItem key={todo.key} todo={todo} variant="row" />
+      ))}
+    </ul>
   );
 }
 
@@ -49,7 +79,7 @@ export function ActionAlerts({ todos }: { todos: Todo[] }) {
       {todos.length > 0 ? (
         <ul className="flex flex-col gap-2.5">
           {todos.map((todo) => (
-            <ActionAlertCard key={todo.key} todo={todo} />
+            <ActionAlertItem key={todo.key} todo={todo} variant="card" />
           ))}
         </ul>
       ) : (

@@ -1,0 +1,140 @@
+/*
+ * Tradelink Assistant: a soft green and teal glow, gradient greeting, avatar and focus ring. The
+ * gradient runs from the brand accent through teal to green. It is only used on large text and
+ * icons, where every stop clears 3:1 (light: #0D9488 3.7:1 and #16A34A 3.3:1 on white; dark: mint,
+ * #2DD4BF and #A3E635 on #0F1211).
+ */
+.chat {
+  --ai-to: #0d9488;
+  --ai-end: #16a34a;
+  --ai-glow-1: rgb(61 220 151 / 0.26);
+  --ai-glow-2: rgb(45 212 191 / 0.2);
+  --ai-glow-3: rgb(163 230 53 / 0.14);
+  position: relative;
+  isolation: isolate;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chat {
+    --ai-to: #2dd4bf;
+    --ai-end: #a3e635;
+    --ai-glow-1: rgb(61 220 151 / 0.14);
+    --ai-glow-2: rgb(45 212 191 / 0.1);
+    --ai-glow-3: rgb(163 230 53 / 0.06);
+  }
+}
+
+:root[data-theme="dark"] .chat {
+  --ai-to: #2dd4bf;
+  --ai-end: #a3e635;
+  --ai-glow-1: rgb(61 220 151 / 0.14);
+  --ai-glow-2: rgb(45 212 191 / 0.1);
+  --ai-glow-3: rgb(163 230 53 / 0.06);
+}
+
+/* The glow behind the top of the chat. */
+.glow {
+  position: absolute;
+  inset: -16px 0 auto;
+  height: 420px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 40% 60% at 32% 20%, var(--ai-glow-1), transparent 70%),
+    radial-gradient(ellipse 35% 55% at 70% 25%, var(--ai-glow-2), transparent 70%),
+    radial-gradient(ellipse 30% 40% at 52% 50%, var(--ai-glow-3), transparent 70%);
+  /* Fades every edge, so the glow never shows the box it is drawn in. */
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 40%, #000 45%, transparent 100%);
+}
+
+.gradientText {
+  background: linear-gradient(90deg, var(--accent), var(--ai-to) 60%, var(--ai-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.avatar {
+  background: linear-gradient(135deg, var(--accent), var(--ai-to));
+  color: var(--on-accent);
+}
+
+/* The input dock: fades the conversation out under a soft glow. */
+.dock {
+  background:
+    radial-gradient(ellipse 60% 90% at 50% 100%, var(--ai-glow-2), transparent 70%),
+    linear-gradient(to top, var(--bg) 65%, transparent);
+}
+
+.composer {
+  border: 1.5px solid var(--control-line);
+  background: var(--surface);
+  box-shadow: var(--tl-shadow-card);
+  transition: box-shadow 150ms ease;
+}
+
+.composer:focus-within {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(90deg, var(--accent), var(--ai-to) 60%, var(--ai-end)) border-box;
+  box-shadow:
+    0 0 0 4px var(--ai-glow-2),
+    0 8px 28px var(--ai-glow-1);
+}
+
+.chip {
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(var(--line), var(--line)) border-box;
+  border: 1px solid transparent;
+}
+
+.chip:hover,
+.chip:focus-visible {
+  background:
+    linear-gradient(135deg, var(--ai-glow-1), var(--ai-glow-2)) padding-box,
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(90deg, var(--accent), var(--ai-to)) border-box;
+}
+
+.thinking {
+  background: linear-gradient(90deg, var(--muted) 30%, var(--ai-to) 50%, var(--muted) 70%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .thinking {
+    animation: shimmer 1.6s linear infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Phone history: a sheet from the left, over a scrim. */
+.sheet {
+  margin: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(320px, 86vw);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.sheet::backdrop {
+  background: var(--scrim);
+}

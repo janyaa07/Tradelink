@@ -2,6 +2,18 @@
 
 All notable changes are listed here. The format follows Keep a Changelog, and versions follow semantic versioning.
 
+## [0.5.0] - 2026-11-03
+
+### Changed (buyer, second round of owner feedback)
+- **Navigation:** on laptop there is no side rail. The section titles sit in the top bar on every page except Home, whose tiles lead to them. Phone keeps the bottom tabs, now five with no More.
+- **Settings:** removed from the nav. It is in the account menu with Sign out, for every role. The Home Settings tile is now Cart.
+- **Alerts:** the bell opens a pop-up with "Needs your action" and the latest updates. Each update, and each alert about an order, has an arrow to that order.
+- **Tradelink Assistant:**
+  - A green gradient look, with chat history kept in the browser and a New chat button.
+  - The message box is focused when the page opens.
+  - Cart requests such as "place an order for items in my cart" show the cart with a Place order button that the buyer taps. The assistant still never places an order on its own.
+- **Home:** rounder corners on the tiles, summary cards and panels.
+
 ## [0.4.0] - 2026-11-03
 
 ### Changed (buyer redesign, owner feedback; see `docs/BUYER_REDESIGN.md`)

@@ -41,7 +41,7 @@ export default async function BuyerHomePage() {
         <ServiceTile label="Products" icon="box" href="/buyer/products" />
         <ServiceTile label="Orders" icon="list" href="/buyer/orders" />
         <ServiceTile label="Insights" icon="trend" href="/buyer/insights" />
-        <ServiceTile label="Settings" icon="gear" href="/buyer/settings" />
+        <ServiceTile label="Cart" icon="cart" href="/buyer/cart" />
       </ServiceGrid>
       <StatGrid>
         <StatCard href="/buyer/insights" value={formatMoney(spentCents)} label="Spent this week" />

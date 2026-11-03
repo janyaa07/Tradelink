@@ -7,9 +7,12 @@ import { requireRole } from "@/data/session";
 import { createSupabaseServerClient } from "@/data/supabase/server";
 import { ASK_COPY, textReply } from "@/domain/ask/replies";
 import type { AskReply, AskTurn, CartLine } from "@/domain/ask/types";
+import { checkLines } from "@/domain/review";
 import { getBuyerCatalogue } from "@/features/buyer/queries";
+import { placeOrdersAction, type PlacedOrders } from "@/features/ordering/actions";
 import { DRAFT_STATES } from "@/features/ordering/draft";
 import { addLinesToDraft } from "@/features/ordering/draft-store";
+import { readDraft } from "@/features/ordering/queries";
 import type { ActionResult } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { linesForCatalogue } from "./cart-lines";
@@ -79,4 +82,38 @@ export async function addToCartAction(lines: CartLine[]): Promise<ActionResult<{
   if (!result.ok) return result;
   revalidatePath("/buyer", "layout");
   return { ok: true, data: { added: parsed.data.length } };
+}
+
+const placeCartSchema = z.object({ draftVersion: z.number().int().min(0), key: z.uuid() });
+
+/** Database refusals put in chat words: the cart page highlights lines, the chat cannot. */
+const PLACE_ERRORS: Record<string, string> = {
+  STALE_DRAFT: ASK_COPY.cartChanged,
+  STOCK_SHORT: ASK_COPY.stockShort,
+};
+
+/**
+ * Place order under an assistant cart reply: the buyer's tap places the cart exactly as the
+ * assistant showed it, one order per supplier, through the same place_orders function as the cart
+ * page. Refused if the cart changed since, or if any line still needs the buyer (BUY-22).
+ */
+export async function placeCartAction(draftVersion: number, key: string): Promise<ActionResult<PlacedOrders>> {
+  const session = await requireRole("buyer");
+  const parsed = placeCartSchema.safeParse({ draftVersion, key });
+  if (!parsed.success) return { ok: false, error: ASK_COPY.invalidInput };
+
+  const [draft, catalogue] = await Promise.all([readDraft(session.userId), getBuyerCatalogue()]);
+  if (draft.version !== parsed.data.draftVersion) return { ok: false, error: ASK_COPY.cartChanged, reason: "STALE_DRAFT" };
+  const byId = new Map(catalogue.map((item) => [item.id, item]));
+  const check = checkLines(draft.lines, byId);
+  if (draft.lines.length === 0 || check.unresolved > 0 || check.over.length > 0) {
+    return { ok: false, error: ASK_COPY.cartNeedsReview };
+  }
+
+  const lines = draft.lines.flatMap((line) =>
+    line.productId ? [{ productId: line.productId, qty: line.qty, sourceText: line.sourceText }] : [],
+  );
+  const result = await placeOrdersAction({ lines, draftVersion: draft.version, key: parsed.data.key });
+  if (result.ok) return result;
+  return { ...result, error: (result.reason && PLACE_ERRORS[result.reason]) || result.error };
 }

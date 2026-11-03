@@ -14,7 +14,7 @@ export function StatCard({ href, value, label, alert = false }: StatCardProps) {
   return (
     <Link
       href={href}
-      className="block min-w-0 rounded-lg border border-line bg-surface px-[13px] py-[11px] text-ink no-underline shadow-card transition-colors duration-150 hover:border-accent"
+      className="block min-w-0 rounded-[20px] border border-line bg-surface px-[15px] py-[12px] text-ink no-underline shadow-card transition-colors duration-150 hover:border-accent"
     >
       <b
         className={`block break-words text-[1.3rem] font-bold leading-[1.2] tracking-[-0.015em] tabular-nums ${alert ? "text-warn" : ""}`}

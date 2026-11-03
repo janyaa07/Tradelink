@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 import { activeHrefFor, NAV } from "./nav";
 
 describe("navigation", () => {
-  it("lists the buyer's six sections in order, with no Alerts item", () => {
+  it("lists the buyer's five sections in order, with no Alerts or Settings item", () => {
     expect(NAV.buyer.map((item) => item.href)).toEqual([
       "/buyer",
       "/buyer/assistant",
       "/buyer/orders",
       "/buyer/products",
       "/buyer/insights",
-      "/buyer/settings",
     ]);
     expect(NAV.supplier.some((item) => item.href.endsWith("/notifications"))).toBe(false);
     expect(NAV.admin.some((item) => item.href === "/admin/notifications")).toBe(true);
@@ -24,5 +23,6 @@ describe("navigation", () => {
   it("highlights nothing on pages outside the nav, such as the cart and alerts", () => {
     expect(activeHrefFor("buyer", "/buyer/cart")).toBe("");
     expect(activeHrefFor("buyer", "/buyer/notifications")).toBe("");
+    expect(activeHrefFor("buyer", "/buyer/settings")).toBe("");
   });
 });

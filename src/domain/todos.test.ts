@@ -56,6 +56,18 @@ describe("to do", () => {
     ]);
   });
 
+  it("links part deliveries and replies to their order, and price changes to none", () => {
+    const [part, price, reply] = buildTodos(
+      {
+        priceChanges: [priceUp],
+        partials: [{ ...partial, orderId: "o1" }],
+        replies: [{ ...credit, orderId: "o2" }],
+      },
+      true,
+    ).sort((a, b) => a.key.localeCompare(b.key));
+    expect([part?.orderId, price?.orderId, reply?.orderId]).toEqual(["o1", undefined, "o2"]);
+  });
+
   it("has no reply item for open or received issues", () => {
     expect(replyText("open", "X", "1.00")).toBeNull();
     expect(replyText("credit_received", "X", "1.00")).toBeNull();

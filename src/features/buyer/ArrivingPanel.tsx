@@ -16,6 +16,7 @@ export function ArrivingPanel({ deliveries }: { deliveries: OrderView[] }) {
   const shown = deliveries.slice(0, SHOWN);
   return (
     <Panel
+      soft
       title="Arriving and to check"
       action={
         deliveries.length > 0 ? (

@@ -10,7 +10,7 @@ export default async function BuyerAssistantPage() {
   return (
     <>
       <h1 className="sr-only">Tradelink Assistant</h1>
-      <AssistantChat firstName={firstName} />
+      <AssistantChat firstName={firstName} userId={session.userId} />
     </>
   );
 }

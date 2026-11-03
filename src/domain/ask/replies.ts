@@ -17,19 +17,58 @@ export const ASK_COPY = {
   noSupplierRecord: "None of your suppliers has delivered an order yet, so there is no on-time record to compare.",
   rateLimited: "Too many requests. Try again in a few minutes.",
   invalidInput: "Check the details and try again.",
+  cartEmpty: "Your cart is empty. Tell me what you need and I will add it.",
+  cartChanged: "Your cart changed. Ask again or open your cart.",
+  cartNeedsReview: "Some items in your cart need checking first. Open your cart to fix them.",
+  stockShort: "Some items do not have enough stock now. Open your cart to change them.",
 } as const;
 
 export function textReply(text: string): AskReply {
   return { text, cards: [], actions: [] };
 }
 
-export function greetingText(firstName: string): string {
-  return `Hi ${firstName}, what do you need today?`;
+/** The empty chat's greeting, in two lines: "Hi Mei" and the question. */
+export function greetingText(firstName: string): { hello: string; ask: string } {
+  return { hello: `Hi ${firstName}`, ask: "What do you need today?" };
 }
 
 /** The chat's confirmation after Add to cart. */
 export function addedToCartText(count: number): string {
   return `Added ${plural(count, "item")} to your cart.`;
+}
+
+function supplierCount(count: number): string {
+  return count === 1 ? "1 supplier" : `${count} suppliers`;
+}
+
+/** "Your cart has 5 items from 2 suppliers, S$123.40 in total." */
+export function cartText(itemCount: number, suppliers: number, totalCents: Cents): string {
+  if (suppliers === 0) return `Your cart has ${plural(itemCount, "item")}.`;
+  return `Your cart has ${plural(itemCount, "item")} from ${supplierCount(suppliers)}, ${formatMoney(totalCents)} in total.`;
+}
+
+/** What stops the cart being placed from chat, one sentence each. */
+export function cartBlockerText(unresolved: number, over: number): string {
+  const parts = [
+    unresolved > 0 ? `${plural(unresolved, "item")} ${unresolved === 1 ? "needs" : "need"} a product chosen` : null,
+    over > 0 ? `${plural(over, "item")} ${over === 1 ? "is" : "are"} above the stock available` : null,
+  ].filter((part): part is string => part !== null);
+  return `${parts.join(" and ")}. Open your cart to fix ${unresolved + over === 1 ? "it" : "them"} before placing.`;
+}
+
+/** The button under a cart reply: "Place order" or "Place 2 orders". */
+export function placeCartLabel(orders: number): string {
+  return orders === 1 ? "Place order" : `Place ${orders} orders`;
+}
+
+export function cartReadyText(orders: number): string {
+  return `Nothing is sent until you tap ${placeCartLabel(orders)}${orders > 1 ? ", one order per supplier" : ""}.`;
+}
+
+/** "2 orders placed and stock reserved: ORD-1070 to Harbour Dry Goods, ORD-1071 to Fresh Lane Produce." */
+export function placedText(orders: { number: string; supplierName: string }[]): string {
+  const list = orders.map((order) => `${order.number} to ${order.supplierName}`).join(", ");
+  return `${plural(orders.length, "order")} placed and stock reserved: ${list}.`;
 }
 
 export function otherShopsText(businessName: string): string {

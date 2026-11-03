@@ -20,7 +20,7 @@ export function ServiceGrid({ label = "Quick actions", columns = 8, children }: 
   return (
     <section
       aria-label={label}
-      className={`grid justify-items-center gap-x-0.5 rounded-xl border border-line bg-surface px-1.5 shadow-card ${COLUMNS[columns]}`}
+      className={`grid justify-items-center gap-x-0.5 rounded-[24px] border border-line bg-surface px-1.5 shadow-card ${COLUMNS[columns]}`}
     >
       {children}
     </section>
@@ -39,12 +39,12 @@ type ServiceTileProps =
   | (TileContent & { href?: undefined } & Omit<ComponentPropsWithoutRef<"button">, "children">);
 
 const tileClass =
-  "flex w-full min-w-0 max-w-[112px] flex-col items-center gap-1.5 rounded-md p-0.5 text-center text-[.76rem] font-medium leading-[1.2] text-ink no-underline";
+  "flex w-full min-w-0 max-w-[112px] flex-col items-center gap-1.5 rounded-xl p-0.5 text-center text-[.76rem] font-medium leading-[1.2] text-ink no-underline";
 
 function TileBody({ label, icon, count = 0 }: TileContent) {
   return (
     <>
-      <span className="relative grid size-[46px] place-items-center rounded-tile bg-accent-soft text-accent">
+      <span className="relative grid size-[48px] place-items-center rounded-[18px] bg-accent-soft text-accent">
         <Icon name={icon} size={23} />
         {count > 0 ? (
           <span

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getOrders: vi.fn(),
   getOrderCardByNumber: vi.fn(),
   getSupplierRecords: vi.fn(),
+  readDraft: vi.fn(),
   answerOpenQuestion: vi.fn(),
   configured: { value: true },
 }));
@@ -28,6 +29,7 @@ vi.mock("@/features/buyer/queries", () => ({
 }));
 vi.mock("@/features/buyer/restock-plan", () => ({ getRestockPlan: mocks.getRestockPlan }));
 vi.mock("@/features/ordering/actions", () => ({ readOrderAction: mocks.readOrderAction }));
+vi.mock("@/features/ordering/queries", () => ({ readDraft: mocks.readDraft }));
 vi.mock("@/features/orders/queries", () => ({
   getOrders: mocks.getOrders,
   OPEN_STATUSES: ["pending", "accepted", "out_for_delivery"],
@@ -134,6 +136,7 @@ beforeEach(() => {
   mocks.getOrders.mockResolvedValue([]);
   mocks.getOrderCardByNumber.mockResolvedValue(null);
   mocks.getSupplierRecords.mockResolvedValue([]);
+  mocks.readDraft.mockResolvedValue({ lines: [], version: 0 });
 });
 
 /** Every scoped query received the signed-in buyer's organisation and nothing else (BUY-50.2). */
@@ -441,5 +444,56 @@ describe("respondToAsk: open questions (BUY-48.8, BUY-50)", () => {
     expectOnlyOwnOrganisation();
     const prompts = JSON.stringify(mocks.answerOpenQuestion.mock.calls.map((call) => call[2]));
     expect(prompts).not.toContain(OTHER_ORG);
+  });
+});
+
+
+describe("respondToAsk: the cart (BUY-49.2)", () => {
+  it("says when the cart is empty", async () => {
+    const reply = await respondToAsk(session, "place an order for items in my cart", []);
+    expect(reply).toEqual({ text: "Your cart is empty. Tell me what you need and I will add it.", cards: [], actions: [] });
+    expect(mocks.readDraft).toHaveBeenCalledWith(session.userId);
+  });
+
+  it("shows the cart with its total and a Place order button the buyer taps", async () => {
+    mocks.readDraft.mockResolvedValue({
+      lines: [
+        draftLine({ id: "a", productId: EGGS, qty: 2, sourceText: "2 ctn eggs", state: "matched" }),
+        draftLine({ id: "b", productId: OIL, qty: 1, sourceText: "oil", state: "manual" }),
+      ],
+      version: 7,
+    });
+    const reply = await respondToAsk(session, "What's in my cart?", []);
+    expect(reply.text).toBe(
+      "Your cart has 2 items from 1 supplier, S$58.50 in total. Nothing is sent until you tap Place order.",
+    );
+    expect(reply.cards).toEqual([
+      {
+        kind: "lines",
+        rows: [
+          { label: "2 × Fresh eggs, 300 pieces", status: null, note: "Harbour Dry Goods", price: "S$20.00" },
+          { label: "1 × Cooking oil 18L", status: null, note: "Harbour Dry Goods", price: "S$38.50" },
+        ],
+      },
+    ]);
+    expect(reply.actions).toEqual([
+      { kind: "place_cart", draftVersion: 7, orders: 1 },
+      { kind: "link", label: "Review cart", href: "/buyer/cart" },
+    ]);
+  });
+
+  it("sends the buyer to the cart when a line needs a product or more stock", async () => {
+    mocks.readDraft.mockResolvedValue({
+      lines: [
+        draftLine({ id: "a", productId: EGGS, qty: 99, sourceText: "99 ctn eggs", state: "matched" }),
+        draftLine({ id: "b", sourceText: "5 tins milk", qty: 5, options: [MILK], state: "check" }),
+      ],
+      version: 3,
+    });
+    const reply = await respondToAsk(session, "checkout", []);
+    expect(reply.text).toBe(
+      "Your cart has 2 items from 1 supplier, S$990.00 in total. 1 item needs a product chosen and 1 item is above the stock available. Open your cart to fix them before placing.",
+    );
+    expect(reply.actions).toEqual([{ kind: "link", label: "Review cart", href: "/buyer/cart" }]);
   });
 });

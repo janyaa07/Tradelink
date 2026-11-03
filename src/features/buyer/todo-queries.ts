@@ -54,7 +54,7 @@ const partialSchema = z.object({
   asked: z.number(),
   sent: z.number(),
   product: named,
-  parent: z.object({ number: z.number(), supplier: named }).nullable(),
+  parent: z.object({ id: z.uuid(), number: z.number(), supplier: named }).nullable(),
 });
 
 /** Part acceptances the buyer has not acted on (BUY-03). RLS limits them to the buyer's orders. */
@@ -62,7 +62,7 @@ async function getPartials(): Promise<PartialInput[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("partial_fulfilments")
-    .select("id, asked, sent, product:products(name), parent:orders(number, supplier:organisations!orders_supplier_org_id_fkey(name))")
+    .select("id, asked, sent, product:products(name), parent:orders(id, number, supplier:organisations!orders_supplier_org_id_fkey(name))")
     .eq("status", "new")
     .order("created_at", { ascending: false });
   if (error) fail("part deliveries", error.message);
@@ -74,6 +74,7 @@ async function getPartials(): Promise<PartialInput[]> {
       productName: row.product?.name ?? "An item",
       supplierName: row.parent?.supplier?.name ?? "Your supplier",
       orderRef: row.parent ? orderNumber(row.parent.number) : "your order",
+      orderId: row.parent?.id ?? null,
       asked: row.asked,
       sent: row.sent,
     }));
@@ -84,7 +85,7 @@ const replySchema = z.object({
   status: z.string(),
   amount: money,
   supplier: named,
-  parent: z.object({ number: z.number() }).nullable(),
+  parent: z.object({ id: z.uuid(), number: z.number() }).nullable(),
 });
 
 /** Answered problems the buyer has not seen yet (BUY-04). */
@@ -92,7 +93,7 @@ async function getReplies(orgId: string): Promise<ReplyInput[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("issues")
-    .select("id, status, amount, supplier:organisations!issues_supplier_org_id_fkey(name), parent:orders(number)")
+    .select("id, status, amount, supplier:organisations!issues_supplier_org_id_fkey(name), parent:orders(id, number)")
     .eq("buyer_org_id", orgId)
     .eq("buyer_seen", false)
     .not("status", "in", "(open,credit_received)")
@@ -107,6 +108,7 @@ async function getReplies(orgId: string): Promise<ReplyInput[]> {
       amount: row.amount,
       supplierName: row.supplier?.name ?? "Your supplier",
       orderRef: row.parent ? orderNumber(row.parent.number) : "your order",
+      orderId: row.parent?.id ?? null,
     }));
 }
 

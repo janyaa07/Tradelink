@@ -1,4 +1,7 @@
-/* Grid areas only. Phone: top bar, main, bottom nav. From 760px: a full-width top bar over a 228px side rail beside main. */
+/*
+ * Grid areas only. Phone: top bar, main, bottom nav. From 760px, withRail: a full-width top bar over a
+ * 228px side rail beside main; withTopNav: the top bar (which then holds the section titles) over main.
+ */
 .shell {
   height: 100dvh;
   display: grid;
@@ -23,12 +26,20 @@
 }
 
 @media (min-width: 760px) {
-  .shell {
+  .withRail {
     grid-template: "top top" auto "nav main" minmax(0, 1fr) "who main" auto / 228px minmax(0, 1fr);
   }
 
-  .who {
+  .withRail .who {
     display: flex;
     grid-area: who;
+  }
+
+  .withTopNav {
+    grid-template: "top" auto "main" minmax(0, 1fr) / minmax(0, 1fr);
+  }
+
+  .withTopNav .nav {
+    display: none;
   }
 }

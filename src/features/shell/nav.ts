@@ -3,6 +3,7 @@ import type { NavItem, ShellRole } from "@/ui/shell/types";
 /**
  * Navigation for each role. The first four show as bottom tabs on phone, the rest under More.
  * Alerts are reached from the bell in the top bar, so buyers and suppliers have no Alerts item.
+ * Buyers reach Settings from the account menu.
  */
 export const NAV: Record<ShellRole, NavItem[]> = {
   buyer: [
@@ -11,7 +12,6 @@ export const NAV: Record<ShellRole, NavItem[]> = {
     { href: "/buyer/orders", label: "Orders", icon: "list" },
     { href: "/buyer/products", label: "Products", icon: "box" },
     { href: "/buyer/insights", label: "Insights", icon: "trend" },
-    { href: "/buyer/settings", label: "Settings", icon: "gear" },
   ],
   supplier: [
     { href: "/supplier", label: "Home", icon: "home" },

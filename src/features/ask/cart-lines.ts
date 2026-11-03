@@ -40,6 +40,16 @@ export function readRows(lines: DraftLine[], byId: Map<string, CatalogueItem>): 
   return lines.map((line) => ({ ...lineRow(line, byId, null), status: readLineStatus(line.state) }));
 }
 
+/**
+ * A line already in the cart: "2 × Fresh eggs" with its supplier and price, or what was typed
+ * with "Check this" or "Not found" when it has no product the buyer can order.
+ */
+export function cartRow(line: Pick<DraftLine, "productId" | "qty" | "sourceText" | "state">, byId: Map<string, CatalogueItem>): LineRow {
+  const item = line.productId ? byId.get(line.productId) : undefined;
+  if (item) return lineRow(line, byId, item.supplierName);
+  return { ...lineRow(line, byId, null), status: line.state === "check" ? "Check this" : "Not found" };
+}
+
 /** Worth offering Add to cart: at least one line matched or has candidate products. */
 export function hasUsableLine(lines: Pick<DraftLine, "productId" | "options">[]): boolean {
   return lines.some((line) => line.productId !== null || line.options.length > 0);

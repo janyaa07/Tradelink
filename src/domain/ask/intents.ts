@@ -5,6 +5,7 @@
 export type AskIntent =
   | { kind: "other_shops" }
   | { kind: "order_number"; number: number }
+  | { kind: "cart" }
   | { kind: "spend" }
   | { kind: "deliveries" }
   | { kind: "restock" }
@@ -16,6 +17,11 @@ export type AskIntent =
 const OTHER_SHOPS =
   /\b(?:other|another|competitors?'?|rival)\s+(?:shops?|stores?|stalls?|buyers?|customers?|businesse?s?|restaurants?|outlets?)\b|\beveryone'?s\b|\ball\s+(?:the\s+)?(?:shops|buyers|customers|businesses)\b/;
 const ORDER_NUMBER = /\bord(?:er)?\s*(?:-|#|no\.?|number)\s*#?\s*(\d{1,12})\b|\bord\s*(\d{1,12})\b/;
+const CART = /\b(?:cart|basket|trolley|check\s?out)\b/;
+/** A whole-message command such as "place my order" or "send the orders now". */
+const PLACE_ORDER =
+  /^(?:please\s+)?(?:place|send|submit|confirm|complete|finish)\s+(?:the\s+|my\s+|this\s+|our\s+|an?\s+)?orders?(?:\s+(?:now|please))?[.!]?$/;
+const ADD = /\badd\b/;
 const SPEND = /\bspen[dt]|\bspending\b|\bbudget/;
 const DELIVERIES = /\barriv|\bdeliver|\bcoming\b|\bon the way\b/;
 const RESTOCK = /\brunning low\b|\bwhat should i (?:re)?order\b|\bneed to order\b|\bwhat do i need\b|\blow\b/;
@@ -50,12 +56,22 @@ export function isQuestion(message: string): boolean {
   return text.endsWith("?") || QUESTION_START.test(text);
 }
 
+/**
+ * "What's in my cart", "checkout" or "place my order": about the cart as it is. A message with a
+ * quantity or "add" ("add 2 ctn eggs to my cart") is an order to read instead.
+ */
+function isCartRequest(text: string): boolean {
+  if (QUANTITY.test(text) || ADD.test(text)) return false;
+  return CART.test(text) || PLACE_ORDER.test(text);
+}
+
 export function routeIntent(message: string): AskIntent {
   const text = normalise(message);
   if (OTHER_SHOPS.test(text)) return { kind: "other_shops" };
   const order = ORDER_NUMBER.exec(text);
   const digits = order?.[1] ?? order?.[2];
   if (digits) return { kind: "order_number", number: Number(digits) };
+  if (isCartRequest(text)) return { kind: "cart" };
   if (SPEND.test(text)) return { kind: "spend" };
   if (SUPPLIER.test(text) && RELIABILITY.test(text)) return { kind: "reliability" };
   if (DELIVERIES.test(text)) {

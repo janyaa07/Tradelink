@@ -3,9 +3,14 @@ import {
   addedToCartText,
   ASK_COPY,
   availabilityLabel,
+  cartBlockerText,
+  cartReadyText,
+  cartText,
   deliveriesText,
   greetingText,
   otherShopsText,
+  placeCartLabel,
+  placedText,
   priceText,
   readLineStatus,
   reliabilityText,
@@ -16,7 +21,7 @@ import {
 
 describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
   it("greets the buyer by first name", () => {
-    expect(greetingText("Mei")).toBe("Hi Mei, what do you need today?");
+    expect(greetingText("Mei")).toEqual({ hello: "Hi Mei", ask: "What do you need today?" });
   });
 
   it("keeps the fixed copy exact", () => {
@@ -67,5 +72,37 @@ describe("Tradelink Assistant copy (BUY-47, BUY-48, BUY-50)", () => {
     expect(readLineStatus("matched")).toBe("Matched");
     expect(readLineStatus("check")).toBe("Check this");
     expect(readLineStatus("not_found")).toBe("Not found");
+  });
+});
+
+
+describe("Tradelink Assistant cart copy", () => {
+  it("sums up the cart", () => {
+    expect(cartText(5, 2, 12340)).toBe("Your cart has 5 items from 2 suppliers, S$123.40 in total.");
+    expect(cartText(1, 1, 5200)).toBe("Your cart has 1 item from 1 supplier, S$52.00 in total.");
+    expect(cartText(2, 0, 0)).toBe("Your cart has 2 items.");
+  });
+
+  it("says what blocks placing from chat", () => {
+    expect(cartBlockerText(1, 0)).toBe("1 item needs a product chosen. Open your cart to fix it before placing.");
+    expect(cartBlockerText(2, 1)).toBe(
+      "2 items need a product chosen and 1 item is above the stock available. Open your cart to fix them before placing.",
+    );
+  });
+
+  it("names the place button by the number of orders", () => {
+    expect(placeCartLabel(1)).toBe("Place order");
+    expect(placeCartLabel(2)).toBe("Place 2 orders");
+    expect(cartReadyText(1)).toBe("Nothing is sent until you tap Place order.");
+    expect(cartReadyText(3)).toBe("Nothing is sent until you tap Place 3 orders, one order per supplier.");
+  });
+
+  it("lists the placed orders", () => {
+    expect(
+      placedText([
+        { number: "ORD-1070", supplierName: "Harbour Dry Goods" },
+        { number: "ORD-1071", supplierName: "Fresh Lane Produce" },
+      ]),
+    ).toBe("2 orders placed and stock reserved: ORD-1070 to Harbour Dry Goods, ORD-1071 to Fresh Lane Produce.");
   });
 });

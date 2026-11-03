@@ -17,11 +17,13 @@ type Props = {
   bellCount: number;
   /** Buyers only: the number of lines in the cart. */
   cartCount?: number;
+  /** Alerts for the bell's pop-up, rendered on the server. Without it the bell links to the alerts page. */
+  bellPanel?: ReactNode;
   children: ReactNode;
 };
 
 /** Wires the app shell to the current route: active tab, home layout, the bell, the cart and sign out. */
-export function RoleShell({ role, userName, orgName, counts = {}, bellCount, cartCount, children }: Props) {
+export function RoleShell({ role, userName, orgName, counts = {}, bellCount, cartCount, bellPanel, children }: Props) {
   const pathname = usePathname();
   const home = NAV[role][0]?.href ?? "/";
   const navItems = NAV[role].map((item) => ({ ...item, count: counts[item.href] || undefined }));
@@ -35,6 +37,8 @@ export function RoleShell({ role, userName, orgName, counts = {}, bellCount, car
       pathname={pathname}
       isHome={pathname === home}
       bell={{ href: `/${role}/notifications`, count: bellCount }}
+      bellPanel={bellPanel}
+      navPlacement={role === "buyer" ? "top" : "rail"}
       cart={role === "buyer" ? { href: "/buyer/cart", count: cartCount ?? 0 } : null}
       signOutAction={signOut}
     >

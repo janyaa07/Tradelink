@@ -30,7 +30,7 @@ export function HomeHero({
 }: HomeHeroProps) {
   return (
     <>
-      <div className="-mx-3.5 -mt-4 flex flex-col gap-3.5 bg-linear-135 from-hero to-hero-2 px-4 pt-[18px] pb-[52px] text-on-hero rail:-mx-6 rail:-mt-6 rail:px-6 rail:pt-[26px] rail:pb-[60px]">
+      <div className="-mx-3.5 -mt-4 flex flex-col gap-3.5 rounded-b-[28px] bg-linear-135 from-hero to-hero-2 px-4 pt-[18px] pb-[52px] text-on-hero rail:-mx-6 rail:-mt-6 rail:px-6 rail:pt-[26px] rail:pb-[60px]">
         <div className="mx-auto flex w-full max-w-[1060px] items-center gap-2.5">
           <BusinessLogo name={orgName} seedKey={logoSeedKey} size={44} />
           <div className="min-w-0">

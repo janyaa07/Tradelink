@@ -14,6 +14,7 @@ const ICONS = {
     </>
   ),
   list: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
+  arrow: <path d="M9 5l7 7-7 7" />,
   stock: <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />,
   history: (
     <>

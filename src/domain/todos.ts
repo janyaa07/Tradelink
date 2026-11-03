@@ -6,13 +6,23 @@ export type TodoTone = "good" | "warn" | "bad";
 export type PriceChangeInput = { id: string; productName: string; supplierName: string; oldPrice: string; newPrice: string };
 export type PartialInput = {
   id: string;
+  /** The order the part delivery belongs to, for the alert's link. */
+  orderId?: string | null;
   productName: string;
   supplierName: string;
   orderRef: string;
   asked: number;
   sent: number;
 };
-export type ReplyInput = { id: string; orderRef: string; supplierName: string; status: string; amount: string };
+export type ReplyInput = {
+  id: string;
+  orderRef: string;
+  /** The order the problem is on, for the alert's link. */
+  orderId?: string | null;
+  supplierName: string;
+  status: string;
+  amount: string;
+};
 
 export type TodoAction =
   | { kind: "price"; id: string }
@@ -21,7 +31,15 @@ export type TodoAction =
   /** A promised credit: the buyer marks it received once it arrives. */
   | { kind: "credit"; id: string };
 
-export type Todo = { key: string; tone: TodoTone; title: string; detail: string; action: TodoAction };
+export type Todo = {
+  key: string;
+  tone: TodoTone;
+  title: string;
+  detail: string;
+  action: TodoAction;
+  /** The order the alert is about, when there is one. */
+  orderId?: string;
+};
 
 /** Percentage change to one decimal, without a sign: "4.2". */
 export function percentChange(oldPrice: string, newPrice: string): string {
@@ -48,6 +66,7 @@ function partialTodo(partial: PartialInput): Todo {
     title: `${partial.supplierName} can only send ${partial.sent} of ${partial.asked}`,
     detail: `${partial.productName} on ${partial.orderRef}.`,
     action: { kind: "partial", id: partial.id, remainder: Math.max(1, partial.asked - partial.sent) },
+    ...(partial.orderId ? { orderId: partial.orderId } : {}),
   };
 }
 
@@ -78,6 +97,7 @@ function replyTodo(reply: ReplyInput): Todo | null {
     title: `Reply on ${reply.orderRef}`,
     detail,
     action: reply.status === "credit_promised" ? { kind: "credit", id: reply.id } : { kind: "reply", id: reply.id },
+    ...(reply.orderId ? { orderId: reply.orderId } : {}),
   };
 }
 

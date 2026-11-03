@@ -5,16 +5,19 @@ type PanelProps = {
   title?: ReactNode;
   /** Shown at the end of the title row, such as a "See all" link or a total. */
   action?: ReactNode;
+  /** Rounder corners, for Home. */
+  soft?: boolean;
   className?: string;
   children: ReactNode;
 };
 
 /** Groups one topic. Use divided rows inside it, not nested cards. */
-export function Panel({ title, action, className, children }: PanelProps) {
+export function Panel({ title, action, soft = false, className, children }: PanelProps) {
   return (
     <section
       className={cx(
-        "flex min-w-0 flex-col gap-2.5 rounded-lg border border-line bg-surface p-3.5 shadow-card",
+        "flex min-w-0 flex-col gap-2.5 border border-line bg-surface shadow-card",
+        soft ? "rounded-[24px] p-4" : "rounded-lg p-3.5",
         className,
       )}
     >

@@ -10,7 +10,7 @@ import type { RestockPlanView } from "./restock-plan";
 export function ReadyPanel({ plan }: { plan: RestockPlanView }) {
   const hasPlan = plan.rows.length > 0;
   return (
-    <Panel title="Ready for tomorrow" action={hasPlan ? <b className="tabular-nums">{formatMoney(plan.totalCents)}</b> : undefined}>
+    <Panel soft title="Ready for tomorrow" action={hasPlan ? <b className="tabular-nums">{formatMoney(plan.totalCents)}</b> : undefined}>
       {hasPlan ? (
         <>
           <ul>

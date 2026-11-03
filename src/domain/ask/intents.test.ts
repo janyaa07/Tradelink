@@ -114,3 +114,32 @@ describe("isQuestion and readsAsOrder", () => {
     expect(readsAsOrder("Is 2 ctn eggs enough for a week?", true)).toBe(false);
   });
 });
+
+
+describe("routeIntent: the cart", () => {
+  it.each([
+    "place an order for items in my cart",
+    "What's in my cart?",
+    "show my cart",
+    "checkout",
+    "check out please",
+    "place my order",
+    "Place the order",
+    "send the orders now",
+    "confirm order",
+    "how much is in my basket",
+  ])("%s goes to cart", (message) => {
+    expect(routeIntent(message).kind).toBe("cart");
+  });
+
+  it.each(["add 2 ctn eggs to my cart", "add eggs to my cart", "place an order for 2 ctn eggs", "2 tins milk in the cart"])(
+    "%s is not about the cart as it is",
+    (message) => {
+      expect(routeIntent(message).kind).not.toBe("cart");
+    },
+  );
+
+  it("still finds an order number first", () => {
+    expect(routeIntent("is ORD-1044 in my cart")).toEqual({ kind: "order_number", number: 1044 });
+  });
+});

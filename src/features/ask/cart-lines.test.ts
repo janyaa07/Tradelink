@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CatalogueItem } from "@/domain/catalogue";
 import type { DraftLine } from "@/features/ordering/draft";
-import { hasUsableLine, lineRow, linesForCatalogue, productCartLine, readRows, toCartLine } from "./cart-lines";
+import { cartRow, hasUsableLine, lineRow, linesForCatalogue, productCartLine, readRows, toCartLine } from "./cart-lines";
 
 const EGGS = "aaaaaaaa-0000-4000-8000-000000000001";
 const MILK = "aaaaaaaa-0000-4000-8000-000000000002";
@@ -112,5 +112,29 @@ describe("linesForCatalogue", () => {
   it("keeps a typed line with no product waiting in the cart", () => {
     const [line] = linesForCatalogue([toCartLine(read({ sourceText: "wagyu", qty: 3 }))], visible);
     expect(line).toEqual({ productId: null, qty: 3, sourceText: "wagyu", options: [], state: "not_found", kg: null, qtyAssumed: false });
+  });
+});
+
+
+describe("cartRow", () => {
+  const byId = new Map([[EGGS, item(EGGS, "Fresh eggs", "52.00")]]);
+
+  it("shows a cart line with its supplier and price", () => {
+    expect(cartRow({ productId: EGGS, qty: 2, sourceText: "2 ctn eggs", state: "matched" }, byId)).toEqual({
+      label: "2 × Fresh eggs",
+      status: null,
+      note: "Harbour Dry Goods",
+      price: "S$104.00",
+    });
+  });
+
+  it("marks a line without an orderable product as Check this or Not found", () => {
+    expect(cartRow({ productId: null, qty: 5, sourceText: "5 tins milk", state: "check" }, byId).status).toBe("Check this");
+    expect(cartRow({ productId: HIDDEN, qty: 1, sourceText: "1 box wagyu", state: "matched" }, byId)).toEqual({
+      label: "1 box wagyu",
+      status: "Not found",
+      note: null,
+      price: null,
+    });
   });
 });

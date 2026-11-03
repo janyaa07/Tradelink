@@ -6,6 +6,9 @@ import { findPriceProduct, productsNamedIn } from "@/domain/ask/products";
 import {
   ASK_COPY,
   availabilityLabel,
+  cartBlockerText,
+  cartReadyText,
+  cartText,
   deliveriesText,
   orderFoundText,
   otherShopsText,
@@ -22,6 +25,7 @@ import type { CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, toCents } from "@/domain/money";
 import { readOrderWithRules } from "@/domain/reader/rules";
 import { formatDaysLeft } from "@/domain/restock";
+import { checkLines, subtotalsBySupplier } from "@/domain/review";
 import {
   getBuyerCatalogue,
   getBuyerSettings,
@@ -31,15 +35,17 @@ import {
 import { getRestockPlan } from "@/features/buyer/restock-plan";
 import { readOrderAction } from "@/features/ordering/actions";
 import type { DraftLine } from "@/features/ordering/draft";
+import { readDraft } from "@/features/ordering/queries";
 import { getOrders, OPEN_STATUSES } from "@/features/orders/queries";
 import { claudeModel, isClaudeConfigured } from "@/integrations/claude/client";
 import { orderNumber } from "@/ui/format";
 import { answerOpenQuestion, type AnswerUsage } from "./answer";
-import { hasUsableLine, lineRow, productCartLine, readRows, toCartLine } from "./cart-lines";
+import { cartRow, hasUsableLine, lineRow, productCartLine, readRows, toCartLine } from "./cart-lines";
 import { buildFacts } from "./facts";
 import { getOrderCardByNumber, getSupplierRecords, toOrderCard } from "./queries";
 
 const INSIGHTS = "/buyer/insights";
+const CART = "/buyer/cart";
 const MAX_DELIVERIES = 20;
 const MAX_NAMED_PRODUCTS = 5;
 
@@ -98,6 +104,31 @@ async function restockReply(orgId: string): Promise<AskReply> {
     text: restockText(plan.rows.length),
     cards: [{ kind: "lines", rows: suggested.map(({ line, daysLeft }) => lineRow(line, byId, daysLeft)) }],
     actions: [{ kind: "add_to_cart", lines: suggested.map(({ line }) => line) }],
+  };
+}
+
+/**
+ * "What's in my cart" or "place my order": the cart's lines and total. When nothing blocks it, a
+ * Place order button the buyer taps; the assistant itself never places anything (BUY-49.2).
+ */
+async function cartReply(userId: string): Promise<AskReply> {
+  const [draft, catalogue] = await Promise.all([readDraft(userId), getBuyerCatalogue()]);
+  if (draft.lines.length === 0) return textReply(ASK_COPY.cartEmpty);
+  const byId = new Map(catalogue.map((item) => [item.id, item]));
+  const check = checkLines(draft.lines, byId);
+  const subtotals = subtotalsBySupplier(check.need, byId);
+  const totalCents = subtotals.reduce((sum, group) => sum + group.totalCents, 0);
+  const rows = draft.lines.map((line) => cartRow(line, byId));
+  const summary = cartText(draft.lines.length, subtotals.length, totalCents);
+  const review = { kind: "link", label: "Review cart", href: CART } as const;
+  const cards = [{ kind: "lines", rows } as const];
+  if (check.unresolved > 0 || check.over.length > 0) {
+    return { text: `${summary} ${cartBlockerText(check.unresolved, check.over.length)}`, cards, actions: [review] };
+  }
+  return {
+    text: `${summary} ${cartReadyText(subtotals.length)}`,
+    cards,
+    actions: [{ kind: "place_cart", draftVersion: draft.version, orders: subtotals.length }, review],
   };
 }
 
@@ -218,6 +249,8 @@ export async function respondToAsk(session: Session, message: string, history: A
       return textReply(otherShopsText(session.orgName));
     case "order_number":
       return orderNumberReply(session.orgId, intent.number);
+    case "cart":
+      return cartReply(session.userId);
     case "spend":
       return spendReply(session.orgId);
     case "deliveries":

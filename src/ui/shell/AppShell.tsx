@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { cx } from "../cx";
 import { ThemeToggle } from "../ThemeToggle";
+import { AlertsPopover } from "./AlertsPopover";
 import styles from "./AppShell.module.css";
 import { Brand } from "./Brand";
 import { ShellNav } from "./ShellNav";
 import { TopBarLink } from "./TopBarLink";
+import { TopNav } from "./TopNav";
 import type { NavItem, ShellLink, ShellRole } from "./types";
 import { UserMenu } from "./UserMenu";
 
@@ -26,6 +28,13 @@ export type AppShellProps = {
   isHome: boolean;
   /** The bell: notifications plus anything that needs action. */
   bell: ShellLink;
+  /** When given, the bell opens these alerts in a pop-up instead of linking to the alerts page. */
+  bellPanel?: ReactNode;
+  /**
+   * "rail": a side rail from 760px. "top": no side rail; from 760px the section titles sit in the
+   * top bar on every page but Home, whose tiles already lead to them. Phone keeps bottom tabs.
+   */
+  navPlacement?: "rail" | "top";
   /** The buyer's cart; other roles have none. */
   cart?: ShellLink | null;
   signOutAction: () => Promise<void>;
@@ -41,15 +50,19 @@ export function AppShell({
   pathname,
   isHome,
   bell,
+  bellPanel,
+  navPlacement = "rail",
   cart,
   signOutAction,
   children,
 }: AppShellProps) {
   const homeHref = navItems[0]?.href ?? "/";
   const roleLabel = ROLE_LABELS[role];
+  const settingsHref = `/${role}/settings`;
+  const rail = navPlacement === "rail";
 
   return (
-    <div className={cx(styles.shell, "bg-bg")}>
+    <div className={cx(styles.shell, rail ? styles.withRail : styles.withTopNav, "bg-bg")}>
       <a
         href="#main"
         className="sr-only z-40 rounded-md bg-accent px-3 py-2 font-bold text-on-accent focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
@@ -63,15 +76,21 @@ export function AppShell({
         )}
       >
         <Brand href={homeHref} />
+        {!rail && !isHome ? <TopNav items={navItems} activeHref={activeHref} /> : null}
+        <span className="flex-1" />
         <ThemeToggle />
-        <TopBarLink
-          href={bell.href}
-          icon="bell"
-          label="Alerts"
-          countLabel="new"
-          count={bell.count}
-          current={pathname === bell.href}
-        />
+        {bellPanel ? (
+          <AlertsPopover count={bell.count}>{bellPanel}</AlertsPopover>
+        ) : (
+          <TopBarLink
+            href={bell.href}
+            icon="bell"
+            label="Alerts"
+            countLabel="new"
+            count={bell.count}
+            current={pathname === bell.href}
+          />
+        )}
         {cart ? (
           <TopBarLink
             href={cart.href}
@@ -82,18 +101,27 @@ export function AppShell({
             current={pathname === cart.href}
           />
         ) : null}
-        <UserMenu userName={userName} orgName={orgName} roleLabel={roleLabel} signOutAction={signOutAction} />
-      </header>
-      <ShellNav items={navItems} activeHref={activeHref} className={cx(styles.nav, "rail:pt-3")} />
-      <div className={cx(styles.who, "items-center border-r border-line bg-surface px-2.5 pt-2 pb-3")}>
         <UserMenu
-          variant="who"
           userName={userName}
           orgName={orgName}
           roleLabel={roleLabel}
+          settingsHref={settingsHref}
           signOutAction={signOutAction}
         />
-      </div>
+      </header>
+      <ShellNav items={navItems} activeHref={activeHref} className={cx(styles.nav, "rail:pt-3")} />
+      {rail ? (
+        <div className={cx(styles.who, "items-center border-r border-line bg-surface px-2.5 pt-2 pb-3")}>
+          <UserMenu
+            variant="who"
+            userName={userName}
+            orgName={orgName}
+            roleLabel={roleLabel}
+            settingsHref={settingsHref}
+            signOutAction={signOutAction}
+          />
+        </div>
+      ) : null}
       <main id="main" tabIndex={-1} className={cx(styles.main, "relative px-3.5 pt-4 pb-7 outline-none rail:p-6 rail:pb-9")}>
         {isHome ? children : <div className="mx-auto flex max-w-[1060px] flex-col gap-4">{children}</div>}
       </main>

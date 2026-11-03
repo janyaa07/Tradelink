@@ -51,8 +51,16 @@ export type CartLine = {
   qtyAssumed: boolean;
 };
 
+export const ASK_LINK_LABELS = ["Open Insights", "See all suppliers", "View cart", "Review cart", "View orders"] as const;
+export type AskLinkLabel = (typeof ASK_LINK_LABELS)[number];
+
 export type AskAction =
-  | { kind: "link"; label: "Open Insights" | "See all suppliers" | "View cart"; href: string }
-  | { kind: "add_to_cart"; lines: CartLine[] };
+  | { kind: "link"; label: AskLinkLabel; href: string }
+  | { kind: "add_to_cart"; lines: CartLine[] }
+  /**
+   * Place the cart as it was when the assistant read it: one order per supplier. Only the buyer's
+   * tap places it; the server refuses if the cart has changed since (draftVersion).
+   */
+  | { kind: "place_cart"; draftVersion: number; orders: number };
 
 export type AskReply = { text: string; cards: AskCard[]; actions: AskAction[] };
