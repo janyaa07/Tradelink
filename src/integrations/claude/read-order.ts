@@ -12,6 +12,7 @@ import {
 } from "@/domain/reader/grounding";
 import { readOrderWithRules } from "@/domain/reader/rules";
 import type { ReadResult } from "@/domain/reader/types";
+import { logger } from "@/lib/logger";
 import { claudeModel, getClaudeClient, isClaudeConfigured } from "./client";
 
 export type ReadOutcome = "ok" | "fallback" | "refusal" | "timeout" | "error" | "invalid_output";
@@ -161,7 +162,13 @@ export async function readOrderWithClaude(
   try {
     message = await requestReading(text, catalogue, now);
   } catch (error) {
-    return fallback(text, catalogue, now, startedAt, outcomeForError(error));
+    const outcome = outcomeForError(error);
+    logger.warn("claude_read_order_failed", {
+      outcome,
+      errorType: error instanceof Error ? error.constructor.name : "unknown",
+      httpStatus: error instanceof Anthropic.APIError ? (error.status ?? null) : null,
+    });
+    return fallback(text, catalogue, now, startedAt, outcome);
   }
   const tokens = { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens };
   if (message.stop_reason === "refusal") return fallback(text, catalogue, now, startedAt, "refusal", tokens);

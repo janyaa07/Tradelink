@@ -44,6 +44,7 @@ export default async function BuyerHomePage() {
         <ServiceTile label="Track" icon="truck" href="/buyer/orders" count={deliveries.length} />
         <ServiceTile label="Availability" icon="stock" href="/buyer/availability" />
         <ServiceTile label="Alerts" icon="bell" href="/buyer/notifications" count={unread} />
+        <ServiceTile label="Insights" icon="trend" href="/buyer/insights" />
         <ServiceTile label="Settings" icon="gear" href="/buyer/settings" />
       </ServiceGrid>
       <StatGrid>
