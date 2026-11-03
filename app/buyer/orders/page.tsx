@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Form from "next/form";
-import Link from "next/link";
 import { requireRole } from "@/data/session";
+import { formatMoney } from "@/domain/money";
 import {
   FILTER_LABELS,
   MAX_SHOWN,
@@ -10,18 +9,23 @@ import {
   orderQueryFor,
   ordersHref,
   parseFilter,
+  needsCheck,
   parseSearch,
   shownFrom,
   type OrderListFilter,
 } from "@/features/buyer/orders/filters";
 import { OrderRow, ProblemRow, RowList } from "@/features/buyer/orders/OrderRows";
 import { countBuyerIssues, getBuyerIssues } from "@/features/buyer/orders/queries";
-import { waitingBanner } from "@/features/buyer/orders/summary";
-import { countOrders, getOrders, type OrderSearch } from "@/features/orders/queries";
-import { Chip, ChipRow } from "@/ui/Chip";
+import { ISSUE_STATUS_PILLS, itemSummary, problemSummary, waitingBanner } from "@/features/buyer/orders/summary";
+import { StatusPill } from "@/features/orders/OrderCard";
+import { countOrders, getOrders, type OrderSearch, type OrderView } from "@/features/orders/queries";
+import { BusinessLogo } from "@/ui/BusinessLogo";
+import { Cell, DataTable, Row, RowLink } from "@/ui/DataTable";
 import { EmptyState } from "@/ui/EmptyState";
-import { Icon } from "@/ui/Icon";
+import { formatDate, formatDateTime, orderNumber } from "@/ui/format";
 import { LinkButton } from "@/ui/LinkButton";
+import { FilterTabs, Notice, PageHeader, SearchBox } from "@/ui/PageHeader";
+import { Pill } from "@/ui/Pill";
 
 export const metadata: Metadata = { title: "Orders · Tradelink" };
 
@@ -33,6 +37,30 @@ const EMPTY: Record<OrderListFilter, string> = {
   problems: "No problems reported. If a delivery is short, damaged or wrong, report it from the order.",
   closed: "No cancelled or rejected orders.",
 };
+
+/** What the buyer has to do about an order comes before where it is. */
+function OrderState({ order }: { order: OrderView }) {
+  if (needsCheck(order)) return <Pill tone="warn">Check delivery</Pill>;
+  if (order.checkStatus === "problem") return <Pill tone="bad">Problem reported</Pill>;
+  return <StatusPill status={order.status} />;
+}
+
+const ORDER_COLUMNS = [
+  { label: "Order", className: "w-28" },
+  { label: "Supplier" },
+  { label: "Items" },
+  { label: "Delivery", className: "w-28" },
+  { label: "Total", align: "right" as const, className: "w-28" },
+  { label: "Status", className: "w-40" },
+];
+
+const PROBLEM_COLUMNS = [
+  { label: "Problem" },
+  { label: "Order", className: "w-28" },
+  { label: "Supplier" },
+  { label: "Reported", className: "w-40" },
+  { label: "Status", className: "w-44" },
+];
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
@@ -56,113 +84,152 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
   const [counts, waiting, orders, issues] = await Promise.all([
     Promise.all(ORDER_LIST_FILTERS.map((chip) => countFor(chip, session.orgId, search))),
     countBuyerIssues({ orgId: session.orgId, openOnly: true }),
-    filter === "problems"
-      ? Promise.resolve([])
-      : getOrders({ buyerOrgId: session.orgId, search, ...orderQueryFor(filter), limit: shown + 1 }),
+    filter === "problems" ? Promise.resolve([]) : getOrders({ buyerOrgId: session.orgId, search, ...orderQueryFor(filter), limit: shown + 1 }),
     filter === "problems" ? getBuyerIssues({ orgId: session.orgId, search, limit: shown + 1 }) : Promise.resolve([]),
   ]);
   const rows = filter === "problems" ? issues.length : orders.length;
   const hasMore = rows > shown && shown < MAX_SHOWN;
 
-  return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 rail:flex-row rail:items-end rail:justify-between">
-        <h1>Orders</h1>
-        <Form action="/buyer/orders" role="search" className="flex w-full items-center gap-2 rail:max-w-sm">
-          {filter !== "all" ? <input type="hidden" name="filter" value={filter} /> : null}
-          <label htmlFor="order-search" className="sr-only">
-            Order number or supplier
-          </label>
-          <span className="relative flex-1">
-            <Icon name="search" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              key={q}
-              id="order-search"
-              type="search"
-              name="q"
-              defaultValue={q}
-              maxLength={60}
-              placeholder="Order number or supplier"
-              className="min-h-10 w-full rounded-lg border border-line bg-surface py-2 pl-9 pr-3 text-[.92rem] text-ink placeholder:text-muted"
-            />
-          </span>
-          <button type="submit" className="sr-only">
-            Search orders
-          </button>
-        </Form>
-      </header>
+  const more = hasMore ? (
+    <LinkButton href={ordersHref({ filter, q, show: shown + PAGE_SIZE })} scroll={false} variant="text">
+      Show more
+    </LinkButton>
+  ) : null;
 
-      {waiting > 0 && filter !== "problems" ? (
-        <Link
-          href={ordersHref({ filter: "problems" })}
-          className="flex items-center justify-between gap-3 rounded-lg bg-warn-soft px-4 py-2.5 text-[.9rem] font-semibold text-warn no-underline hover:underline"
-        >
-          <span className="flex items-center gap-2">
-            <Icon name="flag" size={18} />
-            {waitingBanner(waiting)}
+  return (
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        title="Orders"
+        description="Everything you ordered, newest first. Open one to check a delivery or report a problem."
+        actions={
+          <>
+            <SearchBox
+              action="/buyer/orders"
+              label="Order number or supplier"
+              placeholder="Order number or supplier"
+              defaultValue={q}
+              keep={{ filter: filter === "all" ? undefined : filter }}
+            />
+            <LinkButton href="/buyer/products" variant="primary" className="hidden rail:inline-flex">
+              New order
+            </LinkButton>
+          </>
+        }
+      />
+
+      {waiting > 0 && filter !== "problems" ? <Notice tone="warn" title={waitingBanner(waiting)} href={ordersHref({ filter: "problems" })} /> : null}
+
+      <FilterTabs
+        label="Show orders"
+        tabs={ORDER_LIST_FILTERS.map((tab, index) => ({
+          href: ordersHref({ filter: tab, q }),
+          label: FILTER_LABELS[tab],
+          count: counts[index],
+          current: tab === filter,
+        }))}
+      />
+      {filter === "problems" ? (
+        <p className="text-[.84rem] text-muted">
+          Problems you reported on a delivery. The supplier answers with a credit, a replacement or an update.
+        </p>
+      ) : null}
+      {q ? (
+        <p className="flex flex-wrap items-center gap-x-3 text-[.84rem] text-muted">
+          <span>
+            Results for <b className="text-ink">{q}</b>
           </span>
-          <span aria-hidden="true">›</span>
-        </Link>
+          <LinkButton variant="text" href={ordersHref({ filter })}>
+            Clear search
+          </LinkButton>
+        </p>
       ) : null}
 
-      <div className="flex flex-col gap-3">
-        <ChipRow label="Show orders">
-          {ORDER_LIST_FILTERS.map((chip, index) => (
-            <Chip key={chip} href={ordersHref({ filter: chip, q })} selected={chip === filter}>
-              {FILTER_LABELS[chip]}
-              <span className="num ml-1.5 opacity-75">{counts[index]}</span>
-            </Chip>
-          ))}
-        </ChipRow>
-        {filter === "problems" ? (
-          <p className="text-[.9rem] text-muted">
-            Problems you reported on a delivery. The supplier answers with a credit, a replacement or an update.
-          </p>
-        ) : null}
-        {q ? (
-          <p className="flex flex-wrap items-center gap-x-3 text-[.9rem] text-muted">
-            <span>
-              Results for <b className="text-ink">{q}</b>
-            </span>
-            <LinkButton variant="text" href={ordersHref({ filter })}>
-              Clear search
-            </LinkButton>
-          </p>
-        ) : null}
-      </div>
-
-      <section aria-label={FILTER_LABELS[filter]} className="flex flex-col gap-4">
-        {rows === 0 ? (
-          <EmptyState
-            action={
-              filter === "all" && !q ? (
-                <LinkButton href="/buyer/assistant" variant="primary">
-                  New order
-                </LinkButton>
-              ) : null
-            }
-          >
-            {q ? `Nothing matches "${q}" here.` : EMPTY[filter]}
-          </EmptyState>
-        ) : filter === "problems" ? (
-          <RowList label="Problems">
-            {issues.slice(0, shown).map((issue) => (
-              <ProblemRow key={issue.id} issue={issue} />
-            ))}
-          </RowList>
-        ) : (
-          <RowList label="Orders">
-            {orders.slice(0, shown).map((order) => (
-              <OrderRow key={order.id} order={order} />
-            ))}
-          </RowList>
-        )}
-        {hasMore ? (
-          <LinkButton href={ordersHref({ filter, q, show: shown + PAGE_SIZE })} scroll={false} className="self-center">
-            Show more
-          </LinkButton>
-        ) : null}
-      </section>
+      {rows === 0 ? (
+        <EmptyState
+          action={
+            filter === "all" && !q ? (
+              <LinkButton href="/buyer/products" variant="primary">
+                New order
+              </LinkButton>
+            ) : null
+          }
+        >
+          {q ? `Nothing matches "${q}" here.` : EMPTY[filter]}
+        </EmptyState>
+      ) : filter === "problems" ? (
+        <DataTable
+          label="Problems"
+          columns={PROBLEM_COLUMNS}
+          footer={more}
+          phone={
+            <RowList label="Problems">
+              {issues.slice(0, shown).map((issue) => (
+                <ProblemRow key={issue.id} issue={issue} />
+              ))}
+            </RowList>
+          }
+        >
+          {issues.slice(0, shown).map((issue) => {
+            const pill = ISSUE_STATUS_PILLS[issue.status];
+            return (
+              <Row key={issue.id}>
+                <Cell>
+                  <RowLink href={`/buyer/orders/${issue.orderId}#problems`}>{problemSummary(issue)}</RowLink>
+                </Cell>
+                <Cell num>{orderNumber(issue.orderNumber)}</Cell>
+                <Cell>{issue.supplierName}</Cell>
+                <Cell num muted>
+                  {formatDateTime(issue.createdAt)}
+                </Cell>
+                <Cell>
+                  <Pill tone={pill.tone}>{pill.label}</Pill>
+                </Cell>
+              </Row>
+            );
+          })}
+        </DataTable>
+      ) : (
+        <DataTable
+          label="Orders"
+          columns={ORDER_COLUMNS}
+          footer={more}
+          phone={
+            <RowList label="Orders">
+              {orders.slice(0, shown).map((order) => (
+                <OrderRow key={order.id} order={order} />
+              ))}
+            </RowList>
+          }
+        >
+          {orders.slice(0, shown).map((order) => {
+            const delivery = order.confirmedDeliveryDate ?? order.requestedDeliveryDate;
+            return (
+              <Row key={order.id}>
+                <Cell num>
+                  <RowLink href={`/buyer/orders/${order.id}`}>{orderNumber(order.number)}</RowLink>
+                </Cell>
+                <Cell>
+                  <span className="flex items-center gap-2.5">
+                    <BusinessLogo name={order.supplier.name} seedKey={order.supplier.id || undefined} size={24} />
+                    <span className="truncate">{order.supplier.name}</span>
+                  </span>
+                </Cell>
+                <Cell muted className="max-w-[16rem] truncate">
+                  {itemSummary(order.lines.map((line) => line.name)).names}
+                </Cell>
+                <Cell num>{delivery ? formatDate(delivery) : "—"}</Cell>
+                <Cell num strong align="right">
+                  {formatMoney(order.totalCents)}
+                </Cell>
+                <Cell>
+                  <OrderState order={order} />
+                </Cell>
+              </Row>
+            );
+          })}
+        </DataTable>
+      )}
+      {more ? <div className="self-center rail:hidden">{more}</div> : null}
     </div>
   );
 }
