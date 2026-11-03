@@ -1,0 +1,1 @@
+One item for the operations team. Provide a type icon, priority, title, one line of detail, actions and an operator select. The icon tile and pill show priority, and high priority items also get a red border. It shares the padding and shape of OrderCard.

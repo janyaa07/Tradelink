@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Tradelink</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600&display=swap">
+<style>
+/* Layout concept: a super-app style ordering home. A green hero, tap-first service tiles and product cards, with a white rail that folds into a bottom tab bar when the app is narrow. */
+:root {
+  --bg: #FFFFFF; --surface: #FFFFFF; --sunken: #F1F7F4; --line: #DCE8E2;
+  --ink: #0F2A20; --muted: #54695F; --accent: #0B4F37; --on-accent: #FFFFFF; --accent-soft: #E3F0E9;
+  --nav: #FFFFFF; --nav-ink: #0F2A20; --nav-muted: #5F7469; --nav-active: #E3F0E9;
+  --hero: #0A3A29; --hero-2: #0F5239; --on-hero: #FFFFFF; --on-hero-2: #CFE5DA;
+  --good: #0B6B47; --good-soft: #E3F0E9; --warn: #8F5600; --warn-soft: #FDF0D5; --bad: #B4302F; --bad-soft: #FCE6E4;
+  --blue: #0B4F37; --blue-soft: #E3F0E9; --plum: #0B4F37; --plum-soft: #E3F0E9;
+  --shadow: 0 1px 2px rgba(15, 42, 32, .05), 0 3px 10px rgba(15, 42, 32, .05); --scrim: rgba(10, 58, 41, .5);
+  --display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0F1211; --surface: #1B201E; --sunken: #141817; --line: #303734;
+  --ink: #F4F6F5; --muted: #A8B2AD; --accent: #3DDC97; --on-accent: #06291B; --accent-soft: #20392E;
+  --nav: #151918; --nav-ink: #F4F6F5; --nav-muted: #A0AAA5; --nav-active: #20392E;
+  --hero: #0F4A34; --hero-2: #14644A; --on-hero: #FFFFFF; --on-hero-2: #CFE5DA;
+  --good: #5FE0A8; --good-soft: #1C3A2D; --warn: #F2BC62; --warn-soft: #3B2D14; --bad: #F59A95; --bad-soft: #452322;
+  --blue: #3DDC97; --blue-soft: #20392E; --plum: #3DDC97; --plum-soft: #20392E;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25); --scrim: rgba(0, 0, 0, .65);
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0F1211; --surface: #1B201E; --sunken: #141817; --line: #303734;
+  --ink: #F4F6F5; --muted: #A8B2AD; --accent: #3DDC97; --on-accent: #06291B; --accent-soft: #20392E;
+  --nav: #151918; --nav-ink: #F4F6F5; --nav-muted: #A0AAA5; --nav-active: #20392E;
+  --hero: #0F4A34; --hero-2: #14644A; --on-hero: #FFFFFF; --on-hero-2: #CFE5DA;
+  --good: #5FE0A8; --good-soft: #1C3A2D; --warn: #F2BC62; --warn-soft: #3B2D14; --bad: #F59A95; --bad-soft: #452322;
+  --blue: #3DDC97; --blue-soft: #20392E; --plum: #3DDC97; --plum-soft: #20392E;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25); --scrim: rgba(0, 0, 0, .65);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font: 400 15px/1.45 var(--body);
+  display: flex; flex-direction: column; gap: 10px;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font: 700 1.6rem/1.15 var(--display); text-wrap: balance; }
+h2 { font: 600 1.08rem/1.25 var(--display); text-wrap: balance; }
+.mono { font-family: var(--mono); font-size: .86em; }
+.muted { color: var(--muted); }
+.small { font-size: .84rem; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Demo controls sit outside the app itself */
+.demo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: .84rem; color: var(--muted); }
+.demo-group { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: none; padding: 5px 11px; border-radius: 6px; color: var(--muted); font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.demo select { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; max-width: 170px; }
+.demo .reset { margin-left: auto; border: 1px solid var(--line); background: none; border-radius: 8px; padding: 5px 10px; color: var(--muted); }
+@media (max-width: 860px) { .device-group { display: none; } }
+
+.stage { flex: 1; min-height: 560px; display: flex; justify-content: center; align-items: center; min-width: 0; }
+.frame {
+  container: app / inline-size; position: relative; overflow: hidden; width: 100%; height: 100%; max-width: 100%;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px; transition: width .25s ease;
+}
+.frame[data-device="tablet"] { width: 820px; }
+.frame[data-device="phone"] { width: 390px; max-height: 800px; border-radius: 26px; border-width: 5px; border-color: var(--nav); }
+@media (max-width: 860px) { .frame[data-device] { width: 100%; max-height: none; border-radius: 12px; border-width: 1px; border-color: var(--line); } }
+
+.shell { height: 100%; display: grid; grid-template: "top" auto "main" minmax(0, 1fr) "nav" auto / minmax(0, 1fr); }
+.top { grid-area: top; background: var(--nav); color: var(--nav-ink); padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.brand { font: 700 1.14rem/1 var(--display); display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 20px; height: 20px; }
+.top-org { font-size: .78rem; color: var(--nav-muted); text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.nav { grid-area: nav; background: var(--nav); display: flex; padding: 4px; overflow-x: auto; min-width: 0; }
+.nav button { position: relative; flex: 1 0 68px; min-width: 0; border: 0; background: none; color: var(--nav-muted); border-radius: 8px; padding: 6px 2px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .72rem; }
+.nav button[aria-current="page"] { background: var(--nav-active); color: #FFFFFF; }
+.nav svg { width: 20px; height: 20px; flex: none; }
+.count { background: var(--warn-soft); color: var(--warn); border-radius: 99px; padding: 0 6px; font-size: .7rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.nav .count { position: absolute; top: 2px; right: 6px; }
+.who { display: none; }
+.main { grid-area: main; overflow: auto; padding: 16px 14px 28px; }
+.page { max-width: 1060px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+.head { display: flex; flex-direction: column; gap: 3px; }
+
+@container app (min-width: 760px) {
+  .shell { grid-template: "top main" auto "nav main" minmax(0, 1fr) "who main" auto / 228px minmax(0, 1fr); }
+  .top { padding: 18px 16px 12px; }
+  .top-org { display: none; }
+  .nav { flex-direction: column; gap: 3px; padding: 6px 10px; overflow: hidden auto; }
+  .nav button { flex: none; flex-direction: row; gap: 10px; padding: 9px 10px; font-size: .92rem; text-align: left; }
+  .nav .count { position: static; margin-left: auto; }
+  .who { display: block; grid-area: who; background: var(--nav); color: var(--nav-ink); padding: 12px 16px 16px; font-size: .84rem; }
+  .who span { display: block; color: var(--nav-muted); font-size: .78rem; }
+  .main { padding: 24px 24px 36px; }
+}
+
+/* Shared pieces */
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.big { width: 100%; padding: 11px 14px; font-weight: 600; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+.pill.plain { background: var(--sunken); color: var(--muted); border: 1px solid var(--line); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@container app (min-width: 620px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.tile b { display: block; font: 700 1.5rem/1.2 var(--display); font-variant-numeric: tabular-nums; }
+.tile.alert b { color: var(--warn); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.input { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.tools .input { flex: 1 1 200px; width: auto; min-width: 0; }
+.chip { border: 1px solid var(--line); background: var(--surface); padding: 6px 11px; border-radius: 99px; font-size: .84rem; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+/* Tables turn into stacked records when narrow */
+.tbl-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: .73rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; }
+.prod b { font-weight: 600; display: block; }
+.bar { height: 5px; background: var(--sunken); border-radius: 3px; overflow: hidden; margin-top: 4px; min-width: 56px; }
+.bar i { display: block; height: 100%; background: var(--good); }
+.bar i.warn { background: var(--warn); }
+.bar i.bad { background: var(--bad); }
+.receive { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.receive input { width: 76px; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 8px 12px; }
+.metrics div { min-width: 0; }
+.metrics span { display: block; font-size: .74rem; color: var(--muted); }
+.metrics b { display: block; font-weight: 700; font-size: .92rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.order .bar { margin-top: 0; }
+.order-top { flex-wrap: nowrap; }
+.order-who { flex: 1; }
+.order-top > .pill { flex: none; }
+@container app (max-width: 640px) {
+  .stack thead { display: none; }
+  .stack tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; padding: 12px; border-bottom: 1px solid var(--line); }
+  .stack tr:last-child { border-bottom: 0; }
+  .stack td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; }
+  .stack td.full { grid-column: 1 / -1; }
+  .stack td[data-label]::before { content: attr(data-label); display: block; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+}
+
+/* New order */
+.compose textarea { width: 100%; min-height: 150px; resize: vertical; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 400 .92rem/1.5 var(--mono); }
+.compose-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.compose-actions .primary { flex: 1 1 170px; }
+.review { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@container app (min-width: 980px) { .review { grid-template-columns: minmax(0, 1fr) 300px; } }
+.lines { display: flex; flex-direction: column; gap: 8px; }
+.line { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.line.check { border-color: var(--warn); }
+.line.none, .line.over { border-color: var(--bad); }
+.line-src { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; }
+.line-src .mono { color: var(--muted); overflow-wrap: anywhere; min-width: 0; }
+.line select { width: 100%; min-width: 0; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; }
+.line-info { grid-column: 1 / -1; font-size: .82rem; color: var(--muted); }
+.line-info .err { color: var(--bad); font-weight: 600; }
+.stepper { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.stepper button { border: 0; background: var(--sunken); width: 30px; }
+.stepper input { width: 46px; border: 0; background: none; text-align: center; padding: 6px 0; appearance: textfield; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rm { border: 0; background: none; color: var(--muted); font-size: .8rem; text-decoration: underline; padding: 0; }
+.split { display: flex; flex-direction: column; gap: 6px; }
+.split div { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+.split .tot { border-top: 1px solid var(--line); padding-top: 7px; font-weight: 600; }
+.blocker { font-size: .83rem; color: var(--warn); }
+.note { font-size: .8rem; color: var(--muted); }
+
+/* Orders */
+.orders { display: flex; flex-direction: column; gap: 10px; }
+.order { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+.order-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; }
+.order-items { display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
+.order-items div { display: flex; justify-content: space-between; gap: 12px; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; font-size: .72rem; color: var(--muted); }
+.steps span { border-top: 3px solid var(--line); padding-top: 4px; }
+.steps span.done { border-color: var(--good); color: var(--ink); }
+.order-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; }
+.order-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cols { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@container app (min-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.feed { display: flex; flex-direction: column; }
+.feed > div { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; display: flex; justify-content: space-between; gap: 10px; }
+.feed > div:last-child { border-bottom: 0; }
+.empty { padding: 26px 14px; text-align: center; color: var(--muted); }
+
+/* Add to catalogue */
+.cat-form { grid-column: 1 / -1; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; color: var(--muted); min-width: 0; }
+.field .input { color: var(--ink); font-size: .92rem; }
+.form-err { color: var(--bad); font-size: .84rem; font-weight: 600; }
+.form-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { font-size: .72rem; color: var(--warn); font-weight: 600; }
+
+/* Admin records */
+.back { align-self: flex-start; border: 0; background: none; color: var(--accent); padding: 0; font-weight: 500; }
+.title-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.title-name { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+.profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 16px; margin: 0; }
+.profile dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.profile dd { margin: 0; overflow-wrap: anywhere; }
+.rowlink { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; text-align: left; }
+.attn { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.attn.high { border-color: var(--bad); }
+.attn.unread { border-color: var(--accent); }
+
+/* Today, Ask and Insights */
+.hero-plan { border-color: var(--accent); }
+.todos { display: flex; flex-direction: column; gap: 10px; }
+.todo { border-left: 3px solid var(--line); padding-left: 10px; display: flex; flex-direction: column; gap: 5px; }
+.todo.warn { border-left-color: var(--warn); } .todo.bad { border-left-color: var(--bad); } .todo.good { border-left-color: var(--good); }
+.warn-t { color: var(--warn); font-weight: 600; }
+.row-acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.count-in { width: 76px; text-align: right; padding: 4px 6px; }
+.tgl { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tgl:last-child { border-bottom: 0; }
+.tgl > span span { display: block; }
+.tgl input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.plain { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: .9rem; color: var(--muted); }
+.wbars { display: flex; gap: 8px; align-items: flex-end; height: 170px; }
+.wbars div { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.wbars i { display: block; width: 100%; max-width: 44px; background: var(--accent-soft); border-radius: 4px 4px 0 0; }
+.wbars i.now { background: var(--accent); }
+.wbars .wl { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.hbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; font-size: .9rem; }
+.hbar i { grid-column: 1 / -1; display: block; height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.hbar u { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.chatpage { max-width: 680px; min-height: 100%; }
+.thread { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.um { align-self: flex-end; max-width: 82%; background: var(--accent); color: var(--on-accent); padding: 8px 12px; border-radius: 12px 12px 3px 12px; overflow-wrap: anywhere; }
+.bm { align-self: flex-start; width: 100%; display: flex; flex-direction: column; gap: 7px; align-items: flex-start; }
+.cc { width: min(100%, 420px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.cc-h, .cc-l { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: .9rem; }
+.composer { position: sticky; bottom: -28px; background: var(--bg); padding-block: 8px; display: flex; flex-direction: column; gap: 7px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.chips .chip { flex: none; }
+.send { display: flex; gap: 8px; }
+.send .input { flex: 1; min-width: 0; }
+@container app (min-width: 760px) { .composer { bottom: -36px; } }
+.attn-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; }
+.attn-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; }
+.attn-foot select { background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-width: 100%; }
+.toast { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); width: min(92%, 420px); background: var(--ink); color: var(--bg); padding: 9px 13px; border-radius: 9px; font-size: .88rem; text-align: center; z-index: 5; }
+
+/* Tap-first app look */
+[hidden] { display: none !important; }
+body { -webkit-font-smoothing: antialiased; }
+h1 { font-weight: 800; letter-spacing: -.02em; }
+h2 { font-weight: 700; letter-spacing: -.01em; }
+.frame { background: var(--bg); box-shadow: var(--shadow); border-color: var(--line); border-radius: 18px; }
+.frame[data-device="phone"] { border-color: var(--line); }
+.seg { border-radius: 999px; padding: 3px; }
+.seg button { border-radius: 999px; font-weight: 600; }
+.demo .reset, .demo select { border-radius: 999px; }
+.top { background: var(--surface); color: var(--ink); border-bottom: 1px solid var(--line); }
+.brand { font-family: Sora, var(--display); font-weight: 600; letter-spacing: -.04em; }
+.brand svg { width: 26px; height: 26px; }
+.top-org { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.nav { background: var(--surface); border-top: 1px solid var(--line); padding: 5px 4px; }
+.nav button { flex: 1 1 0; color: var(--nav-muted); font-weight: 600; padding: 6px 2px 4px; }
+.nav button[aria-current="page"] { background: none; color: var(--accent); }
+.shell { grid-template: "top" auto "main" minmax(0, 1fr) "cart" auto "nav" auto / minmax(0, 1fr); }
+.nav .nav-more { display: flex; }
+.nav .count { right: calc(50% - 22px); }
+@container app (max-width: 759px) { .nav .nav-extra { display: none; } .shell.home .top { display: none; } }
+@container app (min-width: 760px) {
+  .shell { grid-template: "top main" auto "nav main" minmax(0, 1fr) "who cart" auto / 228px minmax(0, 1fr); }
+  .shell > .main { grid-area: 1 / 2 / 4 / 3; }
+  .shell.has-cart > .main { grid-area: 1 / 2 / 3 / 3; }
+  .top-org { display: none; }
+  .top { border-bottom: 0; border-right: 1px solid var(--line); }
+  .nav { border-top: 0; border-right: 1px solid var(--line); }
+  .nav .nav-more { display: none; }
+  .nav button { flex: none; padding: 9px 10px; border-radius: 12px; }
+  .nav button[aria-current="page"] { background: var(--nav-active); }
+  .nav .count { right: auto; }
+  .who { background: var(--surface); color: var(--ink); border-right: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+  .who span { color: var(--muted); }
+}
+.who-t { min-width: 0; overflow-wrap: anywhere; }
+.logo { display: inline-grid; place-items: center; flex: none; border-radius: 50%; overflow: hidden; }
+.logo svg { width: 100%; height: 100%; display: block; }
+.btn { border-radius: 12px; font-weight: 600; }
+.btn.primary { font-weight: 700; }
+.btn.danger { border-color: var(--line); }
+.panel, .tile, .order, .attn, .tbl-wrap, .line, .cc { border-radius: 16px; box-shadow: var(--shadow); border-color: var(--line); }
+.input, .line select, .attn-foot select, .compose textarea { border-radius: 12px; }
+.pill.info { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+th { text-transform: none; letter-spacing: 0; font-size: .78rem; }
+.chip { font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.steps span { border-top-width: 4px; border-radius: 2px; }
+.steps span.done { border-color: var(--accent); }
+.order-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.order-who > span:last-child { min-width: 0; }
+.order-who b { display: block; }
+.prod-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.prod-row > div { min-width: 0; }
+.thumb { display: grid; place-items: center; flex: none; border-radius: 12px; }
+.thumb svg { width: 72%; height: 72%; }
+.thumb.amber { background: var(--accent-soft); color: var(--accent); }
+.thumb.green { background: var(--accent-soft); color: var(--accent); }
+.thumb.blue { background: var(--accent-soft); color: var(--accent); }
+.thumb.red { background: var(--accent-soft); color: var(--accent); }
+.thumb.plum { background: var(--accent-soft); color: var(--accent); }
+
+/* Home */
+.home-hero { margin: -16px -14px 0; padding: 18px 16px 52px; background: linear-gradient(135deg, var(--hero), var(--hero-2)); color: var(--on-hero); display: flex; flex-direction: column; gap: 14px; }
+.hero-top { display: flex; align-items: center; gap: 10px; max-width: 1060px; width: 100%; margin-inline: auto; }
+.hero-top div { min-width: 0; }
+.hero-top p { font-size: .85rem; color: var(--on-hero-2); }
+.hero-top b { font: 800 1.2rem/1.2 var(--display); display: block; }
+.searchpill { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1060px; margin-inline: auto; background: var(--surface); color: var(--muted); border: 0; border-radius: 999px; padding: 12px 16px; text-align: left; font-weight: 500; box-shadow: var(--shadow); }
+.searchpill svg { width: 20px; height: 20px; color: var(--accent); flex: none; }
+.home-body { margin-top: -38px; position: relative; }
+.services { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 12px 6px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 2px; }
+.svc { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; color: var(--ink); line-height: 1.2; text-align: center; min-width: 0; padding: 2px; }
+.svc > span:first-child { position: relative; width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; }
+.svc svg { width: 23px; height: 23px; }
+.svc .count { position: absolute; top: -5px; right: -7px; background: var(--bad); color: var(--on-accent); }
+.svc .thumb { background: var(--accent-soft); color: var(--accent); }
+.plan-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.plan-row:last-child { border-bottom: 0; }
+.plan-row .grow { flex: 1; min-width: 0; }
+.sec-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.linkb { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 0; }
+@container app (min-width: 760px) { .home-hero { margin: -24px -24px 0; padding: 26px 24px 60px; } .services { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+
+/* Products */
+.scroller { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
+.scroller .pcard { flex: 0 0 148px; scroll-snap-align: start; }
+.pgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@container app (min-width: 620px) { .pgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container app (min-width: 980px) { .pgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.pcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pcard .thumb { width: 100% !important; height: 92px !important; border-radius: 12px; margin-bottom: 4px; }
+.pcard .thumb svg { width: 56px; height: 56px; }
+.pcard b { font-size: .88rem; line-height: 1.25; }
+.pcard .price { font-weight: 800; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.pcard .sup { font-size: .75rem; color: var(--muted); }
+.pcard .add { position: absolute; right: 16px; top: 72px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); font-size: 1.3rem; font-weight: 600; line-height: 1; box-shadow: var(--shadow); }
+.pcard .add:disabled { background: var(--line); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+.pcard .incart { position: absolute; left: 16px; top: 16px; }
+.cartbar { grid-area: cart; padding: 8px 12px; background: var(--bg); min-width: 0; }
+.cartbar button { width: 100%; max-width: 680px; margin-inline: auto; display: flex; align-items: center; gap: 10px; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 14px; padding: 12px 16px; font-weight: 700; box-shadow: var(--shadow); }
+.cartbar .go { margin-left: auto; }
+
+/* Settings and sheet */
+.tgl { position: relative; }
+.tgl input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 999px; background: var(--line); margin: 0; cursor: pointer; transition: background .15s; }
+.tgl input::after { content: ""; display: block; width: 22px; height: 22px; margin: 2px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); transition: transform .15s; }
+.tgl input:checked { background: var(--accent); }
+.tgl input:checked::after { transform: translateX(18px); }
+.sheet-wrap { position: absolute; inset: 0; z-index: 6; background: var(--scrim); display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: var(--surface); border-radius: 22px 22px 0 0; padding: 10px 16px 18px; display: flex; flex-direction: column; gap: 4px; }
+.sheet h2 { padding: 6px 2px 8px; }
+.sheet button.item { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; padding: 11px 4px; font-weight: 600; text-align: left; border-bottom: 1px solid var(--line); }
+.sheet button.item:last-child { border-bottom: 0; }
+.sheet button.item svg { width: 21px; height: 21px; color: var(--accent); flex: none; }
+.sheet .count { margin-left: auto; }
+.um { border-radius: 16px 16px 4px 16px; }
+/* Attention cards */
+.acards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: start; }
+@container app (min-width: 980px) { .acards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.acard.high { border-color: var(--bad); }
+.atop { display: flex; gap: 12px; min-width: 0; }
+.aico { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; flex: none; }
+.aico svg { width: 22px; height: 22px; }
+.aico.high { background: var(--bad-soft); color: var(--bad); }
+.aico.medium { background: var(--warn-soft); color: var(--warn); }
+.mini .aico { width: 34px; height: 34px; border-radius: 11px; }
+.mini .aico svg { width: 18px; height: 18px; }
+.abody { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ahead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.afoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.assign { display: flex; flex-direction: column; gap: 2px; font-size: .72rem; color: var(--muted); }
+.assign select { background: var(--sunken); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 5px 8px; font-size: .84rem; }
+.toast { border-radius: 14px; bottom: 90px; }
+.shell.has-cart ~ .toast { bottom: 134px; }
+.theme-btn { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--accent); padding: 0; }
+.theme-btn svg { width: 19px; height: 19px; }
+.hero-top .theme-btn { margin-left: auto; background: transparent; color: var(--on-hero); border-color: var(--on-hero-2); }
+.top { gap: 8px; } .top .brand { margin-right: auto; }
+@container app (min-width: 760px) { .hero-top .theme-btn { display: none; } }
+.home-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@container app (min-width: 620px) { .home-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 11px 13px; text-align: left; color: var(--ink); min-width: 0; }
+.stat b { display: block; font: 800 1.35rem/1.2 var(--display); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat.alert b { color: var(--warn); }
+.stat span { font-size: .8rem; color: var(--muted); }
+.mini { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.mini:last-child { border-bottom: 0; }
+.mini .grow { flex: 1; min-width: 0; font-size: .9rem; }
+.mini .grow small { display: block; color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { .frame, .tgl input, .tgl input::after { transition: none; } }
+</style>
+
+<div class="demo" id="demo"></div>
+<div class="stage">
+  <div class="frame" id="frame" data-device="laptop">
+    <div class="shell" id="shell">
+      <header class="top" id="top"></header>
+      <nav class="nav" id="nav" aria-label="Main"></nav>
+      <div class="who" id="who"></div>
+      <main class="main" id="main"></main>
+      <div class="cartbar" id="cart" hidden></div>
+    </div>
+    <div class="sheet-wrap" id="sheet" hidden></div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Icons ---------- */
+const ico = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const I = {
+  crate: ico('<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>'),
+  order: ico('<path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>'),
+  list: ico('<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>'),
+  stock: ico('<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'),
+  history: ico('<path d="M4 12a8 8 0 1 0 3-6.2L4 8V4"/><path d="M12 8v4l3 2"/>'),
+  grid: ico('<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>'),
+  users: ico('<circle cx="9" cy="8" r="3.5"/><path d="M3 20c.5-4 3-6 6-6s5.500 2 6 6M16 5a3.500 3.500 0 0 1 0 6.500M18 14c2 .8 3 3 3 6"/>'),
+  shield: ico('<path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>'),
+  search: ico('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
+  more: ico('<circle cx="5" cy="12" r="1.400"/><circle cx="12" cy="12" r="1.400"/><circle cx="19" cy="12" r="1.400"/>'),
+  repeat: ico('<path d="M17 3l4 4-4 4"/><path d="M3 11V9a2 2 0 0 1 2-2h16M7 21l-4-4 4-4"/><path d="M21 13v2a2 2 0 0 1-2 2H3"/>'),
+  truck: ico('<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7.500" cy="18" r="2"/><circle cx="17.500" cy="18" r="2"/>'),
+  receipt: ico('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>'),
+  moon: ico('<path d="M20 14.500A8 8 0 1 1 9.500 4 6.500 6.500 0 0 0 20 14.500z"/>'),
+  box: ico('<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M12 9v6M9 12h6"/>'),
+  sun: ico('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.600 5.600l1.400 1.400M17 17l1.400 1.400M5.600 18.400L7 17M17 7l1.400-1.400"/>'),
+  home: ico('<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>'),
+  chat: ico('<path d="M4 5h16v11H9l-5 4z"/>'),
+  trend: ico('<path d="M4 17l5-6 4 3 7-8"/><path d="M15 6h5v5"/>'),
+  gear: ico('<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M5.600 18.400l2.100-2.100M16.300 7.700l2.100-2.100"/>'),
+  pulse: ico('<path d="M3 12h4l3-7 4 14 3-7h4"/>'),
+  bell: ico('<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>'),
+  flag: ico('<path d="M5 21V4h13l-3 4.500L18 13H5"/>'),
+  headset: ico('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v5H4zM17 14h3v5h-3z"/><path d="M20 19c0 2-2 2-5 2"/>')
+};
+
+/* ---------- Logos and product art (all original, drawn inline) ---------- */
+const BRAND = `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#0F5239"/><g transform="translate(9 9) scale(.625)"><path d="M6 9h16.500v30h-6V15.500H6z" fill="#FFFFFF" transform="translate(0 0)"/><path d="M25.500 9H42v6.500H31.500V39h-6z" fill="#3DE29F"/></g></svg>`;
+const LOGO_ART = {
+  b1: ['#C8452F', '<path d="M9 19h22c0 6-4.500 10-11 10S9 25 9 19z" fill="#FFFFFF"/><path d="M14 16c0-2.500 2-2.500 2-5M20 16c0-2.500 2-2.500 2-5M26 16c0-2.500 2-2.500 2-5" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"/>'],
+  b2: ['#0F7C8C', '<path d="M11 15h15v8a7 7 0 0 1-7 7h-1a7 7 0 0 1-7-7z" fill="#FFFFFF"/><path d="M26 17h2a3 3 0 0 1 0 7h-2" stroke="#FFFFFF" stroke-width="2.200" fill="none"/><path d="M15 12c0-2 1.500-2 1.500-4M20 12c0-2 1.500-2 1.500-4" stroke="#FFFFFF" stroke-width="2" fill="none" stroke-linecap="round"/>'],
+  s1: ['#1D3F73', '<circle cx="20" cy="11.500" r="2.800" fill="none" stroke="#FFFFFF" stroke-width="2.400"/><path d="M20 14.500V31M13 19h14M9.500 23c1 5 5.500 8 10.500 8s9.500-3 10.500-8" fill="none" stroke="#FFFFFF" stroke-width="2.400" stroke-linecap="round"/>'],
+  s2: ['#2E8B3D', '<path d="M30 9c1 11-5 21-17 20C11 18 18 10 30 9z" fill="#FFFFFF"/><path d="M12 31c3-8 7-12 13-16" stroke="#2E8B3D" stroke-width="2" fill="none" stroke-linecap="round"/>'],
+  s3: ['#D08A11', '<circle cx="20" cy="20" r="6" fill="#FFFFFF"/><path d="M20 7v4M20 29v4M7 20h4M29 20h4M10.800 10.800l2.800 2.800M26.400 26.400l2.800 2.800M10.800 29.200l2.800-2.800M26.400 13.600l2.800-2.800" stroke="#FFFFFF" stroke-width="2.400" stroke-linecap="round"/>'],
+  a1: ['#0F5239', '<g transform="translate(8 8) scale(.5)"><path d="M6 9h16.500v30h-6V15.500H6z" fill="#FFFFFF" transform="translate(0 0)"/><path d="M25.500 9H42v6.500H31.500V39h-6z" fill="#3DE29F"/></g>']
+};
+const LOGO_COLORS = ['#5C4BB0', '#B5447E', '#2F6DB5', '#8A5A1E', '#3B7D74'];
+function logo(a, size = 36) {
+  const art = LOGO_ART[a.id];
+  const n = [...a.org].reduce((t, c) => t + c.charCodeAt(0), 0), bg = art ? art[0] : LOGO_COLORS[n % LOGO_COLORS.length];
+  const initials = a.org.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const inner = art ? art[1] : `<text x="20" y="26" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-weight="800" font-size="15" fill="#FFFFFF">${esc(initials)}</text>`;
+  return `<span class="logo" style="width:${size}px;height:${size}px" aria-hidden="true"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="${bg}"/>${inner}</svg></span>`;
+}
+const GLYPHS = {
+  egg: 'M12 3c-4 0-7 6.500-7 11a7 7 0 0 0 14 0c0-4.500-3-11-7-11z',
+  sack: 'M9 3h6l-1.500 3.500c3 1.500 5.500 5 5.500 9 0 3.500-2.500 5.500-7 5.500s-7-2-7-5.500c0-4 2.500-7.500 5.500-9z',
+  bottle: 'M10 2h4v4c0 1 3 2.500 3 6v8.500a1.500 1.500 0 0 1-1.500 1.500h-7A1.500 1.500 0 0 1 7 20.500V12c0-3.500 3-5 3-6z',
+  tin: 'M5 6c0-1.700 3-3 7-3s7 1.300 7 3v12c0 1.700-3 3-7 3s-7-1.300-7-3z',
+  packet: 'M6 3h12l1 3-1 15H6L5 6z',
+  box: 'M3 8l9-5 9 5v9l-9 5-9-5z',
+  tub: 'M4 8h16l-1.500 12a1.500 1.500 0 0 1-1.500 1.500H7A1.500 1.500 0 0 1 5.500 20zM3 5h18v3H3z',
+  block: 'M4 8h16v11H4zM7 5h10l3 3H4z',
+  leaf: 'M20 3C21 14 15 21 5 20 4 10 10 3 20 3z',
+  soap: 'M8 8h8l1 3v9a1.500 1.500 0 0 1-1.500 1.500h-7A1.500 1.500 0 0 1 7 20v-9zM10 3h6v2h-2v3h-3V5h-1z'
+};
+function kindOf(p) {
+  const n = p.name.toLowerCase();
+  if (/egg/.test(n)) return ['egg', 'amber', 'Fresh'];
+  if (/rice|sugar|flour/.test(n)) return ['sack', 'amber', 'Dry goods'];
+  if (/oil/.test(n)) return ['bottle', 'green', 'Oils and sauces'];
+  if (/milk/.test(n)) return ['tin', 'blue', 'Dry goods'];
+  if (/noodle/.test(n)) return ['packet', 'red', 'Dry goods'];
+  if (/tissue/.test(n)) return ['box', 'plum', 'Supplies'];
+  if (/chilli|sauce|paste/.test(n)) return ['tub', 'red', 'Oils and sauces'];
+  if (/tofu/.test(n)) return ['block', 'blue', 'Fresh'];
+  if (/onion|veg|herb/.test(n)) return ['leaf', 'green', 'Fresh'];
+  if (/soap|clean/.test(n)) return ['soap', 'plum', 'Supplies'];
+  return ['box', 'blue', 'Supplies'];
+}
+const CATS = ['All', 'Fresh', 'Dry goods', 'Oils and sauces', 'Supplies'];
+function thumb(p, size = 40) {
+  const [g, tone] = kindOf(p);
+  return `<span class="thumb ${tone}" style="width:${size}px;height:${size}px" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${GLYPHS[g]}" fill="currentColor"/></svg></span>`;
+}
+
+function isDark() {
+  if (S.theme !== 'system') return S.theme === 'dark';
+  const host = document.documentElement.dataset.theme;
+  return host ? host === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function setTheme(next) {
+  S.theme = next;
+  if (next === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('tradelink-theme', next); } catch (e) {}
+}
+const themeBtn = () => `<button class="theme-btn" data-a="theme" aria-label="Switch to ${isDark() ? 'light' : 'dark'} mode" title="Switch to ${isDark() ? 'light' : 'dark'} mode">${isDark() ? I.sun : I.moon}</button>`;
+
+/* ---------- Example data ---------- */
+const ACCOUNTS = () => [
+  { id: 'b1', name: 'Mei Tan', org: "Mei's Noodle House", role: 'Buyer', status: 'Active', phone: '+65 6000 0101', email: 'mei@noodlehouse.example', address: '21 Market Row, #01-14', joined: 'Mar 2025', hours: 'Daily, 07:00 to 21:00' },
+  { id: 'b2', name: 'Arif Rahman', org: 'Seaside Kopitiam', role: 'Buyer', status: 'Active', phone: '+65 6000 0102', email: 'arif@seaside.example', address: '5 Coastal Walk, #01-02', joined: 'Jul 2025', hours: 'Daily, 06:30 to 19:00' },
+  { id: 's1', name: 'Priya Nair', org: 'Harbour Dry Goods', role: 'Supplier', status: 'Active', phone: '+65 6000 0201', email: 'priya@harbourdry.example', address: '8 Pier Lane, #02-11', joined: 'Jan 2025', range: 'Rice, oil, noodles, dry goods', delivery: 'Mon to Sat', lead: 'Next day', minOrder: 'S$50', cutoff: 16, bank: '4821', onTime: 96 },
+  { id: 's2', name: 'Daniel Koh', org: 'Fresh Lane Produce', role: 'Supplier', status: 'Active', phone: '+65 6000 0202', email: 'daniel@freshlane.example', address: '32 Orchard Yard, #01-07', joined: 'Feb 2025', range: 'Eggs, tofu, fresh produce', delivery: 'Daily', lead: 'Same day before 10:00', minOrder: 'S$30', cutoff: 14, bank: '6630', onTime: 88 },
+  { id: 's3', name: 'Lina Ong', org: 'Bright Pantry Supplies', role: 'Supplier', status: 'Invited', phone: '+65 6000 0203', email: 'lina@brightpantry.example', address: '14 Depot Close', joined: 'Not yet joined', range: 'Flour and baking goods', delivery: 'Not provided', lead: 'Not provided', minOrder: 'Not provided', invitedBy: 'Seaside Kopitiam', invitedAt: ago(1560) },
+  { id: 'a1', name: 'Hannah Lim', org: 'Tradelink Operations', role: 'Admin', status: 'Active', phone: '+65 6000 0301', email: 'hannah@tradelink.example', address: 'Head office', joined: 'Jan 2025' }
+];
+const acct = id => S.accounts.find(a => a.id === id);
+const SAMPLE = `Hi, need for tomorrow:
+2 ctn eggs
+10kg jasmine rice
+3 tins evaporated milk
+oil x 2
+1 tub chilli paste
+2 bottles dish soap
+Thanks!`;
+const ago = m => new Date(Date.now() - m * 60000);
+
+function seed() {
+  const P = (id, sid, sku, name, unit, price, onHand, reorder, aliases = [], packKg = 0) => ({ id, sid, sku, name, unit, price, onHand, reserved: 0, reorder, aliases, packKg });
+  const products = [
+    P('p1', 's1', 'DG-1001', 'Jasmine rice 5kg', 'bag', 8.90, 46, 20, ['jasmine rice', 'jasmine'], 5),
+    P('p2', 's1', 'DG-1002', 'Basmati rice 5kg', 'bag', 14.50, 18, 12, ['basmati rice', 'basmati'], 5),
+    P('p3', 's1', 'DG-1010', 'Cooking oil 2L', 'bottle', 9.40, 30, 15, ['cooking oil', 'vegetable oil']),
+    P('p4', 's1', 'DG-1011', 'Sesame oil 630ml', 'bottle', 7.80, 9, 10, ['sesame oil']),
+    P('p5', 's1', 'DG-1020', 'Evaporated milk 390g', 'tin', 1.35, 120, 60, ['evaporated milk', 'evap milk']),
+    P('p6', 's1', 'DG-1030', 'Dried noodles 400g', 'packet', 2.10, 64, 40, ['noodles', 'dried noodles']),
+    P('p7', 's1', 'DG-1040', 'Tissue paper, 30 packs', 'carton', 18.00, 7, 10, ['tissue paper', 'tissue']),
+    P('p8', 's1', 'DG-1050', 'Granulated sugar 2kg', 'bag', 4.20, 52, 30, ['sugar'], 2),
+    P('p9', 's2', 'FL-2001', 'Fresh eggs, 300 pieces', 'carton', 52.00, 14, 8, ['eggs', 'egg']),
+    P('p10', 's2', 'FL-2010', 'Chilli paste 1kg', 'tub', 11.20, 11, 12, ['chilli paste', 'sambal']),
+    P('p11', 's2', 'FL-2020', 'Firm tofu 300g', 'pack', 1.10, 80, 50, ['tofu', 'firm tofu']),
+    P('p12', 's2', 'FL-2030', 'Spring onion 1kg', 'bag', 4.60, 3, 8, ['spring onion'], 1),
+    { ...P('p13', 's3', 'NEW-1013', 'Rice flour 1kg', 'pack', 3.20, 0, 0, ['rice flour']), unconfirmed: true }
+  ];
+  const O = (n, buyer, sid, items, status, mins) => ({ id: 'ORD-' + n, buyer, sid, status, at: ago(mins), items: items.map(([pid, qty]) => { const p = products.find(x => x.id === pid); return { pid, qty, price: p.price, held: !p.unconfirmed }; }) });
+  const orders = [
+    O(1043, 'b2', 's3', [['p13', 5]], 'Pending', 1560),
+    O(1042, 'b1', 's1', [['p1', 6], ['p3', 4]], 'Pending', 38),
+    O(1041, 'b2', 's1', [['p5', 24], ['p7', 2]], 'Accepted', 190),
+    O(1040, 'b2', 's2', [['p9', 3], ['p10', 2]], 'Out for delivery', 300),
+    O(1039, 'b1', 's2', [['p11', 10]], 'Out for delivery', 420),
+    O(1038, 'b1', 's1', [['p6', 20]], 'Delivered', 1500)
+  ];
+  orders.forEach(o => { if (OPEN.includes(o.status)) o.items.forEach(i => { if (i.held) products.find(p => p.id === i.pid).reserved += i.qty; }); });
+  const moves = [
+    { at: ago(38), pid: 'p1', type: 'Reserved', change: 6, by: 'ORD-1042' },
+    { at: ago(38), pid: 'p3', type: 'Reserved', change: 4, by: 'ORD-1042' },
+    { at: ago(190), pid: 'p5', type: 'Reserved', change: 24, by: 'ORD-1041' },
+    { at: ago(190), pid: 'p7', type: 'Reserved', change: 2, by: 'ORD-1041' },
+    { at: ago(300), pid: 'p9', type: 'Reserved', change: 3, by: 'ORD-1040' },
+    { at: ago(1400), pid: 'p6', type: 'Delivered', change: -20, by: 'ORD-1038' },
+    { at: ago(2600), pid: 'p1', type: 'Received', change: 30, by: 'Priya Nair' }
+  ];
+  const audit = [
+    { at: ago(38), who: 'Mei Tan', org: "Mei's Noodle House", role: 'Buyer', what: 'Placed ORD-1042', flag: '', orgs: ['s1', 'b1'] },
+    { at: ago(95), who: 'Priya Nair', org: 'Harbour Dry Goods', role: 'Supplier', what: 'Blocked from opening ORD-1040, which belongs to another supplier', flag: 'denied', orgs: ['s1'] },
+    { at: ago(190), who: 'Arif Rahman', org: 'Seaside Kopitiam', role: 'Buyer', what: 'Placed ORD-1041', flag: '', orgs: ['s1', 'b2'] },
+    { at: ago(250), who: 'Priya Nair', org: 'Harbour Dry Goods', role: 'Supplier', what: 'Accepted ORD-1041', flag: '', orgs: ['s1', 'b2'] },
+    { at: ago(280), who: 'Daniel Koh', org: 'Fresh Lane Produce', role: 'Supplier', what: 'Marked ORD-1040 out for delivery', flag: '', orgs: ['s2', 'b2'] },
+    { at: ago(1400), who: 'Priya Nair', org: 'Harbour Dry Goods', role: 'Supplier', what: 'Marked ORD-1038 delivered', flag: '', orgs: ['s1', 'b1'] },
+    { at: ago(1560), who: 'Arif Rahman', org: 'Seaside Kopitiam', role: 'Buyer', what: 'Added Rice flour 1kg and invited Bright Pantry Supplies', flag: '', orgs: ['s3', 'b2'] },
+    { at: ago(2600), who: 'Priya Nair', org: 'Harbour Dry Goods', role: 'Supplier', what: 'Received 30 of DG-1001', flag: '', orgs: ['s1'] }
+  ];
+  const operators = [
+    { id: 'o1', name: 'Hannah Lim', team: 'Operations lead', shift: 'Mon to Fri, 09:00 to 18:00', status: 'Online' },
+    { id: 'o2', name: 'Farid Ismail', team: 'Supplier onboarding', shift: 'Mon to Fri, 09:00 to 18:00', status: 'Online' },
+    { id: 'o3', name: 'Grace Chua', team: 'Order desk', shift: 'Daily, 06:00 to 14:00', status: 'Away' },
+    { id: 'o4', name: 'Vikram Menon', team: 'Customer support', shift: 'Daily, 14:00 to 22:00', status: 'Offline' }
+  ];
+  const services = [
+    { name: 'Web app', status: 'Operational', uptime: '99.98%', speed: '180 ms' },
+    { name: 'API', status: 'Operational', uptime: '99.95%', speed: '142 ms' },
+    { name: 'Database', status: 'Operational', uptime: '99.99%', speed: '12 ms' },
+    { name: 'AI order reader', status: 'Operational', uptime: '99.80%', speed: '1.4 s' },
+    { name: 'Email notifications', status: 'Degraded', uptime: '97.60%', speed: '3.2 s' },
+    { name: 'Nightly backup', status: 'Operational', uptime: '100%', speed: 'Last run 02:00' }
+  ];
+  orders.find(o => o.id === 'ORD-1038').check = 'issue';
+  const usuals = [
+    { pid: 'p9', qty: 1, use: .4, have: 1, last: 52 }, { pid: 'p1', qty: 4, use: .8, have: 6, last: 8.9 },
+    { pid: 'p3', qty: 3, use: .5, have: 2, last: 8.9 }, { pid: 'p6', qty: 20, use: 5, have: 12, last: 2.1 },
+    { pid: 'p10', qty: 2, use: .3, have: 4, last: 11.2 }, { pid: 'p11', qty: 20, use: 8, have: 44, last: 1.1 },
+    { pid: 'p12', qty: 3, use: 1.2, have: 2, last: 4.6 }, { pid: 'p7', qty: 1, use: .1, have: 1, last: 18 }
+  ];
+  const issues = [{ id: 'ISS-301', oid: 'ORD-1038', sid: 's1', buyer: 'b1', pid: 'p6', type: 'Short', qty: 2, amount: 4.2, note: '2 packets missing', status: 'Open', at: ago(400), seen: false }];
+  const invoices = [{ no: 'INV-301', oid: 'ORD-1038', sid: 's1', total: 42, expected: 42, flags: [], bank: '4821', bankChanged: false, status: 'Matched', at: ago(1380) }];
+  const priceChanges = [{ id: 'PC-1', pid: 'p3', old: 8.9, now: 9.4, at: ago(1400), status: 'New' }];
+  const chat = [{ from: 'bot', text: "Hi Mei. Type an order the way you'd text a supplier, or ask me about prices, deliveries and spending." }];
+  const weeks = [{ label: '6 Oct', amt: 812 }, { label: '13 Oct', amt: 764 }, { label: '20 Oct', amt: 905 }, { label: '27 Oct', amt: 838 }];
+  const notes = [{ at: ago(1560), kind: 'Invitation sent', text: 'Seaside Kopitiam added Bright Pantry Supplies. Invitation link sent to lina@brightpantry.example.', sid: 's3', read: false }];
+  return { accounts: ACCOUNTS(), notes, products, orders, moves, audit, operators, services, ai: { msgs: 128, lines: 412, matched: 351, flagged: 61 }, assign: {}, dismissed: [], next: 1044, nextSup: 4, nextP: 14, nextOp: 5, usuals, issues, invoices, priceChanges, chat, weeks, partials: [], skipped: [], chatDrafts: [], settings: { budget: 900, lowStock: true, priceAlerts: true, budgetWarn: true }, weekBase: 780, problem: null, partial: null, repricing: null, attnFilter: 'all', chatText: '', orderTab: 'orders', showReview: false, moreOpen: false, cat: 'All', typing: false, nextIss: 302, nextInv: 302, nextPc: 2, nextPa: 1 };
+}
+
+/* ---------- State ---------- */
+const OPEN = ['Pending', 'Accepted', 'Out for delivery'];
+const NAV = {
+  buyer: [['today', 'Home', I.home], ['new', 'Order', I.order], ['ask', 'Ask', I.chat], ['orders', 'Orders', I.list], ['insights', 'Insights', I.trend], ['catalogue', 'Availability', I.stock], ['settings', 'Settings', I.gear]],
+  supplier: [['home', 'Home', I.home], ['orders', 'Orders', I.list], ['inventory', 'Inventory', I.stock], ['activity', 'Activity', I.pulse], ['history', 'Stock history', I.history], ['settings', 'Settings', I.gear]],
+  admin: [['overview', 'Home', I.home], ['attention', 'Attention', I.flag], ['orders', 'Orders', I.list], ['suppliers', 'Suppliers', I.crate], ['notifications', 'Notifications', I.bell], ['users', 'Users', I.users], ['operators', 'Operators', I.headset], ['status', 'System status', I.pulse], ['audit', 'Audit log', I.shield], ['settings', 'Settings', I.gear]]
+};
+const S = {
+  role: 'buyer', supplierId: 's1', device: 'laptop',
+  view: { buyer: 'today', supplier: 'home', admin: 'overview' },
+  theme: (() => { try { return localStorage.getItem('tradelink-theme') || 'system'; } catch (e) { return 'system'; } })(),
+  text: SAMPLE, review: null, reading: false, q: '', lowOnly: false, receiving: null, lineId: 1,
+  detail: null, draft: null, addingLine: null, pform: null,
+  ...seed()
+};
+
+/* ---------- Helpers ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => 'S$' + n.toFixed(2);
+const when = d => d.toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const P = id => S.products.find(p => p.id === id);
+const avail = p => p.onHand - p.reserved;
+const catalogue = () => S.products.filter(p => !p.hidden);
+const suppliers = () => S.accounts.filter(a => a.role === 'Supplier');
+const buyers = () => S.accounts.filter(a => a.role === 'Buyer');
+const health = p => { if (p.unconfirmed) return 'unconfirmed'; const a = avail(p); return a <= 0 ? 'out' : a <= p.reorder ? 'low' : 'ok'; };
+const isLow = p => ['low', 'out'].includes(health(p));
+const healthPill = p => ({ ok: '<span class="pill good">Healthy</span>', low: '<span class="pill warn">Low stock</span>', out: '<span class="pill bad">Out of stock</span>', unconfirmed: '<span class="pill info">Stock unconfirmed</span>' }[health(p)]);
+const accPill = s => `<span class="pill ${{ Active: 'good', Invited: 'info', Suspended: 'bad', Declined: 'plain' }[s]}">${s === 'Invited' ? 'Invitation sent' : s}</span>`;
+const spend = list => list.filter(o => !['Rejected', 'Cancelled'].includes(o.status)).reduce((t, o) => t + total(o), 0);
+const total = o => o.items.reduce((t, i) => t + i.qty * i.price, 0);
+const me = () => acct(S.role === 'buyer' ? 'b1' : S.role === 'supplier' ? S.supplierId : 'a1');
+const plural = (n, u) => n + ' ' + u + (n === 1 ? '' : (/(s|x|ch)$/.test(u) ? 'es' : 's'));
+function log(what, flag = '', orgs = []) { const m = me(); S.audit.unshift({ at: new Date(), who: m.name, org: m.org, role: m.role, what, flag, orgs: [m.id, ...orgs] }); }
+function move(pid, type, change, by) { S.moves.unshift({ at: new Date(), pid, type, change, by }); }
+let toastT;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+
+/* ---------- Order reader: rule-based stand-in for the LLM step ---------- */
+const UNITS = 'ctns?|cartons?|box(?:es)?|bags?|btls?|bottles?|tins?|cans?|pkts?|packets?|packs?|tubs?|trays?|kgs?';
+const FILLER = /\b(hi|hello|hey|pls|please|need|want|abt|about|around|of|for|tomorrow|morning|today|thanks|thank you|the|some)\b/g;
+const norm = w => { w = w.toLowerCase().replace(/[^a-z0-9]/g, ''); return w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w; };
+const tokens = s => s.split(/[\s,]+/).map(norm).filter(w => w && !/\d/.test(w));
+
+function matchProducts(q) {
+  const qt = tokens(q);
+  if (!qt.length) return [];
+  const scored = catalogue().map(p => {
+    if (p.aliases.some(a => q.includes(a))) return { p, score: 1 };
+    const pt = new Set([...tokens(p.name), ...p.aliases.flatMap(tokens)]);
+    return { p, score: qt.filter(t => pt.has(t)).length / qt.length * .9 };
+  }).filter(x => x.score >= .45).sort((a, b) => b.score - a.score);
+  return scored;
+}
+function parseLine(raw) {
+  let s = raw.toLowerCase().replace(/^[-*\s]+/, '').replace(/[.!:]+$/g, '');
+  let qty = 1, unit = '', assumed = true;
+  const m = s.match(new RegExp(`(?:\\bx\\s*)?(\\d+(?:\\.\\d+)?)\\s*(x\\b|${UNITS}\\b)?`));
+  if (m) { qty = parseFloat(m[1]); unit = m[2] || ''; assumed = false; s = s.replace(m[0], ' '); }
+  s = s.replace(new RegExp(`\\b(${UNITS})\\b`, 'g'), ' ').replace(FILLER, ' ').replace(/\bx\b/g, ' ').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!s) return null;
+  const hits = matchProducts(s);
+  const line = { id: S.lineId++, raw: raw.trim(), q: s, unit, qty: Math.max(1, Math.ceil(qty)), kg: /^kg/.test(unit) ? qty : 0, pid: null, state: 'none', options: hits.map(h => h.p.id), assumed };
+  if (hits.length && hits[0].score >= .85 && !(hits[1] && hits[1].score === hits[0].score)) { setProduct(line, hits[0].p.id); line.state = 'ok'; }
+  else if (hits.length) line.state = 'check';
+  return line;
+}
+function setProduct(line, pid) {
+  line.pid = pid;
+  const p = P(pid);
+  if (line.kg && p.packKg) line.qty = Math.ceil(line.kg / p.packKg);
+}
+const readOrder = text => text.split(/\n|,|;|\band\b|&/i).map(parseLine).filter(Boolean);
+
+/* ---------- Actions ---------- */
+function linesCheck() {
+  const lines = S.review || [];
+  const unresolved = lines.filter(l => !l.pid).length;
+  const need = {};
+  lines.forEach(l => { if (l.pid) need[l.pid] = (need[l.pid] || 0) + l.qty; });
+  const over = Object.keys(need).filter(pid => !P(pid).unconfirmed && need[pid] > avail(P(pid)));
+  return { unresolved, need, over };
+}
+const UNIT_LIST = ['bag', 'bottle', 'box', 'can', 'carton', 'pack', 'packet', 'tin', 'tray', 'tub'];
+function unitOf(u) {
+  const k = (u || '').toLowerCase().replace(/s$/, '');
+  const mapped = { ctn: 'carton', btl: 'bottle', pkt: 'packet', kg: 'bag', boxe: 'box' }[k] || k;
+  return UNIT_LIST.includes(mapped) ? mapped : 'pack';
+}
+function openCatalogueForm(line) {
+  const name = line.q.replace(/\b\w/, c => c.toUpperCase());
+  S.addingLine = line.id;
+  S.draft = { name, unit: unitOf(line.unit), price: '', sup: '', nsName: '', nsContact: '', nsPhone: '', nsEmail: '', nsAddress: '', err: '' };
+}
+function saveCatalogue() {
+  const d = S.draft, l = L(S.addingLine), name = d.name.trim(), price = parseFloat(d.price);
+  d.err = '';
+  if (name.length < 2) { d.err = 'Enter a product name.'; return; }
+  if (catalogue().some(p => p.name.toLowerCase() === name.toLowerCase())) { d.err = 'This product is already in the catalogue. Choose it from the list.'; return; }
+  if (!(price > 0) || price > 99999) { d.err = 'Enter a price above 0.'; return; }
+  if (!d.sup) { d.err = 'Choose a supplier or add a new one.'; return; }
+  let sid = d.sup;
+  if (sid === 'new') {
+    const org = d.nsName.trim(), contact = d.nsContact.trim(), phone = d.nsPhone.trim(), email = d.nsEmail.trim();
+    if (!org || !contact) { d.err = 'Enter the supplier name and contact person.'; return; }
+    if (!/^\+?[0-9 ]{8,16}$/.test(phone)) { d.err = 'Enter a valid supplier phone number.'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { d.err = 'Enter a valid supplier email.'; return; }
+    if (suppliers().some(s => s.org.toLowerCase() === org.toLowerCase())) { d.err = 'This supplier already exists. Choose it from the list.'; return; }
+    sid = 's' + S.nextSup++;
+    S.accounts.push({ id: sid, name: contact, org, role: 'Supplier', status: 'Invited', phone, email, address: d.nsAddress.trim() || 'Not provided', joined: 'Not yet joined', range: 'Not provided', delivery: 'Not provided', lead: 'Not provided', minOrder: 'Not provided', invitedBy: me().org, invitedAt: new Date() });
+    notify('Invitation sent', `${me().org} added ${org}. Invitation link sent to ${email}.`, sid);
+  }
+  const n = S.nextP++, pid = 'p' + n;
+  S.products.push({ id: pid, sid, sku: 'NEW-' + (1000 + n), name, unit: d.unit, price, onHand: 0, reserved: 0, reorder: 0, aliases: [name.toLowerCase()], packKg: 0, unconfirmed: true });
+  setProduct(l, pid); l.state = 'added'; l.options = [];
+  log(`Added ${name} to the catalogue${d.sup === 'new' ? ' and invited ' + acct(sid).org : ''}`, '', [sid]);
+  S.draft = null; S.addingLine = null;
+  toast(d.sup === 'new' ? `${name} added. Invitation sent to ${acct(sid).org}.` : `${name} added to the catalogue.`);
+}
+function notify(kind, text, sid) { S.notes.unshift({ at: new Date(), kind, text, sid, read: false }); }
+function setSupplierStatus(id, status) {
+  const s = acct(id);
+  s.status = status;
+  log(`${status === 'Active' ? 'Reactivated' : 'Suspended'} supplier ${s.org}`, '', [id]);
+  if (S.supplierId === id && status !== 'Active') S.supplierId = 's1';
+  toast(`${s.org}: ${status.toLowerCase()}.`);
+}
+function acceptInvite(id) {
+  const s = acct(id);
+  s.status = 'Active'; s.joined = new Date().toLocaleString('en-SG', { month: 'short', year: 'numeric' });
+  log('Accepted the Tradelink invitation');
+  notify('Invitation accepted', `${s.org} accepted the invitation from ${s.invitedBy} and can now receive orders.`, id);
+  S.view.supplier = 'home';
+  toast(`Welcome to Tradelink, ${s.org}.`);
+}
+function declineInvite(id) {
+  const s = acct(id);
+  s.status = 'Declined';
+  S.products.filter(p => p.sid === id).forEach(p => p.hidden = true);
+  S.orders.filter(o => o.sid === id && OPEN.includes(o.status)).forEach(o => { o.items.forEach(i => { if (i.held) { P(i.pid).reserved -= i.qty; move(i.pid, 'Released', -i.qty, o.id); } }); o.status = 'Cancelled'; });
+  (S.review || []).forEach(l => { if (l.pid && P(l.pid).hidden) { l.pid = null; l.state = 'none'; } });
+  log('Declined the Tradelink invitation');
+  notify('Invitation declined', `${s.org} declined the invitation from ${s.invitedBy}. Their products were removed and open orders cancelled.`, id);
+  S.supplierId = 's1';
+  toast(`${s.org} declined the invitation.`);
+}
+function resendInvite(id) {
+  const s = acct(id);
+  s.invitedAt = new Date();
+  log(`Resent the invitation to ${s.org}`, '', [id]);
+  notify('Invitation resent', `Invitation link sent again to ${s.email}.`, id);
+  toast(`Invitation resent to ${s.org}.`);
+}
+function attention() {
+  const items = [], bySev = { high: 0, medium: 1 };
+  suppliers().filter(s => s.status === 'Invited' && Date.now() - s.invitedAt > 24 * 3600000).forEach(s => {
+    const waiting = S.orders.filter(o => o.sid === s.id && o.status === 'Pending').length;
+    items.push({ key: 'inv-' + s.id, sev: 'medium', type: 'Supplier invitation', title: `${s.org} has not accepted`, detail: `Invited by ${s.invitedBy} ${Math.round((Date.now() - s.invitedAt) / 3600000)} hours ago. ${plural(waiting, 'order')} waiting.`, acts: `<button class="btn" data-a="resend" data-id="${s.id}">Resend invitation</button><button class="btn" data-a="detail" data-t="supplier" data-id="${s.id}">View supplier</button>` });
+  });
+  S.services.filter(s => s.status !== 'Operational').forEach(s => items.push({ key: 'svc-' + s.name, sev: 'high', type: 'System', title: `${s.name} is ${s.status.toLowerCase()}`, detail: `Response time ${s.speed}, ${s.uptime} uptime over 30 days.`, acts: `<button class="btn" data-a="goto" data-v="status">System status</button><button class="btn" data-a="dismiss" data-key="svc-${s.name}">Mark handled</button>` }));
+  S.issues.filter(i => i.status === 'Disputed').forEach(i => items.push({ key: 'dsp-' + i.id, sev: 'high', type: 'Dispute', title: `Dispute on ${i.oid}`, detail: `${acct(i.buyer).org} and ${acct(i.sid).org}: ${i.type}, ${money(i.amount)}. ${i.note}`, acts: `<button class="btn primary" data-a="dsp" data-id="${i.id}" data-to="credit">Credit buyer</button><button class="btn" data-a="dsp" data-id="${i.id}" data-to="close">Close, no credit</button>` }));
+  S.invoices.filter(v => v.status === 'Do not pay yet').forEach(v => items.push({ key: 'inv-' + v.no, sev: 'high', type: 'Security', title: `New bank details on ${v.no}`, detail: `${acct(v.sid).org} invoice shows an account ending ${v.bank}. The buyer has been warned.`, acts: `<button class="btn" data-a="detail" data-t="supplier" data-id="${v.sid}">View supplier</button>` }));
+  S.issues.filter(i => i.status === 'Open' && Date.now() - i.at > 4 * 3600000).forEach(i => items.push({ key: 'iss-' + i.id, sev: 'medium', type: 'Delivery problem', title: `${acct(i.sid).org} has not answered`, detail: `${i.type} on ${i.oid} from ${acct(i.buyer).org}, ${Math.round((Date.now() - i.at) / 3600000)} hours ago.`, acts: `<button class="btn" data-a="detail" data-t="supplier" data-id="${i.sid}">View supplier</button>` }));
+  catalogue().filter(p => health(p) === 'out').forEach(p => items.push({ key: 'out-' + p.id, sev: 'high', type: 'Stock', title: `${p.name} is out of stock`, detail: acct(p.sid).org, acts: `<button class="btn" data-a="detail" data-t="supplier" data-id="${p.sid}">View supplier</button>` }));
+  S.orders.filter(o => o.status === 'Pending' && acct(o.sid).status === 'Active' && Date.now() - o.at > 30 * 60000).forEach(o => items.push({ key: 'ord-' + o.id, sev: 'medium', type: 'Order', title: `${o.id} has not been accepted`, detail: `${acct(o.sid).org} received this ${Math.round((Date.now() - o.at) / 60000)} minutes ago.`, acts: `<button class="btn" data-a="detail" data-t="supplier" data-id="${o.sid}">View supplier</button>` }));
+  catalogue().filter(p => p.unconfirmed && acct(p.sid).status === 'Active').forEach(p => items.push({ key: 'unc-' + p.id, sev: 'medium', type: 'Catalogue', title: `Confirm stock for ${p.name}`, detail: `Added by a buyer. ${acct(p.sid).org} has not confirmed stock or price.`, acts: `<button class="btn" data-a="detail" data-t="supplier" data-id="${p.sid}">View supplier</button>` }));
+  catalogue().filter(p => health(p) === 'low').forEach(p => items.push({ key: 'low-' + p.id, sev: 'medium', type: 'Stock', title: `${p.name} is low`, detail: `${acct(p.sid).org}: ${avail(p)} left, reorder at ${p.reorder}.`, acts: `<button class="btn" data-a="detail" data-t="supplier" data-id="${p.sid}">View supplier</button>` }));
+  S.audit.filter(a => a.flag === 'denied').forEach(a => { const key = 'aud-' + a.at.getTime(); items.push({ key, sev: 'medium', type: 'Security', title: 'Blocked action', detail: `${a.who}, ${a.org}: ${a.what}`, acts: `<button class="btn" data-a="goto" data-v="audit">Audit log</button><button class="btn" data-a="dismiss" data-key="${esc(key)}">Mark handled</button>` }); });
+  return items.filter(i => !S.dismissed.includes(i.key)).sort((a, b) => bySev[a.sev] - bySev[b.sev]);
+}
+function placeOrder() {
+  const { unresolved, need, over } = linesCheck();
+  S.review?.forEach(l => { const u = S.usuals.find(x => x.pid === l.pid); if (u) u.last = P(l.pid).price; });
+  if (unresolved || over.length || !Object.keys(need).length) { toast('Check the highlighted lines before placing this order.'); return; }
+  const bySupplier = {};
+  Object.keys(need).forEach(pid => (bySupplier[P(pid).sid] = bySupplier[P(pid).sid] || []).push(pid));
+  const ids = [];
+  Object.entries(bySupplier).forEach(([sid, pids]) => {
+    const id = 'ORD-' + S.next++;
+    S.orders.unshift({ id, buyer: 'b1', sid, status: 'Pending', at: new Date(), session: true, items: pids.map(pid => ({ pid, qty: need[pid], price: P(pid).price, held: !P(pid).unconfirmed })) });
+    pids.filter(pid => !P(pid).unconfirmed).forEach(pid => { P(pid).reserved += need[pid]; move(pid, 'Reserved', need[pid], id); });
+    log('Placed ' + id, '', [sid]);
+    ids.push(id);
+  });
+  S.review = null; S.showReview = false; S.orderTab = 'orders'; S.view.buyer = 'orders';
+  toast(`${plural(ids.length, 'order')} placed and stock reserved.`);
+}
+function advance(id, to) {
+  const o = S.orders.find(x => x.id === id), m = me();
+  const flow = { Pending: ['Accepted', 'Rejected', 'Cancelled'], Accepted: ['Out for delivery'], 'Out for delivery': ['Delivered'] };
+  const owner = to === 'Cancelled' ? o.buyer === m.id : o.sid === m.id;
+  if (!owner || !(flow[o.status] || []).includes(to)) { log('Blocked from changing ' + id, 'denied'); toast('You do not have access to do that.'); return; }
+  if (to === 'Rejected' || to === 'Cancelled') o.items.filter(i => i.held).forEach(i => { P(i.pid).reserved -= i.qty; move(i.pid, 'Released', -i.qty, id); });
+  if (to === 'Delivered') deliverItems(o);
+  o.status = to;
+  log(`${to === 'Out for delivery' ? 'Marked ' + id + ' out for delivery' : to + ' ' + id}`, '', [o.sid, o.buyer]);
+  toast(`${id}: ${to.toLowerCase()}.`);
+}
+function receive(pid) {
+  const v = parseInt(document.getElementById('recv-qty').value, 10), p = P(pid);
+  if (!Number.isInteger(v) || v <= 0 || v > 9999) { toast('Enter a whole number between 1 and 9999.'); return; }
+  if (p.sid !== me().id) { toast('You do not have access to do that.'); return; }
+  if (p.unconfirmed) { p.unconfirmed = false; p.reorder = p.reorder || 5; }
+  p.onHand += v; move(pid, 'Received', v, me().name); log(`Received ${v} of ${p.sku}`);
+  S.receiving = null; toast(`Added ${v} to ${p.name}.`);
+}
+
+/* ---------- Views ---------- */
+const productOptions = l => {
+  const best = l.options.map(P).filter(p => !p.hidden), rest = catalogue().filter(p => !l.options.includes(p.id));
+  const opt = p => `<option value="${p.id}"${p.id === l.pid ? ' selected' : ''}>${esc(p.name)} · ${money(p.price)}</option>`;
+  return `<option value=""${l.pid ? '' : ' selected'}>Choose a product</option>` + (best.length ? `<optgroup label="Best matches">${best.map(opt).join('')}</optgroup>` : '') + `<optgroup label="${best.length ? 'All products' : 'Catalogue'}">${rest.map(opt).join('')}</optgroup>`;
+};
+function catForm() {
+  const d = S.draft;
+  const field = (key, label, attrs = '') => `<label class="field">${label}<input class="input" id="d-${key}" data-dr="${key}" value="${esc(d[key])}" ${attrs}></label>`;
+  const supOpts = suppliers().filter(s => ['Active', 'Invited'].includes(s.status)).map(s => `<option value="${s.id}"${d.sup === s.id ? ' selected' : ''}>${esc(s.org)}${s.status === 'Invited' ? ' (invited)' : ''}</option>`).join('');
+  return `<div class="cat-form">
+    <h3 class="small">Add to catalogue</h3>
+    <div class="fields">
+      ${field('name', 'Product name')}
+      <label class="field">Sold by<select class="input" id="d-unit" data-dr="unit">${UNIT_LIST.map(u => `<option${d.unit === u ? ' selected' : ''}>${u}</option>`).join('')}</select></label>
+      ${field('price', 'Estimated price (S$)', 'type="number" min="0" step="0.01"')}
+      <label class="field">Supplier<select class="input" id="d-sup" data-c="dsup"><option value=""${d.sup ? '' : ' selected'}>Choose a supplier</option>${supOpts}<option value="new"${d.sup === 'new' ? ' selected' : ''}>Add a new supplier</option></select></label>
+    </div>
+    ${d.sup === 'new' ? `<div class="fields">
+      ${field('nsName', 'Supplier name')}
+      ${field('nsContact', 'Contact person')}
+      ${field('nsPhone', 'Phone', 'type="tel"')}
+      ${field('nsEmail', 'Email', 'type="email"')}
+      ${field('nsAddress', 'Address (optional)')}
+    </div><p class="note">We will email this supplier an invitation link. They can accept orders as soon as they join.</p>` : ''}
+    ${d.err ? `<p class="form-err">${esc(d.err)}</p>` : ''}
+    <div class="form-acts"><button class="btn primary" data-a="catsave">Add to catalogue</button><button class="btn" data-a="catclose">Cancel</button></div>
+  </div>`;
+}
+function lineCard(l, chk) {
+  const p = l.pid && P(l.pid), over = l.pid && chk.over.includes(l.pid);
+  const pill = l.state === 'ok' ? '<span class="pill good">Matched</span>' : l.state === 'check' ? '<span class="pill warn">Check this</span>' : l.state === 'none' ? '<span class="pill bad">Not in catalogue</span>' : l.state === 'added' ? '<span class="pill info">Added to catalogue</span>' : l.state === 'suggested' ? '<span class="pill info">Suggested</span>' : '<span class="pill info">Added by you</span>';
+  const pending = p && acct(p.sid).status === 'Invited', alt = over ? altFor(p, l.qty) : null, usual = p && S.usuals.find(u => u.pid === p.id), dearer = usual && p.price > usual.last * 1.02;
+  const info = !p ? (l.state === 'check' ? 'More than one product fits. Choose the right one.' : 'No match found. Add it to the catalogue, choose a product, or remove this line.')
+    : over ? `<span class="err">Only ${avail(p)} available. Reduce the quantity.</span>${alt ? ` <button class="rm" data-a="swap" data-id="${l.id}" data-v="${alt.id}">Use ${esc(alt.name)} instead</button>` : ''}`
+    : `${plural(l.qty, p.unit)} · ${money(p.price * l.qty)}${p.unconfirmed ? ' estimated · stock to be confirmed' : ` · ${avail(p)} available`} · ${esc(acct(p.sid).org)}${pending ? ' · waits for supplier to accept invitation' : ''}${l.kg && p.packKg ? ` · ${l.kg}kg rounded to full bags` : ''}${l.assumed ? ' · quantity assumed' : ''}${dearer ? ` · <span class="warn-t">you last paid ${money(usual.last)}</span>` : ''}`;
+  const addBtn = !p && l.state === 'none' && S.addingLine !== l.id ? `<button class="btn" data-a="catopen" data-id="${l.id}">Add to catalogue</button> ` : '';
+  return `<div class="line ${over ? 'over' : !p ? l.state : ''}">
+    <div class="line-src"><span class="mono">${esc(l.raw)}</span>${pill}</div>
+    ${S.addingLine === l.id ? catForm() : ''}
+    <select id="pick-${l.id}" data-c="pick" data-id="${l.id}" aria-label="Product for ${esc(l.raw)}">${productOptions(l)}</select>
+    <div class="stepper">
+      <button type="button" data-a="step" data-id="${l.id}" data-d="-1" aria-label="Reduce quantity">-</button>
+      <input id="qty-${l.id}" type="number" min="1" value="${l.qty}" data-c="qty" data-id="${l.id}" aria-label="Quantity">
+      <button type="button" data-a="step" data-id="${l.id}" data-d="1" aria-label="Increase quantity">+</button>
+    </div>
+    <div class="line-info">${info} ${addBtn}<button class="rm" data-a="rm" data-id="${l.id}">Remove</button></div>
+  </div>`;
+}
+function vNew() {
+  const head = `<div class="head"><h1>Order</h1><p class="muted">Type it the way you would text a supplier, or tap your usuals.</p></div>`;
+  const compose = `<section class="panel compose">
+    <label for="order-text"><h2>Type or paste your order</h2></label>
+    <textarea id="order-text" data-i="text" spellcheck="false">${esc(S.text)}</textarea>
+    <div class="compose-actions">
+      <button class="btn primary" data-a="read" ${S.reading ? 'disabled' : ''}>${S.reading ? 'Reading your order...' : 'Read my order'}</button>
+      <button class="btn" data-a="loadusual">Use my usual</button>
+      <button class="btn" data-a="manual">Add items manually</button>
+    </div>
+    <p class="note">Prototype: a rule-based reader stands in for the AI step. The real app sends this text to an LLM and validates its reply.</p>
+  </section>`;
+  if (!S.review || !S.showReview) {
+    const inCart = id => (S.review || []).filter(l => l.pid === id).reduce((t, l) => t + l.qty, 0);
+    const usual = S.usuals.filter(u => !P(u.pid).hidden).map(u => productCard(P(u.pid), inCart(u.pid))).join('');
+    return `<div class="page">${head}${compose}<div class="sec-title"><h2>Your usuals</h2><button class="linkb" data-a="loadusual">Add all</button></div><div class="scroller">${usual}</div></div>`;
+  }
+  const chk = linesCheck(), groups = {};
+  Object.keys(chk.need).forEach(pid => { const p = P(pid); groups[p.sid] = (groups[p.sid] || 0) + chk.need[pid] * p.price; });
+  const grand = Object.values(groups).reduce((a, b) => a + b, 0);
+  const blockers = [];
+  if (chk.unresolved) blockers.push(`Choose a product for ${plural(chk.unresolved, 'line')}.`);
+  if (chk.over.length) blockers.push(`Reduce ${plural(chk.over.length, 'item')} to the stock available.`);
+  const nOrders = Object.keys(groups).length;
+  const add = `<select id="add-item" data-c="add" class="input" aria-label="Add a product"><option value="">Add another product</option>${catalogue().map(p => `<option value="${p.id}">${esc(p.name)} · ${p.unconfirmed ? 'stock to confirm' : avail(p) + ' available'}</option>`).join('')}</select>`;
+  return `<div class="page">${head}
+    <div class="review">
+      <section class="lines" aria-label="Review your order">
+        <div class="tools"><h2 style="flex:1">Review ${plural(S.review.length, 'line')}</h2><button class="btn" data-a="edit">Add more items</button></div>
+        ${S.review.map(l => lineCard(l, chk)).join('') || '<div class="panel empty">Add a product to start this order.</div>'}
+        ${add}
+      </section>
+      <aside class="panel">
+        <h2>${nOrders > 1 ? `Splits into ${nOrders} orders` : 'Order summary'}</h2>
+        <div class="split">
+          ${Object.entries(groups).map(([sid, v]) => `<div><span>${esc(acct(sid).org)}</span><span class="num">${money(v)}</span></div>`).join('') || '<span class="muted small">Nothing selected yet.</span>'}
+          <div class="tot"><span>Total before GST</span><span class="num">${money(grand)}</span></div>
+        </div>
+        ${Object.keys(groups).map(s => `<p class="small muted">${esc(acct(s).org)}: ${cutoffText(acct(s))}</p>`).join('')}
+        ${S.settings.budgetWarn && weekSpend() + grand > S.settings.budget ? `<p class="blocker">This takes your week to ${money(weekSpend() + grand)}, above your ${money(S.settings.budget)} budget.</p>` : ''}
+        ${blockers.map(b => `<p class="blocker">${b}</p>`).join('')}
+        <button class="btn primary big" data-a="place" ${blockers.length || !nOrders ? 'disabled' : ''}>Confirm and reserve stock</button>
+        <p class="note">Nothing is sent or reserved until you confirm. Stock is checked again at that moment.</p>
+      </aside>
+    </div></div>`;
+}
+const metrics = list => `<div class="metrics">${list.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+const rec = ({ lead = '', title, sub = '', pill = '', stats = [], note = '', acts = '' }) => `<article class="order"><div class="order-top"><div class="order-who">${lead}<span><b class="small">${title}</b>${sub ? `<span class="muted small" style="display:block">${sub}</span>` : ''}</span></div>${pill}</div>${stats.length ? metrics(stats) : ''}${note}${acts ? `<div class="order-foot"><span></span><div class="order-acts">${acts}</div></div>` : ''}</article>`;
+const empty = text => `<div class="panel empty">${text}</div>`;
+const STEPS = ['Pending', 'Accepted', 'Out for delivery', 'Delivered'];
+function statusPill(s) { const c = { Pending: 'warn', Accepted: 'info', 'Out for delivery': 'info', Delivered: 'good', Rejected: 'bad', Cancelled: 'plain' }[s]; return `<span class="pill ${c}">${s}</span>`; }
+function orderCard(o, mode) {
+  const idx = STEPS.indexOf(o.status);
+  const other = mode === 'buyer' ? acct(o.sid).org : mode === 'supplier' ? acct(o.buyer).org : `${acct(o.buyer).org} to ${acct(o.sid).org}`;
+  const btn = (to, label, cls = '') => `<button class="btn ${cls}" data-a="advance" data-id="${o.id}" data-to="${to}">${label}</button>`;
+  let acts = '';
+  if (mode === 'supplier') {
+    if (o.status === 'Pending') acts = btn('Accepted', 'Accept order', 'primary') + `<button class="btn" data-a="pastart" data-id="${o.id}">Part accept</button>` + btn('Rejected', 'Reject', 'danger');
+    if (o.status === 'Accepted') acts = btn('Out for delivery', 'Mark out for delivery', 'primary');
+    if (o.status === 'Out for delivery') acts = btn('Delivered', 'Mark delivered', 'primary');
+  }
+  if (mode === 'buyer' && o.status === 'Pending') acts = btn('Cancelled', 'Cancel order', 'danger');
+  if (mode === 'buyer' && (o.status === 'Out for delivery' || (o.status === 'Delivered' && !o.check))) acts = `<button class="btn primary" data-a="allhere" data-id="${o.id}">All here</button><button class="btn" data-a="pbopen" data-id="${o.id}">Report a problem</button>` + (o.status === 'Out for delivery' ? `<button class="btn" data-a="nothere" data-id="${o.id}">Not here yet</button>` : '');
+  const checked = o.check === 'ok' ? '<span class="pill good">All here</span>' : o.check === 'issue' ? '<span class="pill warn">Problem reported</span>' : '';
+  return `<article class="order">
+    <div class="order-top"><div class="order-who">${logo(acct(mode === 'supplier' ? o.buyer : o.sid), 36)}<span><b class="small">${esc(other)}</b><span class="mono muted">${o.id}</span></span></div>${statusPill(o.status)}</div>
+    <div class="order-items">${o.items.map(i => `<div><span class="prod-row">${thumb(P(i.pid), 26)}<span>${i.qty} × ${esc(P(i.pid).name)}${i.held ? '' : ' <span class="tag">Stock and price to confirm</span>'}</span></span><span class="num muted">${money(i.qty * i.price)}</span></div>`).join('')}</div>
+    ${idx >= 0 ? `<div class="steps">${STEPS.map((s, n) => `<span class="${n <= idx ? 'done' : ''}">${n === 0 ? 'Placed' : s}</span>`).join('')}</div>` : ''}
+    <div class="order-foot"><span class="small muted">${when(o.at)} · <b class="num">${money(total(o))}</b> ${checked}</span><div class="order-acts">${acts}</div></div>
+    ${S.problem && S.problem.oid === o.id && mode === 'buyer' ? problemForm() : ''}
+    ${S.partial === o.id && mode === 'supplier' ? partialForm(o) : ''}
+  </article>`;
+}
+function vOrders(mode) {
+  const m = me();
+  const list = S.orders.filter(o => mode === 'buyer' ? o.buyer === m.id : mode === 'supplier' ? o.sid === m.id : true);
+  const title = mode === 'buyer' ? 'Orders and invoices' : mode === 'supplier' ? 'Incoming orders' : 'All orders';
+  const sub = mode === 'buyer' ? `Orders placed by ${esc(m.org)}.` : mode === 'supplier' ? `Only orders for ${esc(m.org)} appear here.` : 'Every order on the platform.';
+  const tabs = mode === 'buyer' ? `<div class="seg"><button data-a="ordertab" data-v="orders" aria-pressed="${S.orderTab === 'orders'}">Orders</button><button data-a="ordertab" data-v="invoices" aria-pressed="${S.orderTab === 'invoices'}">Invoices</button></div>` : '';
+  const issues = S.issues.filter(i => mode === 'buyer' ? i.buyer === m.id && i.status === 'Open' : mode === 'supplier' ? i.sid === m.id && i.status === 'Open' : false);
+  const body = mode === 'buyer' && S.orderTab === 'invoices' ? vInvoices() : `${issues.length ? `<section class="head"><h2>${mode === 'supplier' ? 'Problems to answer' : 'Open problems'}</h2></section><div class="orders">${issues.map(i => issueCard(i, mode)).join('')}</div><section class="head"><h2>Orders</h2></section>` : ''}<div class="orders">${list.map(o => orderCard(o, mode)).join('') || '<div class="panel empty">No orders yet.</div>'}</div>`;
+  return `<div class="page"><div class="head"><h1>${title}</h1><p class="muted">${sub}</p></div>${tabs}${body}</div>`;
+}
+function productCard(p, count = 0) {
+  const a = avail(p), out = !p.unconfirmed && a <= 0, s = acct(p.sid);
+  return `<article class="pcard">${thumb(p, 40)}${count ? `<span class="pill good incart">${count} in order</span>` : ''}
+    <button class="add" data-a="addcat" data-id="${p.id}" aria-label="Add ${esc(p.name)}" ${out ? 'disabled' : ''}>+</button>
+    <span class="price">${money(p.price)}</span><b>${esc(p.name)}</b>
+    <span class="sup">per ${esc(p.unit)} · ${esc(s.org)}</span>
+    <span>${p.unconfirmed ? '<span class="pill info">Stock to confirm</span>' : out ? '<span class="pill bad">Out of stock</span>' : health(p) === 'low' ? `<span class="pill warn">Only ${a} left</span>` : `<span class="pill good">${a} available</span>`}</span>
+  </article>`;
+}
+function vCatalogue() {
+  const q = S.q.toLowerCase(), inCart = id => (S.review || []).filter(l => l.pid === id).reduce((t, l) => t + l.qty, 0);
+  const items = catalogue().filter(p => (!q || p.name.toLowerCase().includes(q)) && (S.cat === 'All' || kindOf(p)[2] === S.cat));
+  return `<div class="page"><div class="head"><h1>Availability</h1><p class="muted">All ${catalogue().length} catalogue products, including items that are out of stock.</p></div>
+    <div class="tools"><input class="input" id="search" data-i="q" type="search" placeholder="Search products" aria-label="Search products" value="${esc(S.q)}"></div>
+    <div class="chips">${CATS.map(c => `<button class="chip" data-a="cat" data-v="${c}" aria-pressed="${S.cat === c}">${c}</button>`).join('')}</div>
+    <div class="pgrid">${items.map(p => productCard(p, inCart(p.id))).join('') || '<div class="panel empty">No products match your search.</div>'}</div></div>`;
+}
+function stockBar(p) {
+  if (p.unconfirmed) return '';
+  const pct = Math.min(100, avail(p) / Math.max(1, p.reorder * 2) * 100), h = health(p);
+  return `<div class="bar"><i class="${h === 'ok' ? '' : h === 'low' ? 'warn' : 'bad'}" style="width:${Math.max(3, pct)}%"></i></div>`;
+}
+function productForm() {
+  const d = S.pform;
+  const field = (key, label, attrs = '') => `<label class="field">${label}<input class="input" id="pf-${key}" data-pf="${key}" value="${esc(d[key])}" ${attrs}></label>`;
+  return `<section class="panel"><h2>Add a product</h2>
+    <div class="fields">
+      ${field('name', 'Product name', 'placeholder="Red lentils 1kg"')}
+      <label class="field">Sold by<select class="input" id="pf-unit" data-pf="unit">${UNIT_LIST.map(u => `<option${d.unit === u ? ' selected' : ''}>${u}</option>`).join('')}</select></label>
+      ${field('price', 'Price (S$)', 'type="number" min="0" step="0.01"')}
+      ${field('stock', 'Opening stock', 'type="number" min="0" step="1"')}
+      ${field('reorder', 'Reorder at', 'type="number" min="0" step="1"')}
+    </div>
+    ${d.err ? `<p class="form-err">${esc(d.err)}</p>` : ''}
+    <div class="form-acts"><button class="btn primary" data-a="pfsave">Add product</button><button class="btn" data-a="pfclose">Cancel</button></div>
+    <p class="note">Buyers can see and order this product as soon as you add it.</p>
+  </section>`;
+}
+function saveProduct() {
+  const d = S.pform, m = me(), name = d.name.trim(), price = parseFloat(d.price), stock = Number(d.stock), reorder = Number(d.reorder);
+  d.err = '';
+  if (name.length < 2) { d.err = 'Enter a product name.'; return; }
+  if (catalogue().some(p => p.sid === m.id && p.name.toLowerCase() === name.toLowerCase())) { d.err = 'You already have a product with this name.'; return; }
+  if (!(price > 0) || price > 99999) { d.err = 'Enter a price above 0.'; return; }
+  if (d.stock === '' || !Number.isInteger(stock) || stock < 0 || stock > 99999) { d.err = 'Enter opening stock as a whole number.'; return; }
+  if (d.reorder === '' || !Number.isInteger(reorder) || reorder < 0 || reorder > 99999) { d.err = 'Enter the reorder level as a whole number.'; return; }
+  const n = S.nextP++, pid = 'p' + n;
+  S.products.push({ id: pid, sid: m.id, sku: 'SP-' + (1000 + n), name, unit: d.unit, price, onHand: stock, reserved: 0, reorder, aliases: [name.toLowerCase()], packKg: 0 });
+  if (stock) move(pid, 'Received', stock, 'Opening stock');
+  log(`Added product ${name}`);
+  S.pform = null;
+  toast(`${name} added. Buyers can now order it.`);
+}
+function vInventory() {
+  const m = me(), mine = catalogue().filter(p => p.sid === m.id), q = S.q.toLowerCase();
+  const low = mine.filter(isLow);
+  const list = mine.filter(p => (!q || (p.name + p.sku).toLowerCase().includes(q)) && (!S.lowOnly || isLow(p)));
+  return `<div class="page"><div class="head"><h1>Inventory</h1><p class="muted">Stock held by ${esc(m.org)}. Available means on hand minus reserved.</p></div>
+    <div class="tiles">
+      <div class="tile"><b>${mine.length}</b><span class="small muted">Products</span></div>
+      <div class="tile"><b>${mine.reduce((t, p) => t + p.onHand, 0)}</b><span class="small muted">Units on hand</span></div>
+      <div class="tile"><b>${mine.reduce((t, p) => t + p.reserved, 0)}</b><span class="small muted">Units reserved</span></div>
+      <div class="tile ${low.length ? 'alert' : ''}"><b>${low.length}</b><span class="small muted">Need reordering</span></div>
+    </div>
+    <div class="tools">
+      <input class="input" id="search" data-i="q" type="search" placeholder="Search name or SKU" aria-label="Search inventory" value="${esc(S.q)}">
+      <button class="chip" data-a="lowonly" aria-pressed="${S.lowOnly}">Low stock only</button>
+      ${S.pform ? '' : '<button class="btn primary" data-a="pfopen">Add product</button>'}
+    </div>
+    ${S.pform ? productForm() : ''}
+    <div class="orders">${list.map(p => rec({ lead: thumb(p, 36), title: esc(p.name), sub: `<span class="mono">${p.sku}</span>`, pill: healthPill(p), note: stockBar(p),
+      stats: [['Price', money(p.price)], ['On hand', p.onHand], ['Reserved', p.reserved], ['Available', p.unconfirmed ? 'To confirm' : avail(p)], ['Reorder at', p.reorder]],
+      acts: S.receiving === p.id
+        ? `<div class="receive"><input class="input" id="recv-qty" type="number" min="1" aria-label="Units received"><button class="btn primary" data-a="recvsave" data-id="${p.id}">Add</button><button class="btn" data-a="recvcancel">Cancel</button></div>`
+        : S.repricing === p.id ? `<div class="receive"><input class="input" id="price-new" type="number" min="0" step="0.01" value="${p.price}" aria-label="New price"><button class="btn primary" data-a="pricesave" data-id="${p.id}">Save</button><button class="btn" data-a="pricecancel">Cancel</button></div>`
+        : `<button class="btn" data-a="recv" data-id="${p.id}">${p.unconfirmed ? 'Confirm stock' : 'Receive stock'}</button><button class="btn" data-a="pricestart" data-id="${p.id}">Change price</button>` })).join('') || empty('No products match this view.')}</div></div>`;
+}
+function vHistory() {
+  const m = me(), list = S.moves.filter(x => P(x.pid).sid === m.id);
+  const pill = t => `<span class="pill ${{ Received: 'good', Reserved: 'info', Released: 'plain', Delivered: 'warn' }[t]}">${t}</span>`;
+  return `<div class="page"><div class="head"><h1>Stock history</h1><p class="muted">Every stock change for ${esc(m.org)}, newest first.</p></div>
+    <div class="orders">${list.map(x => rec({ lead: thumb(P(x.pid), 36), title: esc(P(x.pid).name), sub: when(x.at), pill: pill(x.type), stats: [['Units', `${x.change > 0 ? '+' : ''}${x.change}`], ['Source', esc(x.by)]] })).join('') || empty('No stock changes yet.')}</div></div>`;
+}
+function vInvite() {
+  const m = me(), prods = catalogue().filter(p => p.sid === m.id), waiting = S.orders.filter(o => o.sid === m.id && o.status === 'Pending').length;
+  return `<div class="page"><div class="head"><h1>You're invited to Tradelink</h1><p class="muted">${esc(m.invitedBy)} wants to order from ${esc(m.org)} here.</p></div>
+    <section class="panel"><h2>Waiting for you</h2>
+      <div class="feed">
+        <div><span>Orders waiting</span><b class="num">${waiting}</b></div>
+        ${prods.map(p => `<div><span>${esc(p.name)}</span><span class="small muted">${money(p.price)} estimated</span></div>`).join('')}
+      </div>
+      <div class="form-acts"><button class="btn primary" data-a="acceptinv" data-id="${m.id}">Accept invitation</button><button class="btn danger" data-a="declineinv" data-id="${m.id}">Decline</button></div>
+      <p class="note">Prototype: this page stands in for the link in the invitation email.</p>
+    </section></div>`;
+}
+function vNotifications() {
+  const unread = S.notes.filter(n => !n.read).length;
+  const pill = k => `<span class="pill ${{ 'Invitation sent': 'info', 'Invitation resent': 'info', 'Invitation accepted': 'good', 'Invitation declined': 'bad', 'Dispute opened': 'bad', 'Bank details changed': 'bad' }[k]}">${k}</span>`;
+  return `<div class="page"><div class="title-row"><div class="head"><h1>Notifications</h1><p class="muted">Supplier invitations, disputes and security events.</p></div>${unread ? '<button class="btn" data-a="readall">Mark all as read</button>' : ''}</div>
+    <div class="orders">${S.notes.map(n => `<article class="attn ${n.read ? '' : 'unread'}">
+      <div class="attn-head">${pill(n.kind)}<span class="small muted">${when(n.at)}${n.read ? '' : ' · New'}</span></div>
+      <p>${esc(n.text)}</p>
+      <div class="order-acts"><button class="btn" data-a="detail" data-t="supplier" data-id="${n.sid}">View supplier</button></div>
+    </article>`).join('') || '<div class="panel empty">No notifications yet.</div>'}</div></div>`;
+}
+function vActivity() {
+  const m = me(), list = S.audit.filter(a => a.orgs.includes(m.id));
+  return `<div class="page"><div class="head"><h1>Recent activity</h1><p class="muted">Orders, stock updates and account events for ${esc(m.org)}, newest first.</p></div>
+    <section class="panel"><div class="feed">
+      ${list.map(a => `<div><span>${esc(a.what)} ${a.flag ? '<span class="pill bad">Blocked</span>' : ''}<br><span class="small muted">${esc(a.who)}, ${esc(a.org)}</span></span><span class="small muted" style="white-space:nowrap">${when(a.at)}</span></div>`).join('') || '<p class="muted">No activity yet.</p>'}
+    </div></section></div>`;
+}
+const ATTN_ICON = { 'Supplier invitation': 'users', System: 'pulse', Order: 'list', Stock: 'stock', Catalogue: 'box', Security: 'shield', Dispute: 'flag', 'Delivery problem': 'truck' };
+const attnIcon = type => I[ATTN_ICON[type] || 'flag'];
+function vAttention() {
+  const items = attention(), high = items.filter(i => i.sev === 'high').length, assigned = items.filter(i => S.assign[i.key]).length;
+  const opts = key => `<option value="">Unassigned</option>` + S.operators.map(o => `<option value="${o.id}"${S.assign[key] === o.id ? ' selected' : ''}>${esc(o.name)}</option>`).join('');
+  const show = items.filter(i => S.attnFilter === 'all' || (S.attnFilter === 'unassigned' ? !S.assign[i.key] : i.sev === S.attnFilter));
+  const card = (i, n) => `<article class="order acard ${i.sev}">
+      <div class="atop"><span class="aico ${i.sev}">${attnIcon(i.type)}</span>
+        <div class="abody"><div class="ahead"><span class="small muted">${i.type}</span><span class="pill ${i.sev === 'high' ? 'bad' : 'warn'}">${i.sev === 'high' ? 'High' : 'Medium'}</span></div>
+        <h2>${esc(i.title)}</h2><p class="small muted">${esc(i.detail)}</p></div></div>
+      <div class="afoot"><div class="order-acts">${i.acts}</div><label class="assign">Assigned to<select id="as-${n}" data-c="assign" data-key="${esc(i.key)}">${opts(i.key)}</select></label></div>
+    </article>`;
+  const chip = (v, l) => `<button class="chip" data-a="attnf" data-v="${v}" aria-pressed="${S.attnFilter === v}">${l}</button>`;
+  return `<div class="page"><div class="head"><h1>Needs attention</h1><p class="muted">Work for the operations team, most urgent first.</p></div>
+    <div class="tiles">
+      <div class="tile ${high ? 'alert' : ''}"><b>${high}</b><span class="small muted">High priority</span></div>
+      <div class="tile"><b>${items.length - high}</b><span class="small muted">Medium priority</span></div>
+      <div class="tile"><b>${assigned}</b><span class="small muted">Assigned</span></div>
+      <div class="tile"><b>${items.length - assigned}</b><span class="small muted">Unassigned</span></div>
+    </div>
+    <div class="chips">${chip('all', 'All')}${chip('high', 'High')}${chip('medium', 'Medium')}${chip('unassigned', 'Unassigned')}</div>
+    <div class="acards">${show.map(card).join('') || '<div class="panel empty">Nothing here right now.</div>'}</div></div>`;
+}
+function supplierRows() {
+  return suppliers().map(s => {
+    const prods = S.products.filter(p => p.sid === s.id && !p.hidden), open = S.orders.filter(o => o.sid === s.id && OPEN.includes(o.status)).length;
+    return rec({ lead: logo(s, 36), title: `<button class="rowlink" data-a="detail" data-t="supplier" data-id="${s.id}">${esc(s.org)}</button>`, sub: esc(s.name), pill: accPill(s.status), stats: [['Products', prods.length], ['Low stock', prods.filter(isLow).length], ['Open orders', open]] });
+  }).join('');
+}
+function vSuppliers() {
+  return `<div class="page"><div class="head"><h1>Suppliers</h1><p class="muted">Open a supplier to see its profile, products and orders.</p></div>
+    <div class="orders">${supplierRows()}</div></div>`;
+}
+const dl = rows => `<dl class="profile">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+function vSupplierDetail(s) {
+  const prods = S.products.filter(p => p.sid === s.id && !p.hidden), orders = S.orders.filter(o => o.sid === s.id);
+  const open = orders.filter(o => OPEN.includes(o.status)).length;
+  const acts = s.status === 'Invited' ? `<button class="btn" data-a="resend" data-id="${s.id}">Resend invitation</button>`
+    : s.status === 'Active' ? `<button class="btn danger" data-a="suspend" data-id="${s.id}">Suspend</button>`
+    : s.status === 'Suspended' ? `<button class="btn" data-a="activate" data-id="${s.id}">Reactivate</button>` : '';
+  return `<div class="page"><button class="back" data-a="back">Back to suppliers</button>
+    <div class="title-row"><div class="title-name">${logo(s, 48)}<h1>${esc(s.org)}</h1>${accPill(s.status)}</div><div class="order-acts">${acts}</div></div>
+    <div class="tiles">
+      <div class="tile"><b>${prods.length}</b><span class="small muted">Products</span></div>
+      <div class="tile ${prods.filter(isLow).length ? 'alert' : ''}"><b>${prods.filter(isLow).length}</b><span class="small muted">Low stock</span></div>
+      <div class="tile"><b>${open}</b><span class="small muted">Open orders</span></div>
+      <div class="tile"><b>${money(spend(orders))}</b><span class="small muted">Order value</span></div>
+    </div>
+    <section class="panel"><h2>Profile</h2>${dl([['Contact person', s.name], ['Phone', s.phone], ['Email', s.email], ['Address', s.address], ['Product range', s.range], ['Delivery days', s.delivery], ['Lead time', s.lead], ['Minimum order', s.minOrder], ['Joined', s.joined], ...(s.invitedBy ? [['Invited by', s.invitedBy], ['Invitation sent', when(s.invitedAt)]] : [])])}</section>
+    <section class="head"><h2>Shop products</h2></section>
+    <div class="orders">${prods.map(p => rec({ lead: thumb(p, 36), title: esc(p.name), sub: `<span class="mono">${p.sku}</span>`, pill: healthPill(p), stats: [['Price', money(p.price)], ['On hand', p.onHand], ['Available', p.unconfirmed ? 'To confirm' : avail(p)]] })).join('') || empty('No products yet.')}</div>
+    <section class="head"><h2>Orders</h2></section>
+    <div class="orders">${orders.map(o => orderCard(o, 'admin')).join('') || '<div class="panel empty">No orders yet.</div>'}</div></div>`;
+}
+function vBuyerDetail(b) {
+  const orders = S.orders.filter(o => o.buyer === b.id);
+  return `<div class="page"><button class="back" data-a="back">Back to users</button>
+    <div class="title-name">${logo(b, 48)}<h1>${esc(b.org)}</h1>${accPill(b.status)}</div>
+    <section class="panel"><h2>Buyer details</h2>${dl([['Contact person', b.name], ['Phone', b.phone], ['Email', b.email], ['Address', b.address], ['Trading hours', b.hours], ['Joined', b.joined], ['Orders', String(orders.length)], ['Open orders', String(orders.filter(o => OPEN.includes(o.status)).length)], ['Order value', money(spend(orders))]])}</section>
+    <section class="head"><h2>Orders</h2></section>
+    <div class="orders">${orders.map(o => orderCard(o, 'admin')).join('') || '<div class="panel empty">No orders yet.</div>'}</div></div>`;
+}
+function vOperators() {
+  const items = attention(), open = id => items.filter(i => S.assign[i.key] === id).length;
+  const pill = s => `<span class="pill ${{ Online: 'good', Away: 'warn', Offline: 'plain' }[s]}">${s}</span>`;
+  return `<div class="page"><div class="head"><h1>Operators</h1><p class="muted">The Tradelink team who handle approvals, orders and support.</p></div>
+    <div class="orders">${S.operators.map(o => rec({ lead: logo({ id: o.id, org: o.name }, 36), title: esc(o.name), sub: esc(o.team), pill: pill(o.status), stats: [['Shift', esc(o.shift)], ['Assigned items', open(o.id)]] })).join('')}</div>
+    <section class="panel"><h2>Add an operator</h2><div class="fields">
+      <label class="field">Name<input class="input" id="op-name"></label>
+      <label class="field">Team<select class="input" id="op-team"><option>Order desk</option><option>Supplier onboarding</option><option>Customer support</option></select></label>
+      <label class="field">Shift<input class="input" id="op-shift" value="Mon to Fri, 09:00 to 18:00"></label>
+    </div><div class="form-acts"><button class="btn primary" data-a="addop">Add operator</button></div></section></div>`;
+}
+function vStatus() {
+  const bad = S.services.filter(s => s.status !== 'Operational').length, a = S.ai;
+  const pill = s => `<span class="pill ${s === 'Operational' ? 'good' : s === 'Degraded' ? 'warn' : 'bad'}">${s}</span>`;
+  return `<div class="page"><div class="head"><div class="title-name"><h1>System status</h1><span class="pill ${bad ? 'warn' : 'good'}">${bad ? plural(bad, 'service') + ' degraded' : 'All services operational'}</span></div><p class="muted">Example figures. The real app reads these from health checks and logs.</p></div>
+    <div class="tiles">
+      <div class="tile"><b>${a.msgs}</b><span class="small muted">Messages read</span></div>
+      <div class="tile"><b>${a.lines}</b><span class="small muted">Lines read</span></div>
+      <div class="tile"><b>${a.lines ? Math.round(a.matched / a.lines * 100) : 0}%</b><span class="small muted">Matched automatically</span></div>
+      <div class="tile"><b>${a.flagged}</b><span class="small muted">Sent to buyer to check</span></div>
+    </div>
+    <div class="orders">${S.services.map(s => rec({ lead: `<span class="thumb green" style="width:36px;height:36px">${I.pulse}</span>`, title: esc(s.name), pill: pill(s.status), stats: [['30-day uptime', s.uptime], ['Response', s.speed]] })).join('')}</div></div>`;
+}
+function vOverview() {
+  const m = me(), open = S.orders.filter(o => OPEN.includes(o.status)), low = catalogue().filter(isLow), items = attention(), unread = S.notes.filter(n => !n.read).length;
+  const bad = S.services.filter(s => s.status !== 'Operational').length, active = suppliers().filter(s => s.status === 'Active').length, online = S.operators.filter(o => o.status === 'Online').length;
+  return homeShell(m, ['Find a supplier', 'data-a="goto" data-v="suppliers"'], [
+    svc('Attention', I.flag, 'data-a="goto" data-v="attention"', items.length), svc('Alerts', I.bell, 'data-a="goto" data-v="notifications"', unread),
+    svc('Orders', I.list, 'data-a="goto" data-v="orders"'), svc('Suppliers', I.crate, 'data-a="goto" data-v="suppliers"'),
+    svc('Users', I.users, 'data-a="goto" data-v="users"'), svc('Operators', I.headset, 'data-a="goto" data-v="operators"'),
+    svc('System', I.pulse, 'data-a="goto" data-v="status"', bad), svc('Audit log', I.shield, 'data-a="goto" data-v="audit"')
+  ], [
+    stat(items.length, 'Need attention', 'data-a="goto" data-v="attention"', items.length > 0),
+    stat(open.length, 'Open orders', 'data-a="goto" data-v="orders"'),
+    stat(money(open.reduce((t, o) => t + total(o), 0)), 'Open order value', 'data-a="goto" data-v="orders"'),
+    stat(active, 'Active suppliers', 'data-a="goto" data-v="suppliers"')
+  ], `<div class="cols">
+      <section class="panel"><div class="sec-title"><h2>Needs attention</h2><button class="linkb" data-a="goto" data-v="attention">See all</button></div>
+        ${items.slice(0, 2).map(i => `<div class="mini"><span class="aico ${i.sev}">${attnIcon(i.type)}</span><span class="grow">${esc(i.title)}<small>${esc(i.type)}</small></span><span class="pill ${i.sev === 'high' ? 'bad' : 'warn'}">${i.sev === 'high' ? 'High' : 'Medium'}</span></div>`).join('') || '<p class="muted">Nothing needs attention right now.</p>'}
+      </section>
+      ${activityPanel(S.audit, 'data-a="goto" data-v="audit"', 2)}
+      <section class="panel"><div class="sec-title"><h2>Low stock</h2><button class="linkb" data-a="goto" data-v="suppliers">See all ${low.length}</button></div>
+        ${low.slice(0, 2).map(p => `<div class="mini">${thumb(p, 34)}<span class="grow">${esc(p.name)}<small>${esc(acct(p.sid).org)}</small></span>${healthPill(p)}</div>`).join('') || '<p class="muted">All products are above their reorder level.</p>'}
+      </section>
+      <section class="panel"><div class="sec-title"><h2>Platform</h2><button class="linkb" data-a="goto" data-v="status">System status</button></div>
+        <div class="mini"><span class="grow">Services<small>${S.services.length} monitored</small></span><span class="pill ${bad ? 'warn' : 'good'}">${bad ? plural(bad, 'issue') : 'All good'}</span></div>
+        <div class="mini"><span class="grow">Operators online<small>${S.operators.length} on the team</small></span><b class="num">${online}</b></div>
+        <div class="mini"><span class="grow">Unread alerts<small>Invitations, disputes and security</small></span><b class="num">${unread}</b></div>
+      </section>
+    </div>`);
+}
+function vUsers() {
+  const can = { Buyer: 'Own orders, availability', Supplier: 'Own orders and inventory', Admin: 'All records, read only on orders' };
+  return `<div class="page"><div class="head"><h1>Users</h1><p class="muted">Buyer details, plus every account and what its role can reach.</p></div>
+    <section class="head"><h2>Buyers</h2></section>
+    <div class="orders">${buyers().map(b => { const orders = S.orders.filter(o => o.buyer === b.id); return rec({ lead: logo(b, 36), title: `<button class="rowlink" data-a="detail" data-t="buyer" data-id="${b.id}">${esc(b.org)}</button>`, sub: `${esc(b.name)} · ${esc(b.address)}<br>${esc(b.phone)} · ${esc(b.email)}`, pill: accPill(b.status), stats: [['Open orders', orders.filter(o => OPEN.includes(o.status)).length], ['Order value', money(spend(orders))]] }); }).join('')}</div>
+    <section class="head"><h2>All accounts</h2></section>
+    <div class="orders">${S.accounts.map(a => rec({ lead: logo(a, 36), title: esc(a.name), sub: esc(a.org), pill: accPill(a.status), stats: [['Role', a.role], ['Access', can[a.role]]] })).join('')}</div></div>`;
+}
+function vAudit() {
+  return `<div class="page"><div class="head"><h1>Audit log</h1><p class="muted">Who did what and when, including blocked attempts.</p></div>
+    <div class="orders">${S.audit.map(a => rec({ lead: logo(S.accounts.find(x => x.org === a.org) || { id: 'x', org: a.org }, 36), title: esc(a.what), sub: `${esc(a.who)} · ${a.role} · ${when(a.at)}`, pill: a.flag ? '<span class="pill bad">Blocked</span>' : '<span class="pill good">Allowed</span>' })).join('')}</div></div>`;
+}
+
+/* ---------- Shop planning, delivery checks, invoices ---------- */
+const BUYER = 'b1';
+const onOrder = pid => S.orders.filter(o => o.buyer === BUYER && OPEN.includes(o.status)).reduce((t, o) => t + o.items.filter(i => i.pid === pid).reduce((a, i) => a + i.qty, 0), 0);
+const daysLeft = u => (u.have + onOrder(u.pid)) / u.use;
+const cutoffOf = s => s.cutoff || 16;
+const cutoffText = s => new Date().getHours() >= cutoffOf(s) ? 'Past cut-off, earliest delivery is the day after tomorrow' : `Order by ${cutoffOf(s)}:00 for tomorrow`;
+const weekSpend = () => S.weekBase + S.orders.filter(o => o.session && !['Rejected', 'Cancelled'].includes(o.status)).reduce((t, o) => t + total(o), 0);
+function restockPlan() {
+  if (!S.settings.lowStock) return [];
+  return S.usuals.filter(u => daysLeft(u) < 3 && !S.skipped.includes(u.pid) && !P(u.pid).hidden).map(u => {
+    const p = P(u.pid), want = Math.max(1, Math.ceil(u.use * 7 - u.have - onOrder(u.pid))), qty = Math.min(want, Math.max(1, avail(p)));
+    return { ...u, want, qty, left: daysLeft(u) };
+  });
+}
+const usualLine = (pid, qty, raw, state) => ({ id: S.lineId++, raw, qty, kg: 0, pid, state, options: [] });
+function addToCart(pid) {
+  const p = P(pid); S.review = S.review || [];
+  const l = S.review.find(x => x.pid === pid);
+  if (l) l.qty++; else S.review.push(usualLine(pid, 1, 'Added by you', 'manual'));
+  toast(`${p.name} added.`);
+}
+function mergeCart(lines) { const next = [...(S.review || [])]; lines.forEach(n => { const l = n.pid && next.find(x => x.pid === n.pid); if (l) l.qty += n.qty; else next.push(n); }); S.review = next; S.showReview = true; S.view.buyer = 'new'; }
+function loadPlan() { mergeCart(restockPlan().map(u => usualLine(u.pid, u.qty, `Suggested, ${u.left.toFixed(1)} days left`, 'suggested'))); }
+function loadUsual() { mergeCart(S.usuals.filter(u => !P(u.pid).hidden).map(u => usualLine(u.pid, u.qty, 'My usual', 'suggested'))); }
+function altFor(p, qty) {
+  const words = new Set(tokens(p.name));
+  return catalogue().find(x => x.id !== p.id && !x.unconfirmed && avail(x) >= qty && tokens(x.name).some(w => words.has(w)));
+}
+function deliverItems(o) { o.items.filter(i => i.held).forEach(i => { const p = P(i.pid); p.reserved -= i.qty; p.onHand -= i.qty; move(i.pid, 'Delivered', -i.qty, o.id); }); }
+function addToShop(o, minus = {}) { o.items.forEach(i => { const u = S.usuals.find(x => x.pid === i.pid); if (u) u.have += Math.max(0, i.qty - (minus[i.pid] || 0)); }); }
+function allHere(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (o.buyer !== me().id) return;
+  if (o.status === 'Out for delivery') { deliverItems(o); o.status = 'Delivered'; }
+  o.check = 'ok'; addToShop(o);
+  log(`Confirmed all items arrived for ${id}`, '', [o.sid]);
+  toast(`${id} checked. Your stock is updated.`);
+}
+function openProblem(id) { const o = S.orders.find(x => x.id === id); S.problem = { oid: id, pid: o.items[0].pid, type: 'Short', qty: '1', note: '', err: '' }; }
+function saveProblem() {
+  const d = S.problem, o = S.orders.find(x => x.id === d.oid), item = o.items.find(i => i.pid === d.pid), qty = Number(d.qty);
+  d.err = '';
+  if (!Number.isInteger(qty) || qty < 1 || qty > item.qty) { d.err = `Enter a whole number from 1 to ${item.qty}.`; return; }
+  if (o.status === 'Out for delivery') { deliverItems(o); o.status = 'Delivered'; }
+  o.check = 'issue'; addToShop(o, { [d.pid]: qty });
+  const id = 'ISS-' + S.nextIss++;
+  S.issues.unshift({ id, oid: o.id, sid: o.sid, buyer: o.buyer, pid: d.pid, type: d.type, qty, amount: qty * item.price, note: d.note.trim(), status: 'Open', at: new Date(), seen: false });
+  log(`Reported ${d.type.toLowerCase()} on ${o.id}`, '', [o.sid]);
+  S.problem = null; toast(`Problem sent to ${acct(o.sid).org}.`);
+}
+function notHere(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (S.issues.some(i => i.oid === id && i.type === 'Late' && i.status === 'Open')) { toast('You have already reported this order as late.'); return; }
+  S.issues.unshift({ id: 'ISS-' + S.nextIss++, oid: id, sid: o.sid, buyer: o.buyer, pid: o.items[0].pid, type: 'Late', qty: 0, amount: 0, note: 'Delivery has not arrived.', status: 'Open', at: new Date(), seen: false });
+  log(`Reported ${id} as late`, '', [o.sid]);
+  toast(`${acct(o.sid).org} has been asked for an update.`);
+}
+function answerIssue(id, how) {
+  const i = S.issues.find(x => x.id === id);
+  if (i.sid !== me().id || i.status !== 'Open') { toast('You do not have access to do that.'); return; }
+  i.status = { credit: 'Credit promised', replace: 'Replacement promised', update: 'Supplier replied', dispute: 'Disputed' }[how];
+  i.seen = false;
+  log(`${i.status} on ${i.oid}`, '', [i.buyer]);
+  if (how === 'dispute') notify('Dispute opened', `${acct(i.sid).org} disputed a ${i.type.toLowerCase()} report on ${i.oid} from ${acct(i.buyer).org}.`, i.sid);
+  toast(`${i.buyer && acct(i.buyer).org} has been told.`);
+}
+function closeDispute(id, how) {
+  const i = S.issues.find(x => x.id === id);
+  i.status = how === 'credit' ? 'Credit promised' : 'Closed'; i.seen = false;
+  log(`Resolved dispute on ${i.oid}: ${how === 'credit' ? 'credit to buyer' : 'no credit'}`, '', [i.sid, i.buyer]);
+  toast('Dispute resolved.');
+}
+function startPartial(id) { S.partial = id; }
+function savePartial(id) {
+  const o = S.orders.find(x => x.id === id), next = {};
+  for (const i of o.items) {
+    const n = Number(document.getElementById('pa-' + i.pid).value);
+    if (!Number.isInteger(n) || n < 0 || n > i.qty) { toast(`Enter 0 to ${i.qty} for ${P(i.pid).name}.`); return; }
+    next[i.pid] = n;
+  }
+  if (Object.values(next).every(n => n === 0)) { S.partial = null; advance(id, 'Rejected'); return; }
+  o.items.forEach(i => {
+    const diff = i.qty - next[i.pid];
+    if (diff > 0) {
+      if (i.held) { P(i.pid).reserved -= diff; move(i.pid, 'Released', -diff, id); }
+      S.partials.unshift({ id: 'PA-' + S.nextPa++, oid: id, sid: o.sid, pid: i.pid, sent: next[i.pid], asked: i.qty, status: 'New', buyer: o.buyer });
+      i.qty = next[i.pid];
+    }
+  });
+  o.items = o.items.filter(i => i.qty > 0);
+  o.status = 'Accepted'; S.partial = null;
+  log(`Part accepted ${id}`, '', [o.buyer]);
+  toast(`${id} part accepted. The buyer has been told.`);
+}
+function savePrice(pid) {
+  const p = P(pid), v = parseFloat(document.getElementById('price-new').value);
+  if (p.sid !== me().id) { toast('You do not have access to do that.'); return; }
+  if (!(v > 0) || v > 99999) { toast('Enter a price above 0.'); return; }
+  if (v === p.price) { S.repricing = null; return; }
+  S.priceChanges.unshift({ id: 'PC-' + S.nextPc++, pid, old: p.price, now: v, at: new Date(), status: 'New' });
+  p.price = v; S.repricing = null;
+  log(`Changed price of ${p.sku} to ${money(v)}`);
+  toast(`Price updated. Buyers who order this item will be told.`);
+}
+function addInvoice(kind) {
+  const o = S.orders.find(x => x.buyer === BUYER && x.status === 'Delivered');
+  if (!o) { toast('Invoices are checked against a delivered order. You have none yet.'); return; }
+  const s = acct(o.sid), exp = total(o), up = kind === 'price' ? Math.round(exp * .15 * 100) / 100 : 0, fee = kind === 'fee' ? 8 : 0, flags = [];
+  if (up) flags.push({ k: 'Higher price', d: `${money(up)} above the agreed price`, amt: up });
+  if (fee) flags.push({ k: 'Unexpected fee', d: 'Delivery fee not in your terms', amt: fee });
+  const no = 'INV-' + S.nextInv++, bankChanged = kind === 'bank';
+  S.invoices.unshift({ no, oid: o.id, sid: o.sid, total: exp + up + fee, expected: exp, flags, bank: bankChanged ? '7319' : (s.bank || '0000'), bankChanged, status: bankChanged ? 'Do not pay yet' : flags.length ? 'Needs review' : 'Matched', at: new Date() });
+  log(`Checked invoice ${no}`, '', [o.sid]);
+  if (bankChanged) notify('Bank details changed', `Invoice ${no} from ${s.org} shows a new bank account. ${acct(BUYER).org} has been warned.`, o.sid);
+  toast(bankChanged ? 'New bank details found. Do not pay yet.' : flags.length ? 'This invoice does not match your order.' : 'Invoice matches your order.');
+}
+function queryInvoice(no) {
+  const v = S.invoices.find(x => x.no === no), diff = v.flags.reduce((t, f) => t + f.amt, 0), o = S.orders.find(x => x.id === v.oid);
+  v.status = 'Query sent';
+  S.issues.unshift({ id: 'ISS-' + S.nextIss++, oid: v.oid, sid: v.sid, buyer: o.buyer, pid: o.items[0].pid, type: 'Invoice', qty: 0, amount: diff, note: `${no}: ${v.flags.map(f => f.d).join(', ')}.`, status: 'Open', at: new Date(), seen: false });
+  log(`Queried invoice ${no}`, '', [v.sid]);
+  toast(`Query sent to ${acct(v.sid).org}.`);
+}
+function todos() {
+  const items = [], btn = (a, label, attrs = '', cls = '') => `<button class="btn ${cls}" data-a="${a}" ${attrs}>${label}</button>`;
+  if (S.settings.priceAlerts) S.priceChanges.filter(c => c.status === 'New' && S.usuals.some(u => u.pid === c.pid)).forEach(c => {
+    const p = P(c.pid), pct = ((c.now - c.old) / c.old * 100).toFixed(1);
+    items.push({ tone: c.now > c.old ? 'warn' : 'good', title: `${p.name} ${c.now > c.old ? 'went up' : 'went down'} ${Math.abs(pct)}%`, detail: `${money(c.old)} to ${money(c.now)} at ${acct(p.sid).org}.`, acts: btn('pcok', 'OK, noted', `data-id="${c.id}"`) });
+  });
+  S.partials.filter(x => x.status === 'New' && x.buyer === BUYER).forEach(x => {
+    const p = P(x.pid);
+    items.push({ tone: 'warn', title: `${acct(x.sid).org} can only send ${x.sent} of ${x.asked}`, detail: `${p.name} on ${x.oid}.`, acts: btn('parest', `Order the other ${x.asked - x.sent}`, `data-id="${x.id}"`, 'primary') + btn('paskip', 'Skip', `data-id="${x.id}"`) });
+  });
+  S.issues.filter(i => i.buyer === BUYER && i.status !== 'Open' && !i.seen).forEach(i => {
+    const text = { 'Credit promised': `${acct(i.sid).org} will credit ${money(i.amount)}.`, 'Replacement promised': `${acct(i.sid).org} will replace this on the next delivery.`, 'Supplier replied': `${acct(i.sid).org} says it is on the way.`, Disputed: `${acct(i.sid).org} disputes this. Tradelink is reviewing it.`, Closed: 'Tradelink reviewed this and closed it with no credit.' }[i.status];
+    items.push({ tone: i.status === 'Disputed' ? 'bad' : 'good', title: `Reply on ${i.oid}`, detail: text, acts: btn('issseen', 'OK', `data-id="${i.id}"`) });
+  });
+  S.invoices.filter(v => v.status === 'Needs review').forEach(v => items.push({ tone: 'warn', title: `Invoice ${v.no} is ${money(v.total - v.expected)} too high`, detail: v.flags.map(f => f.d).join(', ') + '.', acts: btn('invquery', 'Query supplier', `data-id="${v.no}"`, 'primary') + btn('invaccept', 'Accept', `data-id="${v.no}"`) }));
+  S.invoices.filter(v => v.status === 'Do not pay yet').forEach(v => items.push({ tone: 'bad', title: `Do not pay ${v.no} yet`, detail: `It shows a new bank account ending ${v.bank}. Phone ${acct(v.sid).name} on ${acct(v.sid).phone} before paying.`, acts: btn('invclear', 'I confirmed by phone', `data-id="${v.no}"`) }));
+  return items;
+}
+
+/* ---------- Buyer screens ---------- */
+const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
+const svc = (label, icon, attrs, n = 0) => `<button class="svc" ${attrs}><span class="thumb">${icon}${n ? `<span class="count">${n}</span>` : ''}</span><span>${label}</span></button>`;
+const stat = (value, label, attrs, alert = false) => `<button class="stat ${alert ? 'alert' : ''}" ${attrs}><b>${value}</b><span>${label}</span></button>`;
+function homeShell(m, search, services, stats, body) {
+  return `<div class="home-hero">
+      <div class="hero-top">${logo(m, 44)}<div><p>${greeting()}, ${esc(m.name.split(' ')[0])}</p><b>${esc(m.org)}</b></div>${themeBtn()}</div>
+      <button class="searchpill" ${search[1]}>${I.search}${search[0]}</button>
+    </div>
+    <div class="page home-body">
+      <section class="services" aria-label="Quick actions">${services.join('')}</section>
+      <section class="home-stats" aria-label="Summary">${stats.join('')}</section>
+      ${body}
+    </div>`;
+}
+const activityPanel = (list, attrs, count = 4) => `<section class="panel"><div class="sec-title"><h2>Recent activity</h2><button class="linkb" ${attrs}>See all</button></div>${list.slice(0, count).map(a => `<div class="mini"><span class="grow">${esc(a.what)}<small>${esc(a.who)} · ${when(a.at)}</small></span>${a.flag ? '<span class="pill bad">Blocked</span>' : ''}</div>`).join('') || '<p class="muted">No activity yet.</p>'}</section>`;
+function vToday() {
+  const m = me(), plan = restockPlan(), todo = todos();
+  const arriving = S.orders.filter(o => o.buyer === m.id && (o.status === 'Out for delivery' || (o.status === 'Delivered' && !o.check)));
+  const planTotal = plan.reduce((t, u) => t + u.qty * P(u.pid).price, 0), sids = [...new Set(plan.map(u => P(u.pid).sid))];
+  const openInv = S.invoices.filter(v => ['Needs review', 'Do not pay yet'].includes(v.status)).length, spent = weekSpend(), budget = S.settings.budget;
+  return homeShell(m, ['What do you need to order?', 'data-a="goto" data-v="new"'], [
+    svc('My usual', I.repeat, 'data-a="loadusual"'), svc('New order', I.order, 'data-a="goto" data-v="new"'),
+    svc('Ask', I.chat, 'data-a="goto" data-v="ask"'), svc('Track', I.truck, 'data-a="goto" data-v="orders"', arriving.length),
+    svc('Invoices', I.receipt, 'data-a="gotoinv"', openInv), svc('Insights', I.trend, 'data-a="goto" data-v="insights"'),
+    svc('Availability', I.stock, 'data-a="goto" data-v="catalogue"'), svc('Settings', I.gear, 'data-a="goto" data-v="settings"')
+  ], [
+    stat(money(spent), 'Spent this week', 'data-a="goto" data-v="insights"'),
+    stat(money(Math.max(0, budget - spent)), 'Left of budget', 'data-a="goto" data-v="insights"', spent > budget),
+    stat(arriving.length, 'Deliveries to check', 'data-a="goto" data-v="orders"'),
+    stat(todo.length, 'Things to do', 'data-a="goto" data-v="today"', todo.length > 0)
+  ], `<div class="cols">
+      <section class="panel"><h2>To do</h2>${todo.length ? `<div class="todos">${todo.map(t => `<div class="todo ${t.tone}"><b>${esc(t.title)}</b><p class="small muted">${esc(t.detail)}</p><div class="order-acts">${t.acts}</div></div>`).join('')}</div>` : '<p class="muted">You are all caught up.</p>'}</section>
+      <section class="panel"><div class="title-row"><h2>Ready for tomorrow</h2>${plan.length ? `<b class="num">${money(planTotal)}</b>` : ''}</div>
+      ${plan.length ? `<div>${plan.map(u => { const p = P(u.pid); return `<div class="plan-row">${thumb(p, 42)}<span class="grow"><b class="small">${esc(p.name)}</b><br><span class="small muted">${u.left.toFixed(1)} days left${u.qty < u.want ? `, only ${u.qty} available` : ''}</span></span><span class="num small" style="white-space:nowrap">${plural(u.qty, p.unit)}</span></div>`; }).join('')}</div>
+        <p class="small muted">${sids.map(s => `${esc(acct(s).org)}: ${cutoffText(acct(s))}`).join('<br>')}</p>
+        <div class="form-acts"><button class="btn primary" data-a="loadplan">Review and send</button><button class="btn" data-a="skipplan">Not today</button></div>`
+      : `<p class="muted">You have enough stock for the next few days.</p>`}
+      </section>
+    </div>
+    ${arriving.length ? `<section class="head"><h2>Arriving and to check</h2></section><div class="orders">${arriving.map(o => orderCard(o, 'buyer')).join('')}</div>` : ''}`);
+}
+function vSupplierHome() {
+  const m = me(), orders = S.orders.filter(o => o.sid === m.id), mine = catalogue().filter(p => p.sid === m.id);
+  const pending = orders.filter(o => o.status === 'Pending'), toSend = orders.filter(o => ['Accepted', 'Out for delivery'].includes(o.status));
+  const issues = S.issues.filter(i => i.sid === m.id && i.status === 'Open'), low = mine.filter(isLow), unconfirmed = mine.filter(p => p.unconfirmed);
+  const openValue = orders.filter(o => OPEN.includes(o.status)).reduce((t, o) => t + total(o), 0);
+  const todo = [
+    ...issues.map(i => ({ tone: 'warn', title: `${i.type === 'Late' ? 'Late delivery' : i.type === 'Invoice' ? 'Invoice query' : i.type + ' item'} on ${i.oid}`, detail: `${acct(i.buyer).org}${i.note ? ': ' + i.note : ''}`, v: 'orders', label: 'Answer' })),
+    ...unconfirmed.map(p => ({ tone: 'warn', title: `Confirm stock for ${p.name}`, detail: 'A buyer added this item.', v: 'inventory', label: 'Confirm' })),
+    ...low.map(p => ({ tone: health(p) === 'out' ? 'bad' : 'warn', title: `${p.name} is ${health(p) === 'out' ? 'out of stock' : 'low'}`, detail: `${avail(p)} available, reorder at ${p.reorder}.`, v: 'inventory', label: 'Receive stock' }))
+  ];
+  return homeShell(m, ['Find a product in your inventory', 'data-a="goto" data-v="inventory"'], [
+    svc('Orders', I.list, 'data-a="goto" data-v="orders"', pending.length), svc('Inventory', I.stock, 'data-a="goto" data-v="inventory"', low.length),
+    svc('Add product', I.box, 'data-a="supadd"'), svc('Problems', I.flag, 'data-a="goto" data-v="orders"', issues.length),
+    svc('Deliveries', I.truck, 'data-a="goto" data-v="orders"'), svc('Stock history', I.history, 'data-a="goto" data-v="history"'),
+    svc('Activity', I.pulse, 'data-a="goto" data-v="activity"'), svc('Settings', I.gear, 'data-a="goto" data-v="settings"')
+  ], [
+    stat(pending.length, 'New orders', 'data-a="goto" data-v="orders"', pending.length > 0),
+    stat(toSend.length, 'To deliver', 'data-a="goto" data-v="orders"'),
+    stat(money(openValue), 'Open order value', 'data-a="goto" data-v="orders"'),
+    stat(low.length, 'Low stock products', 'data-a="goto" data-v="inventory"', low.length > 0)
+  ], `<div class="cols">
+      <section class="panel"><h2>To do</h2>${todo.length ? `<div class="todos">${todo.map(x => `<div class="todo ${x.tone}"><b>${esc(x.title)}</b><p class="small muted">${esc(x.detail)}</p><div class="order-acts"><button class="btn" data-a="goto" data-v="${x.v}">${x.label}</button></div></div>`).join('')}</div>` : '<p class="muted">You are all caught up.</p>'}</section>
+      ${activityPanel(S.audit.filter(a => a.orgs.includes(m.id)), 'data-a="goto" data-v="activity"', 2)}
+    </div>
+    <section class="head"><h2>New orders</h2></section>
+    <div class="orders">${pending.map(o => orderCard(o, 'supplier')).join('') || '<div class="panel empty">No new orders right now.</div>'}</div>`);
+}
+function problemForm() {
+  const d = S.problem, o = S.orders.find(x => x.id === d.oid);
+  return `<div class="cat-form"><h3 class="small">Report a problem</h3><div class="fields">
+    <label class="field">Item<select class="input" id="pb-pid" data-pb="pid">${o.items.map(i => `<option value="${i.pid}"${d.pid === i.pid ? ' selected' : ''}>${esc(P(i.pid).name)}</option>`).join('')}</select></label>
+    <label class="field">What happened<select class="input" id="pb-type" data-pb="type">${['Short', 'Damaged', 'Wrong item', 'Expired'].map(t => `<option${d.type === t ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    <label class="field">Quantity affected<input class="input" id="pb-qty" type="number" min="1" data-pb="qty" value="${esc(d.qty)}"></label>
+    <label class="field">Note (optional)<input class="input" id="pb-note" data-pb="note" value="${esc(d.note)}"></label>
+  </div>${d.err ? `<p class="form-err">${esc(d.err)}</p>` : ''}<div class="form-acts"><button class="btn primary" data-a="pbsave">Send to supplier</button><button class="btn" data-a="pbclose">Cancel</button></div></div>`;
+}
+function partialForm(o) {
+  return `<div class="cat-form"><h3 class="small">How much can you send?</h3><div class="fields">${o.items.map(i => `<label class="field">${esc(P(i.pid).name)}<input class="input" id="pa-${i.pid}" type="number" min="0" max="${i.qty}" value="${i.qty}"></label>`).join('')}</div><div class="form-acts"><button class="btn primary" data-a="pasave" data-id="${o.id}">Send part order</button><button class="btn" data-a="paclose">Cancel</button></div></div>`;
+}
+function issueCard(i, mode) {
+  const p = P(i.pid), buyer = acct(i.buyer).org;
+  const acts = mode === 'supplier' && i.status === 'Open' ? `<div class="order-acts">
+    ${i.amount > 0 ? `<button class="btn primary" data-a="iss" data-id="${i.id}" data-to="credit">Credit ${money(i.amount)}</button>` : ''}
+    ${i.type === 'Late' ? `<button class="btn primary" data-a="iss" data-id="${i.id}" data-to="update">It is on the way</button>` : i.type === 'Invoice' ? '' : `<button class="btn" data-a="iss" data-id="${i.id}" data-to="replace">Replace next delivery</button>`}
+    ${i.type === 'Late' ? '' : `<button class="btn danger" data-a="iss" data-id="${i.id}" data-to="dispute">${i.type === 'Invoice' ? 'Invoice is correct' : 'Dispute'}</button>`}</div>` : '';
+  const label = i.type === 'Invoice' ? `Invoice query on ${i.oid}` : i.type === 'Late' ? `${i.oid} is late` : `${i.type}: ${i.qty} × ${esc(p.name)}`;
+  return `<article class="attn"><div class="attn-head"><b>${label}</b><span class="pill ${i.status === 'Open' ? 'warn' : i.status === 'Disputed' ? 'bad' : 'good'}">${i.status}</span></div>
+    <p class="small muted">${mode === 'supplier' ? esc(buyer) + ' · ' : ''}${i.oid} · ${when(i.at)}${i.note ? ' · ' + esc(i.note) : ''}</p>${acts}</article>`;
+}
+function vInvoices() {
+  const pill = s => `<span class="pill ${{ Matched: 'good', 'Needs review': 'warn', 'Query sent': 'info', 'Do not pay yet': 'bad', Accepted: 'plain', 'Cleared by phone': 'good' }[s]}">${s}</span>`;
+  const credits = S.issues.filter(i => i.buyer === BUYER && ['Credit promised', 'Credit received'].includes(i.status));
+  return `<section class="panel"><h2>Check an invoice</h2><p class="small muted">The real app reads a photo or PDF, then compares it with the order, the agreed price and the supplier's saved bank details. Try a sample:</p>
+      <div class="order-acts"><button class="btn" data-a="inv" data-v="match">Invoice that matches</button><button class="btn" data-a="inv" data-v="price">Higher price</button><button class="btn" data-a="inv" data-v="fee">Surprise fee</button><button class="btn" data-a="inv" data-v="bank">New bank details</button></div>
+      <p class="note">Tradelink checks invoices. It never makes payments.</p></section>
+    <div class="orders">${S.invoices.map(v => `<article class="attn"><div class="attn-head"><b class="mono">${v.no}</b>${pill(v.status)}</div>
+      <div class="split"><div><span>${esc(acct(v.sid).org)} · ${v.oid}</span><span class="num">${money(v.total)}</span></div><div class="small muted"><span>Expected from your order</span><span class="num">${money(v.expected)}</span></div></div>
+      ${v.flags.map(f => `<p class="small">${f.k}: ${esc(f.d)}.</p>`).join('')}${v.bankChanged ? `<p class="small">New bank account ending ${v.bank}. Saved account ends ${esc(acct(v.sid).bank || '')}.</p>` : ''}</article>`).join('')}</div>
+    ${credits.length ? `<section class="panel"><h2>Credits</h2><div class="feed">${credits.map(i => `<div><span>${esc(acct(i.sid).org)}<br><span class="small muted">${i.oid}</span></span><span style="text-align:right"><b class="num">${money(i.amount)}</b><br>${i.status === 'Credit promised' ? `<button class="rm" data-a="credited" data-id="${i.id}">Mark as received</button>` : '<span class="small muted">Received</span>'}</span></div>`).join('')}</div></section>` : ''}`;
+}
+function vInsights() {
+  const wk = [...S.weeks, { label: 'This week', amt: weekSpend() }], max = Math.max(...wk.map(w => w.amt), S.settings.budget), budget = S.settings.budget, spent = weekSpend();
+  const bySup = {};
+  S.orders.filter(o => o.buyer === BUYER && !['Rejected', 'Cancelled'].includes(o.status)).forEach(o => bySup[o.sid] = (bySup[o.sid] || 0) + total(o));
+  const supMax = Math.max(1, ...Object.values(bySup));
+  const caught = S.invoices.reduce((t, v) => t + v.flags.reduce((a, f) => a + f.amt, 0), 0) + S.issues.filter(i => i.buyer === BUYER && i.status.startsWith('Credit')).reduce((t, i) => t + i.amount, 0);
+  const rows = suppliers().filter(s => s.status === 'Active' && S.orders.some(o => o.buyer === BUYER && o.sid === s.id));
+  const buyerChanges = S.priceChanges.filter(c => S.usuals.some(u => u.pid === c.pid));
+  return `<div class="page"><div class="head"><h1>Insights</h1><p class="muted">Facts from your own orders, deliveries and invoices.</p></div>
+    <div class="tiles">
+      <div class="tile"><b>${money(spent)}</b><span class="small muted">Spent this week</span></div>
+      <div class="tile ${spent > budget ? 'alert' : ''}"><b>${money(Math.max(0, budget - spent))}</b><span class="small muted">Left of ${money(budget)} budget</span></div>
+      <div class="tile"><b>${money(caught)}</b><span class="small muted">Overcharges caught</span></div>
+      <div class="tile"><b>${buyerChanges.length}</b><span class="small muted">Price changes</span></div>
+    </div>
+    <div class="cols">
+      <section class="panel"><h2>Weekly spend</h2>
+        <div class="wbars" role="img" aria-label="Weekly spend for the last six weeks, ending ${money(spent)} this week">${wk.map((w, n) => `<div title="${w.label}: ${money(w.amt)}"><span class="small num">${n === wk.length - 1 ? money(w.amt) : ''}</span><i class="${n === wk.length - 1 ? 'now' : ''}" style="height:${Math.max(3, w.amt / max * 100)}%"></i><span class="wl">${w.label}</span></div>`).join('')}</div>
+        <p class="note">Example history for earlier weeks. This week updates as you order.</p></section>
+      <section class="panel"><h2>Spend by supplier</h2>${Object.entries(bySup).sort((a, b) => b[1] - a[1]).map(([s, v]) => `<div class="hbar"><span class="prod-row">${logo(acct(s), 24)}${esc(acct(s).org)}</span><b class="num">${money(v)}</b><i><u style="width:${v / supMax * 100}%"></u></i></div>`).join('')}</section>
+    </div>
+    <section class="head"><h2>Supplier record</h2></section>
+    <div class="orders">${rows.map(s => rec({ lead: logo(s, 36), title: esc(s.org), stats: [['On time', `${s.onTime || 100}%`], ['Problems', S.issues.filter(i => i.sid === s.id && i.buyer === BUYER).length], ['Cut-off', `${cutoffOf(s)}:00`]] })).join('')}</div>
+    <section class="panel"><h2>Price changes</h2><div class="feed">${buyerChanges.map(c => `<div><span>${esc(P(c.pid).name)}<br><span class="small muted">${when(c.at)}</span></span><span class="num">${money(c.old)} to ${money(c.now)}</span></div>`).join('') || '<p class="muted">No price changes on your usual items.</p>'}</div></section>
+  </div>`;
+}
+const appearance = () => `<section class="panel"><h2>Appearance</h2><div class="seg" role="group" aria-label="Appearance">${[['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => `<button data-a="settheme" data-v="${v}" aria-pressed="${S.theme === v}">${l}</button>`).join('')}</div></section>`;
+function vSupplierSettings() {
+  const m = me();
+  return `<div class="page"><div class="head"><h1>Settings</h1><p class="muted">Your business details and preferences.</p></div>${appearance()}
+    <section class="panel"><h2>Business profile</h2>${dl([['Business', m.org], ['Contact person', m.name], ['Phone', m.phone], ['Email', m.email], ['Address', m.address], ['Product range', m.range], ['Delivery days', m.delivery], ['Lead time', m.lead], ['Minimum order', m.minOrder], ['Order cut-off', cutoffOf(m) + ':00']])}</section></div>`;
+}
+function vAdminSettings() {
+  const m = me();
+  return `<div class="page"><div class="head"><h1>Settings</h1><p class="muted">Your account and preferences.</p></div>${appearance()}
+    <section class="panel"><h2>Account</h2>${dl([['Name', m.name], ['Team', m.org], ['Role', m.role], ['Email', m.email]])}</section></div>`;
+}
+function vSettings() {
+  const toggle = (k, title, text) => `<label class="tgl"><span><b>${title}</b><span class="small muted">${text}</span></span><input type="checkbox" id="set-${k}" data-c="setting" data-key="${k}" ${S.settings[k] ? 'checked' : ''}></label>`;
+  return `<div class="page"><div class="head"><h1>Settings</h1><p class="muted">Choose how Tradelink helps ${esc(me().org)}.</p></div>
+    ${appearance()}
+    <section class="panel"><h2>Weekly budget</h2><label class="field">Warn me above this amount (S$)<input class="input" id="set-budget" type="number" min="1" data-c="budget" value="${S.settings.budget}"></label></section>
+    <section class="panel"><h2>Alerts and suggestions</h2>
+      ${toggle('lowStock', 'Suggest what to reorder', 'Uses how fast you go through each usual item.')}
+      ${toggle('priceAlerts', 'Tell me about price changes', 'Shows changes to your usual items on Today.')}
+      ${toggle('budgetWarn', 'Warn me before I go over budget', 'Shows a warning when you review an order.')}
+    </section>
+    <section class="panel"><h2>What Tradelink can do</h2><div class="cols">
+      <div><b>It can</b><ul class="plain"><li>Read your order messages</li><li>Suggest quantities</li><li>Prepare orders for you to confirm</li><li>Compare invoices with your orders</li></ul></div>
+      <div><b>It cannot</b><ul class="plain"><li>Send an order without your confirmation</li><li>Make payments</li><li>Change bank details</li><li>See other shops' orders or prices</li></ul></div>
+    </div></section>
+    <section class="head"><h2>My usual items</h2></section>
+    <div class="orders">${S.usuals.map(u => rec({ lead: thumb(P(u.pid), 36), title: esc(P(u.pid).name), stats: [['In your shop', `<input class="input count-in" id="have-${u.pid}" type="number" min="0" data-c="have" data-key="${u.pid}" value="${u.have}" aria-label="Amount in your shop">`], ['Use per day', u.use], ['Days left', daysLeft(u).toFixed(1)]] })).join('')}</div>
+  </div>`;
+}
+
+/* ---------- Ask: rule-based stand-in for the assistant ---------- */
+const CHIPS = ['What should I order?', "What's arriving today?", 'How much did I spend this week?', 'How much is cooking oil?', 'Which supplier is most reliable?', '2 ctn eggs and 5 tins evaporated milk'];
+const cardOrder = o => `<div class="cc"><div class="cc-h"><b class="mono">${o.id}</b>${statusPill(o.status)}</div><p class="small muted">${esc(acct(o.sid).org)}</p>${o.items.map(i => `<div class="cc-l"><span>${i.qty} × ${esc(P(i.pid).name)}</span></div>`).join('')}<div class="cc-l"><span class="small muted">Total</span><b class="num">${money(total(o))}</b></div></div>`;
+function reply(q) {
+  const t = q.toLowerCase(), mine = S.orders.filter(o => o.buyer === BUYER);
+  if (/(other|another) (shop|buyer|customer)|seaside|everyone'?s/.test(t)) return { text: `I can only see orders and prices for ${acct(BUYER).org}.` };
+  const id = t.match(/ord-?\s*(\d+)/);
+  if (id) { const o = mine.find(x => x.id === 'ORD-' + id[1]); return o ? { text: `Here is ${o.id}.`, html: cardOrder(o) } : { text: 'I cannot find that order on your account.' }; }
+  if (/spen[dt]|budget/.test(t)) { const s = weekSpend(), b = S.settings.budget; return { text: `You have spent ${money(s)} this week, ${s > b ? money(s - b) + ' over' : money(b - s) + ' under'} your ${money(b)} budget.`, html: `<button class="btn" data-a="goto" data-v="insights">Open Insights</button>` }; }
+  if (/arriv|deliver|coming/.test(t)) { const a = mine.filter(o => o.status === 'Out for delivery'); return a.length ? { text: `${plural(a.length, 'delivery')} on the way.`, html: a.map(cardOrder).join('') } : { text: 'Nothing is on the way right now.' }; }
+  if (/running low|what should i order|need to order|\blow\b/.test(t)) { const p = restockPlan(); return p.length ? { text: `${plural(p.length, 'item')} will run out soon.`, html: `<div class="cc">${p.map(u => `<div class="cc-l"><span>${esc(P(u.pid).name)}</span><span class="small muted">${u.left.toFixed(1)} days left</span></div>`).join('')}</div><button class="btn primary" data-a="loadplan">Review and send</button>` } : { text: 'You have enough stock for the next few days.' }; }
+  if (/usual|reorder|same as/.test(t)) return { text: 'I can load your usual items for you to review.', html: '<button class="btn primary" data-a="loadusual">Load my usual</button>' };
+  if (/reliab|on time|best supplier|late/.test(t)) { const r = suppliers().filter(s => s.status === 'Active').sort((a, b) => (b.onTime || 0) - (a.onTime || 0))[0]; return { text: `${r.org} has your best record, at ${r.onTime}% on time.`, html: `<button class="btn" data-a="goto" data-v="insights">See all suppliers</button>` }; }
+  if (/price|how much|cost/.test(t)) {
+    const hit = matchProducts(t.replace(/price|how much|cost|is|of|the|does|what|\?/g, ' ').replace(/\s+/g, ' ').trim())[0];
+    if (!hit) return { text: 'I could not find that product in the catalogue.' };
+    const p = hit.p, u = S.usuals.find(x => x.pid === p.id);
+    return { text: `${p.name} is ${money(p.price)} per ${p.unit}.`, html: `<div class="cc"><div class="cc-l"><span>Supplier</span><span>${esc(acct(p.sid).org)}</span></div><div class="cc-l"><span>Available</span><span class="num">${p.unconfirmed ? 'To confirm' : avail(p)}</span></div>${u ? `<div class="cc-l"><span>You last paid</span><span class="num">${money(u.last)}</span></div>` : ''}</div>` };
+  }
+  const lines = readOrder(q);
+  if (lines.some(l => l.pid || l.options.length)) {
+    S.chatDrafts.push(q);
+    return { text: 'Here is what I read. Nothing has been sent.', html: `<div class="cc">${lines.map(l => `<div class="cc-l"><span>${l.pid ? `${l.qty} × ${esc(P(l.pid).name)}` : esc(l.raw)}</span><span class="small muted">${l.state === 'ok' ? 'Matched' : l.state === 'check' ? 'Check this' : 'Not found'}</span></div>`).join('')}</div><button class="btn primary" data-a="chatreview" data-id="${S.chatDrafts.length - 1}">Review order</button>` };
+  }
+  return { text: 'I did not catch that. Type your order as you would text a supplier, or ask about prices, deliveries or spending.' };
+}
+function sendChat(text) {
+  const q = text.trim(); if (!q) return;
+  S.chat.push({ from: 'me', text: q }); S.chatText = ''; S.typing = true; S.scrollChat = true; render();
+  setTimeout(() => { S.typing = false; S.chat.push({ from: 'bot', ...reply(q) }); S.scrollChat = true; render(); }, 450);
+}
+function vAsk() {
+  return `<div class="page chatpage"><div class="head"><h1>Ask Tradelink</h1><p class="muted">Order in your own words or ask about your shop.</p></div>
+    <div class="thread">${S.chat.map(m => m.from === 'me' ? `<div class="um">${esc(m.text)}</div>` : `<div class="bm"><p>${esc(m.text)}</p>${m.html || ''}</div>`).join('')}${S.typing ? '<div class="bm muted">Thinking...</div>' : ''}</div>
+    <div class="composer"><div class="chips">${CHIPS.map(c => `<button class="chip" data-a="ask" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      <div class="send"><input class="input" id="chat-in" data-i="chatText" placeholder="Message Tradelink" aria-label="Message Tradelink" value="${esc(S.chatText)}"><button class="btn primary" data-a="send">Send</button></div>
+      <p class="note">Prototype: simple rules stand in for the AI assistant.</p></div></div>`;
+}
+
+/* ---------- Render ---------- */
+function view() {
+  const v = S.view[S.role];
+  if (S.role === 'buyer') return ({ today: vToday, new: vNew, ask: vAsk, orders: () => vOrders('buyer'), insights: vInsights, catalogue: vCatalogue, settings: vSettings })[v]();
+  if (S.role === 'supplier' && me().status === 'Invited') return vInvite();
+  if (S.role === 'supplier') return ({ home: vSupplierHome, orders: () => vOrders('supplier'), inventory: vInventory, history: vHistory, activity: vActivity, settings: vSupplierSettings })[v]();
+  if (S.detail) return S.detail.t === 'supplier' ? vSupplierDetail(acct(S.detail.id)) : vBuyerDetail(acct(S.detail.id));
+  return ({ overview: vOverview, notifications: vNotifications, attention: vAttention, orders: () => vOrders('admin'), suppliers: vSuppliers, users: vUsers, operators: vOperators, status: vStatus, audit: vAudit, settings: vAdminSettings })[v]();
+}
+function render() {
+  const a = document.activeElement, fid = a && a.id, pos = a && a.selectionStart;
+  const main = document.getElementById('main'), top = main.scrollTop;
+  const seg = (name, val, label, cur) => `<button data-a="${name}" data-v="${val}" aria-pressed="${cur === val}">${label}</button>`;
+  document.getElementById('demo').innerHTML = `
+    <div class="demo-group"><span>View as</span><div class="seg">${seg('role', 'buyer', 'Buyer', S.role)}${seg('role', 'supplier', 'Supplier', S.role)}${seg('role', 'admin', 'Admin', S.role)}</div>
+    ${S.role === 'supplier' ? `<select id="sup" data-c="supplier" aria-label="Supplier account">${suppliers().filter(s => ['Active', 'Invited'].includes(s.status)).map(s => `<option value="${s.id}"${S.supplierId === s.id ? ' selected' : ''}>${esc(s.org)}${s.status === 'Invited' ? ' (invited)' : ''}</option>`).join('')}</select>` : ''}</div>
+    <div class="demo-group device-group"><span>Screen</span><div class="seg">${seg('device', 'phone', 'Phone', S.device)}${seg('device', 'tablet', 'Tablet', S.device)}${seg('device', 'laptop', 'Laptop', S.device)}</div></div>
+    <button class="reset" data-a="reset">Reset demo</button>`;
+  document.getElementById('frame').dataset.device = S.device;
+  const m = me();
+  document.getElementById('top').innerHTML = `<div class="brand">${BRAND}tradelink</div><div class="top-org">${logo(m, 24)}<span>${esc(m.org)}</span></div>${themeBtn()}`;
+  const home = (S.role === 'buyer' && S.view.buyer === 'today') || (S.role === 'supplier' && S.view.supplier === 'home' && m.status !== 'Invited') || (S.role === 'admin' && S.view.admin === 'overview' && !S.detail);
+  const cartLines = S.role === 'buyer' && !(S.view.buyer === 'new' && S.showReview) ? (S.review || []) : [];
+  const shell = document.getElementById('shell'), cart = document.getElementById('cart');
+  shell.classList.toggle('home', home); shell.classList.toggle('has-cart', cartLines.length > 0);
+  cart.hidden = !cartLines.length;
+  const cartTotal = cartLines.reduce((t, l) => t + (l.pid ? P(l.pid).price * l.qty : 0), 0);
+  cart.innerHTML = cartLines.length ? `<button data-a="cart"><span>${plural(cartLines.length, 'item')}</span><b class="num">${money(cartTotal)}</b><span class="go">View order</span></button>` : '';
+  const counts = S.role === 'admin' ? { attention: attention().length, notifications: S.notes.filter(n => !n.read).length } : {};
+  const navItems = S.role === 'supplier' && m.status === 'Invited' ? [] : NAV[S.role];
+  const extra = navItems.length > 5 ? navItems.slice(4) : [], extraIds = extra.map(x => x[0]);
+  const extraCount = extra.reduce((t, x) => t + (counts[x[0]] || 0), 0), inExtra = extraIds.includes(S.view[S.role]);
+  document.getElementById('nav').innerHTML = navItems.map(([id, label, icon]) => `<button class="${extraIds.includes(id) ? 'nav-extra' : ''}" data-a="nav" data-v="${id}" ${S.view[S.role] === id ? 'aria-current="page"' : ''}>${icon}<span>${label}</span>${counts[id] ? `<span class="count">${counts[id]}</span>` : ''}</button>`).join('') + (extra.length ? `<button class="nav-more" data-a="more" ${inExtra ? 'aria-current="page"' : ''}>${I.more}<span>More</span>${extraCount ? `<span class="count">${extraCount}</span>` : ''}</button>` : '');
+  const sheet = document.getElementById('sheet');
+  sheet.hidden = !S.moreOpen;
+  sheet.innerHTML = S.moreOpen ? `<div class="sheet-close" data-a="moreclose" style="position:absolute;inset:0"></div><div class="sheet" style="position:relative"><h2>More</h2>${extra.map(([id, label, icon]) => `<button class="item" data-a="nav" data-v="${id}">${icon}<span>${label}</span>${counts[id] ? `<span class="count">${counts[id]}</span>` : ''}</button>`).join('')}</div>` : '';
+  document.getElementById('who').innerHTML = `${logo(m, 34)}<div class="who-t">${esc(m.name)}<span>${esc(m.org)} · ${m.role}</span><span>Example data</span></div>`;
+  main.innerHTML = view();
+  main.scrollTop = S.scrollChat ? main.scrollHeight : top; S.scrollChat = false;
+  if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { if (pos != null) el.setSelectionRange(pos, pos); } catch (e) {} } }
+}
+
+/* ---------- Events ---------- */
+const L = id => S.review.find(l => l.id === +id);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+  const { a, v, id, d, to, t, key } = b.dataset;
+  if (a === 'role') { S.moreOpen = false; S.role = v; S.q = ''; S.lowOnly = false; S.receiving = null; S.detail = null; S.pform = null; document.getElementById('main').scrollTop = 0; }
+  if (a === 'device') S.device = v;
+  if (a === 'nav' || a === 'goto') { S.moreOpen = false; if (v === 'new') S.showReview = false; S.view[S.role] = v; S.q = ''; S.receiving = null; S.detail = null; S.pform = null; document.getElementById('main').scrollTop = 0; }
+  if (a === 'reset') { Object.assign(S, seed(), { text: SAMPLE, review: null, q: '', lowOnly: false, receiving: null, detail: null, draft: null, addingLine: null, pform: null, supplierId: 's1' }); toast('Demo reset.'); }
+  if (a === 'pfopen') S.pform = { name: '', unit: 'pack', price: '', stock: '', reorder: '', err: '' };
+  if (a === 'pfclose') S.pform = null;
+  if (a === 'pfsave') saveProduct();
+  if (a === 'read') {
+    S.reading = true; render();
+    setTimeout(() => {
+      S.reading = false; S.draft = null; S.addingLine = null; const lines = readOrder(S.text);
+      if (!lines.length) toast('No items found. Add a quantity and a product name.');
+      else { mergeCart(lines); S.ai.msgs++; S.ai.lines += lines.length; S.ai.matched += lines.filter(l => l.state === 'ok').length; S.ai.flagged += lines.filter(l => l.state !== 'ok').length; }
+      render();
+    }, 650);
+    return;
+  }
+  if (a === 'loadplan') loadPlan();
+  if (a === 'loadusual') loadUsual();
+  if (a === 'skipplan') { S.skipped = restockPlan().map(u => u.pid); toast('Skipped for today.'); }
+  if (a === 'allhere') allHere(id);
+  if (a === 'pbopen') openProblem(id);
+  if (a === 'pbclose') S.problem = null;
+  if (a === 'pbsave') saveProblem();
+  if (a === 'nothere') notHere(id);
+  if (a === 'iss') answerIssue(id, to);
+  if (a === 'dsp') closeDispute(id, to);
+  if (a === 'issseen') S.issues.find(i => i.id === id).seen = true;
+  if (a === 'credited') { S.issues.find(i => i.id === id).status = 'Credit received'; toast('Credit recorded.'); }
+  if (a === 'pcok') S.priceChanges.find(c => c.id === id).status = 'Seen';
+  if (a === 'pastart') startPartial(id);
+  if (a === 'paclose') S.partial = null;
+  if (a === 'pasave') savePartial(id);
+  if (a === 'paskip') S.partials.find(x => x.id === id).status = 'Skipped';
+  if (a === 'parest') { const x = S.partials.find(y => y.id === id); x.status = 'Added'; mergeCart([usualLine(x.pid, x.asked - x.sent, `Remainder of ${x.oid}`, 'suggested')]); }
+  if (a === 'pricestart') S.repricing = id;
+  if (a === 'pricecancel') S.repricing = null;
+  if (a === 'pricesave') savePrice(id);
+  if (a === 'ordertab') S.orderTab = v;
+  if (a === 'inv') addInvoice(v);
+  if (a === 'invquery') queryInvoice(id);
+  if (a === 'invaccept') S.invoices.find(x => x.no === id).status = 'Accepted';
+  if (a === 'invclear') { S.invoices.find(x => x.no === id).status = 'Cleared by phone'; log(`Confirmed bank details for ${id} by phone`); }
+  if (a === 'swap') { const l = L(id); setProduct(l, v); l.state = 'ok'; }
+  if (a === 'ask') { sendChat(v); return; }
+  if (a === 'send') { sendChat(S.chatText); return; }
+  if (a === 'chatreview') mergeCart(readOrder(S.chatDrafts[+id]));
+  if (a === 'theme') setTheme(isDark() ? 'light' : 'dark');
+  if (a === 'settheme') setTheme(v);
+  if (a === 'supadd') { S.view.supplier = 'inventory'; S.pform = { name: '', unit: 'pack', price: '', stock: '', reorder: '', err: '' }; }
+  if (a === 'catopen') openCatalogueForm(L(id));
+  if (a === 'catclose') { S.draft = null; S.addingLine = null; }
+  if (a === 'catsave') saveCatalogue();
+  if (a === 'detail') { S.detail = { t, id }; document.getElementById('main').scrollTop = 0; }
+  if (a === 'back') { S.view.admin = S.detail.t === 'supplier' ? 'suppliers' : 'users'; S.detail = null; }
+  if (a === 'activate') setSupplierStatus(id, 'Active');
+  if (a === 'suspend') setSupplierStatus(id, 'Suspended');
+  if (a === 'resend') resendInvite(id);
+  if (a === 'acceptinv') acceptInvite(id);
+  if (a === 'declineinv') declineInvite(id);
+  if (a === 'readall') S.notes.forEach(n => n.read = true);
+  if (a === 'dismiss') S.dismissed.push(key);
+  if (a === 'addop') {
+    const name = document.getElementById('op-name').value.trim();
+    if (name.length < 2) { toast('Enter the operator name.'); return; }
+    S.operators.push({ id: 'o' + S.nextOp++, name, team: document.getElementById('op-team').value, shift: document.getElementById('op-shift').value.trim() || 'Not set', status: 'Offline' });
+    log('Added operator ' + name); toast(`${name} added.`);
+  }
+  if (a === 'manual') { S.review = S.review || []; S.showReview = true; }
+  if (a === 'edit') S.showReview = false;
+  if (a === 'cart') { S.showReview = true; S.view.buyer = 'new'; }
+  if (a === 'more') S.moreOpen = true;
+  if (a === 'moreclose' && e.target === b) S.moreOpen = false;
+  if (a === 'gotoinv') { S.orderTab = 'invoices'; S.view.buyer = 'orders'; }
+  if (a === 'cat') S.cat = v;
+  if (a === 'attnf') S.attnFilter = v;
+  if (a === 'step') { const l = L(id); l.qty = Math.max(1, l.qty + +d); }
+  if (a === 'rm') { S.review = S.review.filter(l => l.id !== +id); if (S.addingLine === +id) { S.addingLine = null; S.draft = null; } }
+  if (a === 'place') placeOrder();
+  if (a === 'advance') advance(id, to);
+  if (a === 'lowonly') S.lowOnly = !S.lowOnly;
+  if (a === 'recv') S.receiving = id;
+  if (a === 'recvcancel') S.receiving = null;
+  if (a === 'recvsave') receive(id);
+  if (a === 'addcat') addToCart(id);
+  render();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'chat-in') { e.preventDefault(); sendChat(S.chatText); } });
+document.addEventListener('input', e => {
+  const pf = e.target.dataset.pf; if (pf && S.pform) { S.pform[pf] = e.target.value; S.pform.err = ''; document.querySelector('.form-err')?.remove(); return; }
+  const pb = e.target.dataset.pb; if (pb && S.problem) { S.problem[pb] = e.target.value; S.problem.err = ''; document.querySelector('.form-err')?.remove(); return; }
+  const dr = e.target.dataset.dr; if (dr && S.draft) { S.draft[dr] = e.target.value; S.draft.err = ''; document.querySelector('.form-err')?.remove(); return; }
+  const k = e.target.dataset.i; if (!k) return;
+  S[k] = e.target.value; if (k === 'q') render();
+});
+document.addEventListener('change', e => {
+  const t = e.target, c = t.dataset.c; if (!c) return;
+  if (c === 'supplier') { S.supplierId = t.value; S.receiving = null; S.pform = null; }
+  if (t.dataset.pb) return;
+  if (c === 'setting') S.settings[t.dataset.key] = t.checked;
+  if (c === 'budget') { const n = Number(t.value); if (n > 0) S.settings.budget = n; }
+  if (c === 'have') { const n = Number(t.value); if (n >= 0) { S.usuals.find(u => u.pid === t.dataset.key).have = n; S.skipped = []; } }
+  if (c === 'dsup') S.draft.sup = t.value;
+  if (c === 'assign') S.assign[t.dataset.key] = t.value;
+  if (c === 'pick') { const l = L(t.dataset.id); if (S.addingLine === l.id) { S.addingLine = null; S.draft = null; } if (t.value) { setProduct(l, t.value); if (l.state !== 'manual') l.state = 'ok'; } else l.pid = null; }
+  if (c === 'qty') { const l = L(t.dataset.id), n = parseInt(t.value, 10); l.qty = Number.isInteger(n) && n > 0 ? n : 1; }
+  if (c === 'add' && t.value) addToCart(t.value);
+  render();
+});
+if (S.theme !== 'system') document.documentElement.dataset.theme = S.theme;
+render();
+</script>
+
+</body>
+</html>

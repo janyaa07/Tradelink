@@ -1,0 +1,1 @@
+A circular logo for every shop and supplier. A business without artwork gets a badge with up to two initials on a fixed colour. These logos are the one place colours beyond green may appear. The examples are fictional.

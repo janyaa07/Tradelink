@@ -1,0 +1,1 @@
+`tradelink-mark.svg` is the main mark in dark and mid green, for light grounds. `tradelink-mark-white.svg` is white and pale green, for hero and dark grounds. `tradelink-icon.svg` is the app icon on a dark green square. Their inks are fixed. Keep clear space of a quarter of the mark width, and do not recolour, rotate or outline them.

@@ -1,0 +1,21 @@
+<!-- @dsCard height=288 -->
+<!--
+blocks: hero-2 and accent at full value, accent-soft for relief, 72px tiles from a 8px gap (space-8), corners radius-lg.
+arrangement: stacked crates on a pallet grid, bleeding off the right edge, some merged two-wide.
+pattern: geometric modular tiles, chosen because the product is stacked cartons and tap-first tiles.
+scales: pitch 80px (72 + space-8), radius-lg 16px.
+-->
+<style>
+html, body { margin: 0; height: 100%; background: var(--bg); }
+.c { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--bg); }
+.c svg { position: absolute; inset: 0; }
+.a { fill: var(--hero-2); } .b { fill: var(--accent); } .d { fill: var(--accent-soft); }
+.c rect { rx: var(--radius-lg); }
+.n { position: absolute; left: 32px; bottom: 58px; font: 800 80px/.95 var(--font-sans); letter-spacing: -.03em; color: var(--ink); }
+.t { position: absolute; left: 34px; bottom: 30px; font-size: 14px; color: var(--muted); }
+</style>
+<div class="c"><svg viewBox="0 0 960 288" aria-hidden="true">
+<rect class="a" x="504" y="24" width="152" height="72"/><rect class="d" x="664" y="24" width="72" height="72"/><rect class="b" x="744" y="24" width="72" height="72"/><rect class="a" x="824" y="24" width="152" height="72"/>
+<rect class="d" x="504" y="104" width="72" height="72"/><rect class="b" x="584" y="104" width="152" height="72"/><rect class="a" x="744" y="104" width="72" height="72"/><rect class="d" x="824" y="104" width="72" height="72"/><rect class="b" x="904" y="104" width="72" height="72"/>
+<rect class="b" x="504" y="184" width="72" height="72"/><rect class="a" x="584" y="184" width="72" height="72"/><rect class="d" x="664" y="184" width="152" height="72"/><rect class="b" x="824" y="184" width="72" height="72"/><rect class="a" x="904" y="184" width="72" height="72"/>
+</svg><div class="n">Tradelink</div><div class="t">Order stock the way you text a supplier.</div></div>

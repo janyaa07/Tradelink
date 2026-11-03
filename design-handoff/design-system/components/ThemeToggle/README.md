@@ -1,0 +1,1 @@
+Switches between light and dark. Sits in the top bar, the rail and the phone home hero. Provide an `aria-label` that names the mode it switches to. Settings also offers System, Light and Dark through Segmented.

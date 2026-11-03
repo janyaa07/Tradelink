@@ -1,0 +1,54 @@
+/* Grid areas only. Phone: top bar, main, cart, bottom nav. From 760px: a 228px side rail beside main. */
+.shell {
+  height: 100dvh;
+  display: grid;
+  grid-template: "top" auto "main" minmax(0, 1fr) "cart" auto "nav" auto / minmax(0, 1fr);
+}
+
+.top {
+  grid-area: top;
+}
+
+.home .top {
+  display: none;
+}
+
+.nav {
+  grid-area: nav;
+}
+
+.who {
+  display: none;
+}
+
+.main {
+  grid-area: main;
+  overflow: auto;
+}
+
+.cart {
+  grid-area: cart;
+}
+
+@media (min-width: 760px) {
+  .shell {
+    grid-template: "top main" auto "nav main" minmax(0, 1fr) "who cart" auto / 228px minmax(0, 1fr);
+  }
+
+  .home .top {
+    display: flex;
+  }
+
+  .who {
+    display: flex;
+    grid-area: who;
+  }
+
+  .main {
+    grid-area: 1 / 2 / 4 / 3;
+  }
+
+  .hasCart .main {
+    grid-area: 1 / 2 / 3 / 3;
+  }
+}
