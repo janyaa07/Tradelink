@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { callRpc } from "@/data/rpc";
+import { plural } from "@/domain/catalogue";
 import { formatMoney, toCents } from "@/domain/money";
 import { addToCartAction, placeCartAction } from "@/features/ask/actions";
 import { productCartLine } from "@/features/ask/cart-lines";
@@ -333,7 +334,7 @@ export const BUYER_TOOLS: AiTool[] = [
       const inShop = input.in_shop ?? usual?.inShop ?? 0;
       return {
         title: `${usual ? "Update" : "Add"} ${item.name} in your usual items`,
-        details: [`Usual ${input.usual_qty} ${item.unit}`, `Uses ${usePerDay} a day, ${inShop} in the shop`],
+        details: [`Usual ${plural(input.usual_qty, item.unit)}`, `Uses ${usePerDay} a day, ${inShop} in the shop`],
         confirmLabel: usual ? "Update usual" : "Add to usual",
         args: { ...input, use_per_day: usePerDay, in_shop: inShop },
       };

@@ -37,6 +37,7 @@ import {
   upsertConversation,
   type ChatMessage,
   type Conversation,
+  type Segment,
 } from "./history";
 
 export type AiRole = "buyer" | "supplier";
@@ -64,7 +65,52 @@ type StreamEvent =
   | { type: "cards"; cards: AskCard[] }
   | { type: "proposal"; proposal: AiProposal }
   | { type: "error"; message: string }
+  | { type: "break" }
   | { type: "done" };
+
+/** Shown while Tradelink AI works, so a wait never looks stuck. Tool updates take over when they come. */
+const WAITING: Record<AiRole, string[]> = {
+  buyer: [
+    "Reading your message",
+    "Checking your shop",
+    "Looking at orders and prices",
+    "Comparing your suppliers",
+    "Working it out",
+    "Putting it together",
+  ],
+  supplier: [
+    "Reading your message",
+    "Checking your orders",
+    "Looking at your stock",
+    "Checking buyers and dates",
+    "Working it out",
+    "Putting it together",
+  ],
+};
+const WAITING_STEP_MS = 1600;
+const QUIET_AFTER_TEXT_MS = 900;
+
+/** Adds one streamed piece to a reply, keeping text, cards and actions in arrival order. */
+function addPiece(message: ChatMessage, piece: { text: string; newParagraph: boolean } | { card: AskCard } | { action: AskAction }): ChatMessage {
+  const reply = message.reply;
+  const segments: Segment[] = [...(message.segments ?? [])];
+  if ("text" in piece) {
+    const lastSegment = segments.at(-1);
+    if (lastSegment?.kind === "text") {
+      const joiner = piece.newParagraph && lastSegment.text.trim() ? "\n\n" : "";
+      segments[segments.length - 1] = { kind: "text", text: lastSegment.text + joiner + piece.text };
+    } else {
+      segments.push({ kind: "text", text: piece.text });
+    }
+    return { ...message, segments, reply: { ...reply, text: reply.text + (piece.newParagraph ? "\n\n" : "") + piece.text } };
+  }
+  if ("card" in piece) {
+    segments.push({ kind: "card", index: reply.cards.length });
+    return { ...message, segments, reply: { ...reply, cards: [...reply.cards, piece.card] } };
+  }
+  segments.push({ kind: "action", index: reply.actions.length });
+  return { ...message, segments, reply: { ...reply, actions: [...reply.actions, piece.action] } };
+}
 
 /** Where the person goes next after a confirmed change. */
 function linkAfter(role: AiRole, tool: string): AskAction | null {
@@ -314,6 +360,33 @@ function MessageView({ message, handlers }: { message: ChatMessage; handlers: Re
     );
   }
   const { text, cards, actions } = message.reply;
+  if (message.segments) {
+    return (
+      <div className="flex gap-3">
+        <AssistantAvatar />
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-3 pt-1">
+          <span className="sr-only">Tradelink AI: </span>
+          {message.segments.map((segment, index) => {
+            if (segment.kind === "text") {
+              return segment.text.trim() ? (
+                <p key={index} className="whitespace-pre-line leading-relaxed [overflow-wrap:anywhere]">
+                  {segment.text.trim()}
+                </p>
+              ) : null;
+            }
+            if (segment.kind === "card") {
+              const card = cards[segment.index];
+              return card ? <CardView key={index} card={card} /> : null;
+            }
+            const action = actions[segment.index];
+            return action ? (
+              <ReplyActions key={index} actions={[action]} done={message.done} resolved={message.resolved ?? {}} handlers={handlers} />
+            ) : null;
+          })}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex gap-3">
       <AssistantAvatar />
@@ -448,6 +521,8 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [waitStep, setWaitStep] = useState(0);
+  const lastTextAt = useRef(0);
   const [working, setWorking] = useState(false);
   const nextId = useRef(1);
   const currentIdRef = useRef(currentId);
@@ -466,6 +541,12 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!thinking) return;
+    const timer = setInterval(() => setWaitStep((step) => step + 1), WAITING_STEP_MS);
+    return () => clearInterval(timer);
+  }, [thinking]);
 
   useEffect(() => {
     if (messages.length > 0 || thinking) endRef.current?.scrollIntoView({ block: "end" });
@@ -540,10 +621,20 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
     setDraft("");
     setThinking(true);
     setStatus(null);
+    setWaitStep(0);
+    lastTextAt.current = 0;
     const replyId = nextId.current++;
-    commit([...messagesRef.current, { id: replyId, from: "tradelink", reply: { text: "", cards: [], actions: [] }, done: false }]);
-    const addText = (text: string) =>
-      patch(replyId, (message) => ({ ...message, reply: { ...message.reply, text: message.reply.text + text } }));
+    commit([
+      ...messagesRef.current,
+      { id: replyId, from: "tradelink", reply: { text: "", cards: [], actions: [] }, done: false, segments: [] },
+    ]);
+    let newParagraph = false;
+    const held: ({ card: AskCard } | { action: AskAction })[] = [];
+    const addText = (text: string) => {
+      lastTextAt.current = Date.now();
+      patch(replyId, (message) => addPiece(message, { text, newParagraph }));
+      newParagraph = false;
+    };
     try {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
@@ -566,21 +657,20 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
           if (event.type === "text") {
             addText(event.delta);
             setStatus(null);
-          } else if (event.type === "status") setStatus(event.text);
+          } else if (event.type === "status") {
+            setStatus(event.text);
+            setWaitStep(0);
+          } else if (event.type === "break") newParagraph = true;
           else if (event.type === "error") addText(event.message);
-          else if (event.type === "cards") {
-            patch(replyId, (message) => ({ ...message, reply: { ...message.reply, cards: [...message.reply.cards, ...event.cards] } }));
-          } else if (event.type === "proposal") {
-            patch(replyId, (message) => ({
-              ...message,
-              reply: { ...message.reply, actions: [...message.reply.actions, { kind: "confirm", proposal: event.proposal }] },
-            }));
-          }
+          else if (event.type === "cards") held.push(...event.cards.map((card) => ({ card })));
+          else if (event.type === "proposal") held.push({ action: { kind: "confirm", proposal: event.proposal } });
         }
       }
     } catch {
       addText(ASK_COPY.unavailable);
     }
+    // The answer leads; its cards and confirm cards follow underneath, so nothing jumps while it is written.
+    for (const piece of held) patch(replyId, (message) => addPiece(message, piece));
     const reply = messagesRef.current.find((message) => message.id === replyId);
     if (reply && !reply.reply.text.trim() && reply.reply.cards.length === 0 && reply.reply.actions.length === 0) addText(ASK_COPY.unavailable);
     commit(messagesRef.current);
@@ -744,10 +834,12 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
             {messages.map((message) => (
               <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
             ))}
-            {thinking && (status || !messages.at(-1)?.reply.text.trim()) ? (
-              <div className="flex items-center gap-3">
+            {thinking && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
+              <div className="flex items-center gap-3" aria-live="polite">
                 <AssistantAvatar />
-                <p className={cx(styles.thinking, "font-medium")}>{status ? `${status}...` : "Thinking..."}</p>
+                <p key={`${status ?? ""}${waitStep}`} className={cx(styles.thinking, styles.waitLine, "font-medium")}>
+                  {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}...
+                </p>
               </div>
             ) : null}
           </div>

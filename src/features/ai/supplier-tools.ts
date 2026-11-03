@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { getCatalogue } from "@/data/catalogue";
 import { callRpc } from "@/data/rpc";
+import { plural } from "@/domain/catalogue";
 import { formatMoney } from "@/domain/money";
 import { toOrderCard } from "@/features/ask/queries";
 import type { AskCard } from "@/domain/ask/types";
@@ -183,7 +184,7 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       const item = await ownProduct(product_id);
       if (!item) return { error: "That product is not in your inventory." };
       return {
-        title: `Add ${qty} ${item.unit} of ${item.name} to stock`,
+        title: `Add ${plural(qty, item.unit)} of ${item.name} to stock`,
         details: [`On hand now ${item.onHand}, after ${item.onHand + qty}`],
         confirmLabel: "Add stock",
         args: { product_id, qty },

@@ -138,3 +138,21 @@
 .sheet::backdrop {
   background: var(--scrim);
 }
+
+/* Each waiting line slides in gently as the next one replaces it. */
+.waitLine {
+  animation: wait-in 260ms ease-out;
+}
+
+@keyframes wait-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waitLine {
+    animation: none;
+  }
+}

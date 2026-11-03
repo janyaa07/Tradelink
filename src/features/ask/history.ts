@@ -90,6 +90,16 @@ const messageSchema = z.object({
   done: z.boolean(),
   /** Tradelink AI confirm cards the person answered, by proposal id. */
   resolved: z.record(z.string(), z.enum(["done", "skipped"])).optional(),
+  /** Tradelink AI replies: text, cards and confirm cards in the order they arrived. */
+  segments: z
+    .array(
+      z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("text"), text: z.string() }),
+        z.object({ kind: z.literal("card"), index: z.number().int().min(0) }),
+        z.object({ kind: z.literal("action"), index: z.number().int().min(0) }),
+      ]),
+    )
+    .optional(),
 });
 
 const conversationSchema = z.object({
@@ -105,7 +115,11 @@ export type ChatMessage = {
   reply: AskReply;
   done: boolean;
   resolved?: Record<string, "done" | "skipped">;
+  segments?: Segment[];
 };
+
+/** One piece of a streamed reply. Cards and actions point into reply.cards and reply.actions. */
+export type Segment = { kind: "text"; text: string } | { kind: "card"; index: number } | { kind: "action"; index: number };
 export type Conversation = { id: string; title: string; updatedAt: string; messages: ChatMessage[] };
 
 function storageKey(userId: string): string {
