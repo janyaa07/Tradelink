@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { filterInventory, inventoryHref, movementSource, movementUnits, needsReorder, signedUnits, stockBarPercent } from "./stock";
+import {
+  filterInventory,
+  inventoryHref,
+  movementReason,
+  movementSource,
+  movementUnits,
+  needsReorder,
+  parseInventoryFilter,
+  parseMovementType,
+  signedUnits,
+  stockBarPercent,
+  stockHistoryHref,
+} from "./stock";
 
 describe("stockBarPercent", () => {
   it("measures available stock against twice the reorder level", () => {
@@ -27,13 +39,25 @@ describe("filterInventory", () => {
   ];
 
   it("searches name and SKU, ignoring case", () => {
-    expect(filterInventory(items, "RICE", false).map((item) => item.sku)).toEqual(["HD-1002"]);
-    expect(filterInventory(items, "hd-", false)).toHaveLength(2);
+    expect(filterInventory(items, "RICE", "all").map((item) => item.sku)).toEqual(["HD-1002"]);
+    expect(filterInventory(items, "hd-", "all")).toHaveLength(2);
   });
 
-  it("keeps only low and out-of-stock products with Low stock only", () => {
-    expect(filterInventory(items, "", true).map((item) => item.sku)).toEqual(["HD-1002", "HD-1003"]);
+  it("keeps low, out or buyer-added products", () => {
+    expect(filterInventory(items, "", "low").map((item) => item.sku)).toEqual(["HD-1002"]);
+    expect(filterInventory(items, "", "out").map((item) => item.sku)).toEqual(["HD-1003"]);
+    expect(filterInventory(items, "", "confirm").map((item) => item.sku)).toEqual(["NEW-1014"]);
+    expect(filterInventory(items, "oil", "low")).toHaveLength(0);
+  });
+
+  it("counts low and out of stock as needing a reorder", () => {
+    expect(needsReorder({ health: "out" })).toBe(true);
     expect(needsReorder({ health: "unconfirmed" })).toBe(false);
+  });
+
+  it("reads the filter, defaulting to All", () => {
+    expect(parseInventoryFilter("confirm")).toBe("confirm");
+    expect(parseInventoryFilter("1")).toBe("all");
   });
 });
 
@@ -51,18 +75,28 @@ describe("movements", () => {
   });
 
   it("names the reason for adjustments", () => {
-    expect(movementSource({ type: "adjusted", reason: "count_correction", source: "Ahmad Tan" })).toBe(
-      "Ahmad Tan, count correction",
-    );
+    expect(movementSource({ type: "adjusted", reason: "count_correction", source: "Ahmad Tan" })).toBe("Ahmad Tan, count correction");
     expect(movementSource({ type: "received", reason: "opening_stock", source: "Opening stock" })).toBe("Opening stock");
     expect(movementSource({ type: "reserved", reason: null, source: "ORD-1044" })).toBe("ORD-1044");
+  });
+
+  it("gives a reason only for adjustments", () => {
+    expect(movementReason({ type: "adjusted", reason: "damaged" })).toBe("Damaged");
+    expect(movementReason({ type: "received", reason: "opening_stock" })).toBeNull();
+  });
+
+  it("links to one kind of change", () => {
+    expect(parseMovementType("adjusted")).toBe("adjusted");
+    expect(parseMovementType("all")).toBeNull();
+    expect(stockHistoryHref("received")).toBe("/supplier/stock-history?type=received");
+    expect(stockHistoryHref(null)).toBe("/supplier/stock-history");
   });
 });
 
 describe("inventoryHref", () => {
   it("keeps only the parts of the view that are set", () => {
     expect(inventoryHref({})).toBe("/supplier/inventory");
-    expect(inventoryHref({ q: " rice ", low: true })).toBe("/supplier/inventory?q=rice&low=1");
+    expect(inventoryHref({ q: " rice ", filter: "low" })).toBe("/supplier/inventory?q=rice&filter=low");
     expect(inventoryHref({ q: "eggs & tofu", add: true })).toBe("/supplier/inventory?q=eggs+%26+tofu&add=1");
   });
 });

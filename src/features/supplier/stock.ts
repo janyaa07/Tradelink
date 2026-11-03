@@ -23,19 +23,32 @@ export function stockBarPercent(item: Pick<CatalogueItem, "status" | "available"
   return Math.round(Math.max(3, Math.min(100, percent)));
 }
 
-/** Filters inventory by name or SKU and, optionally, to products that need reordering (SUP-10). */
-export function filterInventory<T extends Pick<CatalogueItem, "name" | "sku" | "health">>(
-  items: T[],
-  query: string,
-  lowOnly: boolean,
-): T[] {
+export const INVENTORY_FILTERS = ["all", "low", "out", "confirm"] as const;
+export type InventoryFilter = (typeof INVENTORY_FILTERS)[number];
+
+export const INVENTORY_FILTER_LABELS: Record<InventoryFilter, string> = {
+  all: "All",
+  low: "Low",
+  out: "Out",
+  confirm: "To confirm",
+};
+
+const FILTER_HEALTH: Record<Exclude<InventoryFilter, "all">, Health> = { low: "low", out: "out", confirm: "unconfirmed" };
+
+export function parseInventoryFilter(value: string): InventoryFilter {
+  return INVENTORY_FILTERS.find((filter) => filter === value) ?? "all";
+}
+
+/** Filters inventory by name or SKU and by stock state: low, out, or added by a buyer and waiting to be confirmed (SUP-10). */
+export function filterInventory<T extends Pick<CatalogueItem, "name" | "sku" | "health">>(items: T[], query: string, filter: InventoryFilter): T[] {
   const q = query.trim().toLowerCase();
   return items.filter(
-    (item) => (!q || `${item.name} ${item.sku}`.toLowerCase().includes(q)) && (!lowOnly || needsReorder(item)),
+    (item) => (!q || `${item.name} ${item.sku}`.toLowerCase().includes(q)) && (filter === "all" || item.health === FILTER_HEALTH[filter]),
   );
 }
 
-export type MovementType = "received" | "reserved" | "released" | "delivered" | "adjusted";
+export const MOVEMENT_TYPES = ["received", "reserved", "released", "delivered", "adjusted"] as const;
+export type MovementType = (typeof MOVEMENT_TYPES)[number];
 export type AdjustReason = "damaged" | "expired" | "count_correction";
 
 export const MOVEMENT_PILL: Record<MovementType, { label: string; tone: PillTone }> = {
@@ -75,11 +88,26 @@ export function movementSource(movement: Pick<Movement, "type" | "reason" | "sou
   return movement.type === "adjusted" && reason ? `${movement.source}, ${reason.toLowerCase()}` : movement.source;
 }
 
-/** The Inventory URL for a view: search text, Low stock only and the open Add product form. */
-export function inventoryHref({ q = "", low = false, add = false }: { q?: string; low?: boolean; add?: boolean }): string {
+/** The reason for an adjustment, such as Damaged. Other changes have none. */
+export function movementReason(movement: Pick<Movement, "type" | "reason">): string | null {
+  if (movement.type !== "adjusted") return null;
+  return ADJUST_REASONS.find((option) => option.value === movement.reason)?.label ?? null;
+}
+
+export function parseMovementType(value: string): MovementType | null {
+  return MOVEMENT_TYPES.find((type) => type === value) ?? null;
+}
+
+/** The Stock history URL for one kind of change, or every change. */
+export function stockHistoryHref(type: MovementType | null): string {
+  return type ? `/supplier/stock-history?type=${type}` : "/supplier/stock-history";
+}
+
+/** The Inventory URL for a view: search text, filter and the open Add product form. */
+export function inventoryHref({ q = "", filter = "all", add = false }: { q?: string; filter?: InventoryFilter; add?: boolean }): string {
   const params = new URLSearchParams();
   if (q.trim()) params.set("q", q.trim());
-  if (low) params.set("low", "1");
+  if (filter !== "all") params.set("filter", filter);
   if (add) params.set("add", "1");
   const query = params.toString();
   return query ? `/supplier/inventory?${query}` : "/supplier/inventory";
