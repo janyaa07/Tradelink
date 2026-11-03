@@ -1,0 +1,169 @@
+import "server-only";
+import { cache } from "react";
+import { z } from "zod";
+import { createSupabaseServerClient } from "@/data/supabase/server";
+import { buildTodos, type PartialInput, type PriceChangeInput, type ReplyInput, type Todo } from "@/domain/todos";
+import { orderNumber } from "@/ui/format";
+import { getBuyerSettings, getUsualItems } from "./queries";
+
+const money = z.union([z.string(), z.number()]).transform((value) => Number(value).toFixed(2));
+const named = z.object({ name: z.string() }).nullable();
+
+function fail(what: string, message: string): never {
+  throw new Error(`Could not load ${what}: ${message}`);
+}
+
+const priceChangeSchema = z.object({
+  id: z.uuid(),
+  old_price: money,
+  new_price: money,
+  product: z.object({ name: z.string(), supplier: named }).nullable(),
+});
+
+/** Price changes on usual items that nobody in the business has acknowledged (BUY-02). */
+async function getPriceChanges(orgId: string, productIds: string[]): Promise<PriceChangeInput[]> {
+  if (productIds.length === 0) return [];
+  const supabase = await createSupabaseServerClient();
+  const [changes, acks] = await Promise.all([
+    supabase
+      .from("price_changes")
+      .select("id, old_price, new_price, product:products(name, supplier:organisations!products_supplier_org_id_fkey(name))")
+      .in("product_id", productIds)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase.from("price_change_acks").select("price_change_id").eq("buyer_org_id", orgId),
+  ]);
+  if (changes.error) fail("price changes", changes.error.message);
+  if (acks.error) fail("price changes", acks.error.message);
+  const acked = new Set(z.array(z.object({ price_change_id: z.uuid() })).parse(acks.data).map((row) => row.price_change_id));
+  return z
+    .array(priceChangeSchema)
+    .parse(changes.data)
+    .filter((row) => !acked.has(row.id) && row.product !== null)
+    .map((row) => ({
+      id: row.id,
+      productName: row.product?.name ?? "",
+      supplierName: row.product?.supplier?.name ?? "your supplier",
+      oldPrice: row.old_price,
+      newPrice: row.new_price,
+    }));
+}
+
+const partialSchema = z.object({
+  id: z.uuid(),
+  asked: z.number(),
+  sent: z.number(),
+  product: named,
+  parent: z.object({ number: z.number(), supplier: named }).nullable(),
+});
+
+/** Part acceptances the buyer has not acted on (BUY-03). RLS limits them to the buyer's orders. */
+async function getPartials(): Promise<PartialInput[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("partial_fulfilments")
+    .select("id, asked, sent, product:products(name), parent:orders(number, supplier:organisations!orders_supplier_org_id_fkey(name))")
+    .eq("status", "new")
+    .order("created_at", { ascending: false });
+  if (error) fail("part deliveries", error.message);
+  return z
+    .array(partialSchema)
+    .parse(data)
+    .map((row) => ({
+      id: row.id,
+      productName: row.product?.name ?? "An item",
+      supplierName: row.parent?.supplier?.name ?? "Your supplier",
+      orderRef: row.parent ? orderNumber(row.parent.number) : "your order",
+      asked: row.asked,
+      sent: row.sent,
+    }));
+}
+
+const replySchema = z.object({
+  id: z.uuid(),
+  status: z.string(),
+  amount: money,
+  supplier: named,
+  parent: z.object({ number: z.number() }).nullable(),
+});
+
+/** Answered problems the buyer has not seen yet (BUY-04). */
+async function getReplies(orgId: string): Promise<ReplyInput[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("issues")
+    .select("id, status, amount, supplier:organisations!issues_supplier_org_id_fkey(name), parent:orders(number)")
+    .eq("buyer_org_id", orgId)
+    .eq("buyer_seen", false)
+    .not("status", "in", "(open,credit_received)")
+    .order("answered_at", { ascending: false });
+  if (error) fail("replies", error.message);
+  return z
+    .array(replySchema)
+    .parse(data)
+    .map((row) => ({
+      id: row.id,
+      status: row.status,
+      amount: row.amount,
+      supplierName: row.supplier?.name ?? "Your supplier",
+      orderRef: row.parent ? orderNumber(row.parent.number) : "your order",
+    }));
+}
+
+/** The buyer's To do list, most urgent first. Cached per request. */
+export const getTodos = cache(async (orgId: string): Promise<Todo[]> => {
+  const [settings, usuals] = await Promise.all([getBuyerSettings(orgId), getUsualItems(orgId)]);
+  const [priceChanges, partials, replies] = await Promise.all([
+    settings.priceAlerts ? getPriceChanges(orgId, usuals.map((usual) => usual.productId)) : Promise.resolve([]),
+    getPartials(),
+    getReplies(orgId),
+  ]);
+  return buildTodos({ priceChanges, partials, replies }, settings.priceAlerts);
+});
+
+export type OpenIssue = {
+  id: string;
+  number: number;
+  type: "short" | "damaged" | "wrong_item" | "expired" | "late" | "invoice";
+  qty: number;
+  note: string | null;
+  createdAt: string;
+  productName: string | null;
+  orderRef: string;
+};
+
+const issueSchema = z.object({
+  id: z.uuid(),
+  number: z.number(),
+  type: z.enum(["short", "damaged", "wrong_item", "expired", "late", "invoice"]),
+  qty: z.number(),
+  note: z.string().nullable(),
+  created_at: z.string(),
+  product: named,
+  parent: z.object({ number: z.number() }).nullable(),
+});
+
+/** Problems the buyer reported that the supplier has not answered yet (BUY-27). */
+export async function getOpenIssues(orgId: string): Promise<OpenIssue[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("issues")
+    .select("id, number, type, qty, note, created_at, product:products(name), parent:orders(number)")
+    .eq("buyer_org_id", orgId)
+    .eq("status", "open")
+    .order("created_at", { ascending: false });
+  if (error) fail("open problems", error.message);
+  return z
+    .array(issueSchema)
+    .parse(data)
+    .map((row) => ({
+      id: row.id,
+      number: row.number,
+      type: row.type,
+      qty: row.qty,
+      note: row.note,
+      createdAt: row.created_at,
+      productName: row.product?.name ?? null,
+      orderRef: row.parent ? orderNumber(row.parent.number) : "your order",
+    }));
+}
