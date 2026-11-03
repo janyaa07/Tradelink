@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { getCatalogue } from "@/data/catalogue";
 import { callRpc } from "@/data/rpc";
-import { plural } from "@/domain/catalogue";
+import { CATEGORIES, plural, UNITS } from "@/domain/catalogue";
 import type { AiCard } from "@/domain/ask/types";
 import { formatMoney, toCents } from "@/domain/money";
 import { getOrders } from "@/features/orders/queries";
@@ -10,7 +10,7 @@ import { ISSUE_ANSWERS } from "@/features/supplier/issues";
 import { getBusinessProfile, getOpenIssues } from "@/features/supplier/queries";
 import { formatDate, orderNumber } from "@/ui/format";
 import { orderCard, stockCard, tag } from "./cards";
-import { readTool, writeTool, type AiTool } from "./registry";
+import { cardTool, readTool, writeTool, type AiTool, type ExecResult } from "./registry";
 import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
 const SUPPLIER_FILTERS = {
@@ -27,6 +27,11 @@ const ANSWER_WORDS: Record<(typeof ISSUE_ANSWERS)[number], string> = {
   on_the_way: "Tell the buyer it is on the way",
   dispute: "Dispute it",
 };
+
+/** A stock card for something just added, so the card says so. */
+function freshStock(card: AiCard): AiCard {
+  return card.kind === "ai_stock" ? { ...card, stock: { ...card.stock, added: true } } : card;
+}
 
 async function ownProduct(productId: string) {
   return (await getCatalogue()).find((item) => item.id === productId) ?? null;
@@ -117,6 +122,46 @@ export const SUPPLIER_TOOLS: AiTool[] = [
     },
   }),
   readTool({
+    name: "new_product_form",
+    description:
+      "Show a form card to add a new product to the supplier's catalogue, filled in from the request: name, unit, price, category, opening stock and reorder level. The person checks it and taps Add product.",
+    input: z.object({
+      name: z.string().trim().min(2).max(80),
+      unit: z.enum(UNITS).optional().describe("Best guess from the product, such as bag for rice or dal, bottle for oil"),
+      price: z.number().gt(0).max(99999).optional().describe("Only a price the person gave"),
+      category: z.enum(CATEGORIES).optional().describe("Best guess from the name"),
+      opening: z.number().int().min(0).max(99999).optional(),
+      reorder: z.number().int().min(0).max(9999).optional(),
+    }),
+    run: async (ctx, input) => {
+      const similar = (await getCatalogue()).filter((item) => item.name.toLowerCase().includes(input.name.toLowerCase())).slice(0, 3);
+      const card: AiCard = {
+        kind: "ai_new_product",
+        key: ctx.cardKey("NEW"),
+        view: "supplier",
+        form: {
+          name: input.name,
+          unit: input.unit ?? null,
+          priceCents: input.price ? toCents(input.price) : null,
+          suppliers: [],
+          supplierId: null,
+          newSupplier: null,
+          category: input.category ?? null,
+          opening: input.opening ?? 0,
+          reorder: input.reorder ?? 5,
+        },
+      };
+      return {
+        data: {
+          card: tag(card),
+          similar_in_inventory: similar.map((item) => `${item.name} (${item.sku})`),
+          note: "Nothing is added until they tap Add product on the card.",
+        },
+        cards: [card],
+      };
+    },
+  }),
+  readTool({
     name: "get_problems",
     description: "Open problems buyers reported on the supplier's deliveries, with issue_id and a card tag (the card has the four answers).",
     input: z.object({}),
@@ -199,6 +244,33 @@ export const SUPPLIER_TOOLS: AiTool[] = [
     exec: async (_ctx, { issue_id, answer }, key) => {
       const result = await callRpc("answer_issue", { p_issue: issue_id, p_answer: answer, p_key: key });
       return result.ok ? { ok: true, data: "Answer sent to the buyer." } : result;
+    },
+  }),
+  cardTool({
+    name: "add_product",
+    description: "Adds the product from a new product card.",
+    input: z.object({
+      name: z.string().trim().min(2).max(80),
+      unit: z.enum(UNITS),
+      price: z.number().gt(0).max(99999),
+      category: z.enum(CATEGORIES),
+      opening: z.number().int().min(0).max(99999),
+      reorder: z.number().int().min(0).max(9999),
+    }),
+    exec: async (ctx, input, key): Promise<ExecResult> => {
+      const result = await callRpc<{ productId: string }>("supplier_add_product", {
+        p_name: input.name,
+        p_unit: input.unit,
+        p_price: input.price,
+        p_opening: input.opening,
+        p_reorder: input.reorder,
+        p_category: input.category,
+        p_art: null,
+        p_key: key,
+      });
+      if (!result.ok) return { ok: false, error: result.reason === "DUPLICATE" ? `${input.name} is already in your inventory.` : result.error };
+      const item = await ownProduct(result.data.productId);
+      return { ok: true, data: `${input.name} added. Buyers can now order it.`, ...(item ? { card: freshStock(stockCard(item, ctx.cardKey("S"))) } : {}) };
     },
   }),
   writeTool({

@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getSession, roleOf } from "@/data/session";
-import type { ActionResult } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { toolsFor } from "./agent";
 import { cardKeys } from "./cards";
+import type { ExecResult } from "./registry";
 
 const proposalInput = z.object({
   id: z.uuid(),
@@ -19,7 +19,7 @@ const proposalInput = z.object({
  * change runs as them through the same database functions as the app's own buttons, with the
  * proposal id as the idempotency key, so a second tap does nothing twice.
  */
-export async function executeAiAction(input: z.infer<typeof proposalInput>): Promise<ActionResult<string>> {
+export async function executeAiAction(input: z.infer<typeof proposalInput>): Promise<ExecResult> {
   const session = await getSession();
   const role = session ? roleOf(session.kind) : null;
   if (!session || (role !== "buyer" && role !== "supplier")) return { ok: false, error: "Sign in again to do this." };

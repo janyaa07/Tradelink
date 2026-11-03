@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import type { AiAlert, AiCard, AiCart, AiOrder, AiProblem, AiProduct, AiStock, AiSupplier } from "@/domain/ask/types";
+import { CATEGORIES, CATEGORY_LABELS, UNITS } from "@/domain/catalogue";
+import type { AiAlert, AiCard, AiCart, AiCartLine, AiNewProduct, AiNewSupplier, AiOrder, AiProblem, AiProduct, AiStock, AiSupplier } from "@/domain/ask/types";
 import { formatMoney } from "@/domain/money";
 import { executeAiAction } from "@/features/ai/execute";
 import { Stepper } from "@/features/ordering/Stepper";
@@ -26,7 +27,7 @@ const SHOWN_LINES = 3;
  * Runs one card button through the same checked path as a confirm card (executeAiAction), so a
  * card can never do more than the person could on the matching screen.
  */
-function useCardRun(onDone: (message: string) => void) {
+function useCardRun(onDone: (message: string, card?: AiCard) => void) {
   const router = useRouter();
   const [busy, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -40,7 +41,7 @@ function useCardRun(onDone: (message: string) => void) {
       }
       if (outcome.ok) {
         setResult({ ok: true, text: outcome.data });
-        onDone(outcome.data);
+        onDone(outcome.data, outcome.card);
         router.refresh();
       } else {
         setResult({ ok: false, text: outcome.error });
@@ -50,15 +51,27 @@ function useCardRun(onDone: (message: string) => void) {
 }
 
 /** Asks for a second tap before anything that is hard to undo, such as Cancel or Reject. */
-function TwoStepButton({ label, confirmLabel, busy, onConfirm }: { label: string; confirmLabel: string; busy: boolean; onConfirm: () => void }) {
+function TwoStepButton({
+  label,
+  confirmLabel,
+  busy,
+  onConfirm,
+  tone = "danger",
+}: {
+  label: string;
+  confirmLabel: string;
+  busy: boolean;
+  onConfirm: () => void;
+  tone?: "danger" | "default";
+}) {
   const [armed, setArmed] = useState(false);
   return (
     <Button
-      variant="danger"
+      variant={tone}
       disabled={busy}
       onClick={() => (armed ? onConfirm() : setArmed(true))}
       onBlur={() => setArmed(false)}
-      className={cx(armed && "border-bad bg-bad-soft")}
+      className={cx(armed && (tone === "danger" ? "border-bad bg-bad-soft" : "border-accent bg-accent-soft text-accent"))}
     >
       {armed ? confirmLabel : label}
     </Button>
@@ -74,7 +87,9 @@ function Frame({
   children,
   actions,
   result,
+  notice,
 }: {
+  notice?: ReactNode;
   href?: string;
   lead?: ReactNode;
   title: ReactNode;
@@ -104,6 +119,12 @@ function Frame({
       ) : (
         <div className="px-3.5 pt-3 pb-2.5">{head}</div>
       )}
+      {notice ? (
+        <p className="mx-3.5 mb-2.5 flex items-center gap-1.5 rounded-lg bg-good-soft px-2.5 py-1.5 text-[.8rem] font-medium text-good">
+          <Icon name="check" size={14} />
+          {notice}
+        </p>
+      ) : null}
       {children ? <div className="px-3.5 pb-3">{children}</div> : null}
       {actions && !result?.ok ? <div className="flex flex-wrap items-center gap-2 border-t border-line bg-sunken/40 px-3.5 py-2.5">{actions}</div> : null}
       {result ? (
@@ -263,7 +284,7 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
 function ProductCardView({ card, product, onChange }: { card: Extract<AiCard, { kind: "ai_product" }>; product: AiProduct; onChange: Change }) {
   const [qty, setQty] = useState(product.suggestedQty && product.suggestedQty > 0 ? product.suggestedQty : 1);
   const added = useRef(0);
-  const { busy, result, run } = useCardRun(() => onChange({ ...card, product: { ...product, inCart: product.inCart + added.current } }));
+  const { busy, result, run } = useCardRun(() => onChange({ ...card, product: { ...product, inCart: product.inCart + added.current, added: false } }));
   const soldOut = product.available !== null && product.available <= 0;
   const stock = product.available === null ? "Stock to be confirmed" : soldOut ? "Out of stock" : `${product.available} available`;
   return (
@@ -292,10 +313,21 @@ function ProductCardView({ card, product, onChange }: { card: Extract<AiCard, { 
             >
               {busy ? "Adding..." : `Add · ${formatMoney(product.priceCents * qty)}`}
             </Button>
+            <TwoStepButton
+              tone="default"
+              label="Order now"
+              confirmLabel={`Tap again to order · ${formatMoney(product.priceCents * qty)}`}
+              busy={busy}
+              onConfirm={() => {
+                added.current = 0;
+                run("order_now", { items: [{ product_id: product.id, qty }] });
+              }}
+            />
           </>
         )
       }
       result={result}
+      notice={product.added ? `Added. ${product.supplier} confirms the price and stock.` : null}
     >
       {product.note || product.inCart > 0 ? (
         <p className="flex flex-wrap gap-x-3 text-[.8rem]">
@@ -318,7 +350,7 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
   const [mode, setMode] = useState<"none" | "receive" | "price">("none");
   const [value, setValue] = useState("");
   const change = useRef<Partial<AiStock>>({});
-  const { busy, result, run } = useCardRun(() => onChange({ ...card, stock: { ...stock, ...change.current } }));
+  const { busy, result, run } = useCardRun(() => onChange({ ...card, stock: { ...stock, ...change.current, added: false } }));
   const number = Number(value);
   const valid = mode === "receive" ? Number.isInteger(number) && number > 0 : number > 0;
   const submit = () => {
@@ -342,6 +374,7 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
       title={stock.name}
       sub={`${stock.sku} · ${formatMoney(stock.priceCents)} per ${stock.unit}`}
       pill={<Pill tone={HEALTH[stock.health].tone}>{HEALTH[stock.health].label}</Pill>}
+      notice={stock.added ? "Added to your inventory. Buyers can order it now." : null}
       actions={
         mode === "none" ? (
           <>
@@ -467,9 +500,32 @@ function AlertCardView({ alert }: { alert: AiAlert }) {
   );
 }
 
-function CartCardView({ cart }: { cart: AiCart }) {
-  const { busy, result, run } = useCardRun(() => undefined);
+const CART_SHOWN = 6;
+
+/** A line asks for more than the supplier has free right now. */
+const shortBy = (line: AiCartLine) => (line.available !== null && line.qty > line.available ? line.available : null);
+
+function CartCardView({ card, cart, onChange }: { card: Extract<AiCard, { kind: "ai_cart" }>; cart: AiCart; onChange: Change }) {
+  const edit = useCardRun((_message, next) => next && onChange({ ...next, key: card.key }));
+  const place = useCardRun(() => undefined);
+  const [open, setOpen] = useState(false);
   const empty = cart.lines.length === 0;
+  const short = cart.lines.filter((line) => shortBy(line) !== null);
+  const blocked = cart.unresolved + short.length;
+  const busy = edit.busy || place.busy;
+  const setQty = (productId: string, qty: number) => edit.run("set_cart_quantity", { product_id: productId, qty });
+
+  // One group per supplier, which is how the cart splits into orders.
+  const groups = new Map<string, { lines: { line: AiCartLine; index: number }[]; cents: number }>();
+  cart.lines.forEach((line, index) => {
+    const name = line.supplier ?? "Needs a product";
+    const group = groups.get(name) ?? { lines: [], cents: 0 };
+    group.lines.push({ line, index });
+    group.cents += line.lineCents ?? 0;
+    groups.set(name, group);
+  });
+  let shown = 0;
+
   return (
     <Frame
       href="/buyer/cart"
@@ -480,32 +536,106 @@ function CartCardView({ cart }: { cart: AiCart }) {
       }
       title="Your cart"
       sub={empty ? "Empty" : `${cart.lines.length} ${cart.lines.length === 1 ? "item" : "items"} · ${cart.suppliers} ${cart.suppliers === 1 ? "supplier" : "suppliers"}`}
-      pill={empty ? null : <b className="tabular-nums">{formatMoney(cart.totalCents)}</b>}
+      pill={empty ? null : <b className="text-[1.05rem] tabular-nums">{formatMoney(cart.totalCents)}</b>}
       actions={
-        empty ? null : cart.unresolved > 0 ? (
-          <span className="text-[.875rem] text-warn">
-            {cart.unresolved} {cart.unresolved === 1 ? "line needs" : "lines need"} a product chosen in the cart first.
-          </span>
-        ) : (
-          <Button variant="primary" disabled={busy} onClick={() => run("place_order", { cart_version: cart.version })}>
-            {busy ? "Placing..." : cart.suppliers > 1 ? `Place ${cart.suppliers} orders` : "Place order"}
-          </Button>
+        empty ? null : (
+          <>
+            <Button variant="primary" disabled={busy || blocked > 0} onClick={() => place.run("place_order", { cart_version: cart.version })}>
+              {place.busy ? "Placing..." : `${cart.suppliers > 1 ? `Place ${cart.suppliers} orders` : "Place order"} · ${formatMoney(cart.totalCents)}`}
+            </Button>
+            {blocked > 0 ? (
+              <span className="text-[.8rem] text-warn">
+                Fix {blocked === 1 ? "the item" : `${blocked} items`} marked below first
+              </span>
+            ) : null}
+            {edit.result && !edit.result.ok ? <span className="text-[.8rem] text-bad">{edit.result.text}</span> : null}
+          </>
         )
       }
-      result={result}
+      result={place.result}
     >
-      {empty ? null : (
-        <ul className="flex flex-col gap-0.5 text-[.9rem]">
-          {cart.lines.slice(0, 6).map((line, index) => (
-            <li key={index} className="flex justify-between gap-3">
-              <span className="min-w-0 truncate">
-                <span className="tabular-nums text-muted">{line.qty}×</span> {line.name}
-              </span>
-              <span className="flex-none tabular-nums text-muted">{line.lineCents === null ? "Choose" : formatMoney(line.lineCents)}</span>
-            </li>
-          ))}
-          {cart.lines.length > 6 ? <li className="text-[.8rem] text-muted">+{cart.lines.length - 6} more</li> : null}
-        </ul>
+      {empty ? (
+        <p className="text-[.875rem] text-muted">Nothing in your cart yet.</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {[...groups].map(([supplier, group]) => {
+            const visible = group.lines.filter(() => open || shown++ < CART_SHOWN);
+            if (visible.length === 0) return null;
+            return (
+              <section key={supplier} aria-label={supplier} className="overflow-hidden rounded-xl border border-line">
+                <header className="flex items-center justify-between gap-2 bg-sunken/60 px-2.5 py-1.5 text-[.75rem] font-semibold text-muted">
+                  <span className="truncate">{supplier}</span>
+                  <span className="tabular-nums">{formatMoney(group.cents)}</span>
+                </header>
+                <ul className="divide-y divide-line">
+                  {visible.map(({ line, index }) => {
+                    const free = shortBy(line);
+                    return (
+                      <li key={index} className={cx("px-2.5 py-1.5", free !== null && "bg-warn-soft/40")}>
+                        <div className="flex items-center gap-2">
+                          {line.productId ? (
+                            <span className="inline-flex flex-none items-center rounded-full border border-line bg-surface">
+                              <button
+                                type="button"
+                                aria-label={line.qty === 1 ? `Remove ${line.name}` : `One less ${line.name}`}
+                                disabled={busy}
+                                onClick={() => line.productId && setQty(line.productId, line.qty - 1)}
+                                className="grid size-7 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-50"
+                              >
+                                {line.qty === 1 ? "×" : "−"}
+                              </button>
+                              <span className="min-w-6 text-center text-[.85rem] font-semibold tabular-nums">{line.qty}</span>
+                              <button
+                                type="button"
+                                aria-label={`One more ${line.name}`}
+                                disabled={busy || (line.available !== null && line.qty >= line.available)}
+                                onClick={() => line.productId && setQty(line.productId, line.qty + 1)}
+                                className="grid size-7 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-50"
+                              >
+                                +
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="min-w-[4.5rem] text-center text-[.85rem] tabular-nums text-muted">{line.qty}</span>
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-[.9rem]">{line.name}</span>
+                          <span className="flex-none text-[.85rem] tabular-nums text-muted">
+                            {line.lineCents === null ? "" : formatMoney(line.lineCents)}
+                          </span>
+                        </div>
+                        {free !== null && line.productId ? (
+                          <p className="mt-1 flex flex-wrap items-center gap-x-2 pl-[5.25rem] text-[.8rem] text-warn">
+                            {free === 0 ? "Out of stock now." : `Only ${free} available.`}
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => line.productId && setQty(line.productId, free)}
+                              className="font-semibold text-accent underline-offset-2 hover:underline disabled:opacity-50"
+                            >
+                              {free === 0 ? "Remove it" : `Use ${free}`}
+                            </button>
+                          </p>
+                        ) : null}
+                        {!line.productId ? (
+                          <p className="mt-1 pl-[5.25rem] text-[.8rem] text-warn">
+                            <Link href="/buyer/cart" className="font-semibold text-accent">
+                              Choose the product in your cart
+                            </Link>
+                          </p>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })}
+          {cart.lines.length > CART_SHOWN ? (
+            <button type="button" onClick={() => setOpen(!open)} className="self-start text-[.85rem] font-semibold text-accent">
+              {open ? "Show less" : `Show all ${cart.lines.length} items`}
+            </button>
+          ) : null}
+        </div>
       )}
     </Frame>
   );
@@ -542,16 +672,212 @@ function SupplierCardView({ supplier }: { supplier: AiSupplier }) {
     <Frame
       lead={<BusinessLogo name={supplier.name} size={36} />}
       title={supplier.name}
-      sub={[supplier.cutOff ? `Cut-off ${supplier.cutOff}` : null, supplier.deliveryDays].filter(Boolean).join(" · ") || "No terms set"}
+      sub={
+        supplier.invited
+          ? "Not on Tradelink yet"
+          : [supplier.cutOff ? `Cut-off ${supplier.cutOff}` : null, supplier.deliveryDays].filter(Boolean).join(" · ") || "No terms set"
+      }
       pill={
-        <Pill tone={tone}>
-          {supplier.onTimePercent === null ? "New" : `${supplier.onTimePercent}% on time`}
+        <Pill tone={supplier.invited ? "plain" : tone}>
+          {supplier.invited ? "Invited" : supplier.onTimePercent === null ? "New" : `${supplier.onTimePercent}% on time`}
         </Pill>
       }
+      notice={supplier.invited ? "Added. Ask Tradelink AI to add their products." : null}
     >
-      <p className="text-[.8rem] text-muted">
-        {supplier.deliveries === 0 ? "No deliveries yet" : `Based on ${supplier.deliveries} ${supplier.deliveries === 1 ? "delivery" : "deliveries"}`}
-      </p>
+      {supplier.invited ? null : (
+        <p className="text-[.8rem] text-muted">
+          {supplier.deliveries === 0 ? "No deliveries yet" : `Based on ${supplier.deliveries} ${supplier.deliveries === 1 ? "delivery" : "deliveries"}`}
+        </p>
+      )}
+    </Frame>
+  );
+}
+
+const inputClass = "w-full rounded-lg border border-control-line bg-surface px-2.5 py-1.5 text-[.9rem] text-ink";
+
+function FormField({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
+  return (
+    <label className={cx("flex flex-col gap-1 text-[.75rem] font-medium text-muted", wide && "col-span-2")}>
+      {label}
+      {children}
+    </label>
+  );
+}
+
+const NEW_SUPPLIER = "new";
+
+function NewProductCardView({ card, form, onChange }: { card: Extract<AiCard, { kind: "ai_new_product" }>; form: AiNewProduct; onChange: Change }) {
+  const supplierView = card.view === "supplier";
+  const [name, setName] = useState(form.name);
+  const [unit, setUnit] = useState(form.unit ?? "");
+  const [price, setPrice] = useState(form.priceCents === null ? "" : (form.priceCents / 100).toFixed(2));
+  const [supplier, setSupplier] = useState(form.supplierId ?? (form.newSupplier || form.suppliers.length === 0 ? NEW_SUPPLIER : ""));
+  const [newSupplier, setNewSupplier] = useState(form.newSupplier ?? "");
+  const [category, setCategory] = useState(form.category ?? "");
+  const [opening, setOpening] = useState(String(form.opening ?? 0));
+  const [reorder, setReorder] = useState(String(form.reorder ?? 5));
+  const { busy, result, run } = useCardRun((_message, next) => next && onChange({ ...next, key: card.key }));
+
+  const amount = Number(price);
+  const whole = (value: string) => /^\d{1,5}$/.test(value);
+  const missing = [
+    name.trim().length < 2 && "a name",
+    !unit && "a unit",
+    !(amount > 0) && "a price",
+    !supplierView && supplier === "" && "a supplier",
+    !supplierView && supplier === NEW_SUPPLIER && newSupplier.trim().length < 2 && "the supplier's name",
+    supplierView && !category && "a category",
+    supplierView && !(whole(opening) && whole(reorder)) && "stock numbers",
+  ].filter((entry): entry is string => Boolean(entry));
+
+  const submit = () => {
+    if (missing.length > 0) return;
+    const base = { name: name.trim(), unit, price: amount };
+    run(
+      "add_product",
+      supplierView
+        ? { ...base, category, opening: Number(opening), reorder: Number(reorder) }
+        : supplier === NEW_SUPPLIER
+          ? { ...base, new_supplier: newSupplier.trim() }
+          : { ...base, supplier_id: supplier },
+    );
+  };
+
+  return (
+    <Frame
+      lead={
+        <span className="grid size-9 flex-none place-items-center rounded-xl bg-accent-soft text-accent">
+          <Icon name="box" size={18} />
+        </span>
+      }
+      title="New product"
+      sub={supplierView ? "Added to your inventory" : supplier === NEW_SUPPLIER && newSupplier.trim() ? `Adds ${newSupplier.trim()} as a new supplier too` : "The supplier confirms the price and stock"}
+      actions={
+        <>
+          <Button variant="primary" disabled={busy || missing.length > 0} onClick={submit}>
+            {busy ? "Adding..." : supplier === NEW_SUPPLIER && !supplierView ? "Add product and supplier" : "Add product"}
+          </Button>
+          {missing.length > 0 ? <span className="text-[.8rem] text-muted">Add {missing.join(", ")}</span> : null}
+        </>
+      }
+      result={result && !result.ok ? result : null}
+    >
+      <form
+        className="grid grid-cols-2 gap-2.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <FormField label="Product name" wide>
+          <input value={name} onChange={(event) => setName(event.target.value)} maxLength={80} className={inputClass} />
+        </FormField>
+        <FormField label="Unit">
+          <select value={unit} onChange={(event) => setUnit(event.target.value)} className={inputClass}>
+            <option value="">Choose</option>
+            {UNITS.map((entry) => (
+              <option key={entry} value={entry}>
+                {entry}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label={supplierView ? "Price (S$)" : "Estimated price (S$)"}>
+          <input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" placeholder="0.00" className={cx(inputClass, "tabular-nums")} />
+        </FormField>
+        {supplierView ? (
+          <>
+            <FormField label="Category" wide>
+              <select value={category} onChange={(event) => setCategory(event.target.value)} className={inputClass}>
+                <option value="">Choose</option>
+                {CATEGORIES.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {CATEGORY_LABELS[entry]}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Opening stock">
+              <input value={opening} onChange={(event) => setOpening(event.target.value)} inputMode="numeric" className={cx(inputClass, "tabular-nums")} />
+            </FormField>
+            <FormField label="Reorder at">
+              <input value={reorder} onChange={(event) => setReorder(event.target.value)} inputMode="numeric" className={cx(inputClass, "tabular-nums")} />
+            </FormField>
+          </>
+        ) : (
+          <>
+            <FormField label="Supplier" wide>
+              <select value={supplier} onChange={(event) => setSupplier(event.target.value)} className={inputClass}>
+                {form.suppliers.length > 0 ? <option value="">Choose</option> : null}
+                {form.suppliers.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+                <option value={NEW_SUPPLIER}>New supplier</option>
+              </select>
+            </FormField>
+            {supplier === NEW_SUPPLIER ? (
+              <FormField label="New supplier's name" wide>
+                <input value={newSupplier} onChange={(event) => setNewSupplier(event.target.value)} maxLength={120} className={inputClass} />
+              </FormField>
+            ) : null}
+          </>
+        )}
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+      </form>
+    </Frame>
+  );
+}
+
+function NewSupplierCardView({ card, form, onChange }: { card: Extract<AiCard, { kind: "ai_new_supplier" }>; form: AiNewSupplier; onChange: Change }) {
+  const [name, setName] = useState(form.name);
+  const [contact, setContact] = useState(form.contact ?? "");
+  const [phone, setPhone] = useState(form.phone ?? "");
+  const { busy, result, run } = useCardRun((_message, next) => next && onChange({ ...next, key: card.key }));
+  const phoneOk = phone.trim() === "" || /^\+?[0-9 ]{8,16}$/.test(phone.trim());
+  const ready = name.trim().length >= 2 && phoneOk;
+  const submit = () => {
+    if (!ready) return;
+    run("add_supplier", {
+      name: name.trim(),
+      ...(contact.trim() ? { contact: contact.trim() } : {}),
+      ...(phone.trim() ? { phone: phone.trim() } : {}),
+    });
+  };
+  return (
+    <Frame
+      lead={<BusinessLogo name={name || "New supplier"} size={36} />}
+      title="New supplier"
+      sub="Tradelink invites them; you can add their products straight away"
+      actions={
+        <>
+          <Button variant="primary" disabled={busy || !ready} onClick={submit}>
+            {busy ? "Adding..." : "Add supplier"}
+          </Button>
+          {!phoneOk ? <span className="text-[.8rem] text-warn">Phone needs 8 to 16 digits</span> : null}
+        </>
+      }
+      result={result && !result.ok ? result : null}
+    >
+      <form
+        className="grid grid-cols-2 gap-2.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <FormField label="Supplier name" wide>
+          <input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} className={inputClass} />
+        </FormField>
+        <FormField label="Contact name (optional)">
+          <input value={contact} onChange={(event) => setContact(event.target.value)} maxLength={120} className={inputClass} />
+        </FormField>
+        <FormField label="Phone (optional)">
+          <input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" className={cx(inputClass, "tabular-nums")} />
+        </FormField>
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+      </form>
     </Frame>
   );
 }
@@ -570,10 +896,14 @@ export function AiCardView({ card, onChange }: { card: AiCard; onChange: Change 
     case "ai_alert":
       return <AlertCardView alert={card.alert} />;
     case "ai_cart":
-      return <CartCardView cart={card.cart} />;
+      return <CartCardView card={card} cart={card.cart} onChange={onChange} />;
     case "ai_spend":
       return <SpendCardView spend={card.spend} />;
     case "ai_supplier":
       return <SupplierCardView supplier={card.supplier} />;
+    case "ai_new_product":
+      return <NewProductCardView card={card} form={card.form} onChange={onChange} />;
+    case "ai_new_supplier":
+      return <NewSupplierCardView card={card} form={card.form} onChange={onChange} />;
   }
 }

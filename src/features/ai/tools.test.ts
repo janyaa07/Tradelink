@@ -38,4 +38,20 @@ describe("Tradelink AI tools", () => {
     expect(buyer.has("place_order") && !supplier.has("place_order")).toBe(true);
     expect(supplier.has("change_price") && !buyer.has("change_price")).toBe(true);
   });
+
+  it("keeps adding products and suppliers to the form cards, never a model proposal", async () => {
+    for (const tool of [...BUYER_TOOLS, ...SUPPLIER_TOOLS].filter((entry) => entry.name === "add_product" || entry.name === "add_supplier")) {
+      expect(tool.kind === "write" && tool.cardOnly).toBe(true);
+      if (tool.kind === "write") expect(await tool.propose({} as never, {} as never)).toHaveProperty("error");
+    }
+    expect(BUYER_TOOLS.some((tool) => tool.name === "new_product_form")).toBe(true);
+    expect(SUPPLIER_TOOLS.some((tool) => tool.name === "new_product_form")).toBe(true);
+  });
+
+  it("places a direct order without the cart version, so the cart is left alone", () => {
+    const tool = BUYER_TOOLS.find((entry) => entry.name === "order_now");
+    expect(tool?.kind).toBe("write");
+    expect(tool?.input.safeParse({ items: [{ product_id: crypto.randomUUID(), qty: 1 }] }).success).toBe(true);
+    expect(tool?.input.safeParse({ items: [] }).success).toBe(false);
+  });
 });

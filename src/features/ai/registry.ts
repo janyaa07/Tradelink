@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { Session } from "@/data/session";
-import type { AskCard } from "@/domain/ask/types";
+import type { AiCard, AskCard } from "@/domain/ask/types";
 import type { ActionResult } from "@/lib/errors";
 
 /** Who is asking. Every tool runs as this person, so RLS and the database functions decide. */
@@ -28,6 +28,9 @@ export type Proposal = {
   args: Record<string, unknown>;
 };
 
+/** What a change returns: the words to show and, when the card should redraw, its new state. */
+export type ExecResult = { ok: true; data: string; card?: AiCard } | Extract<ActionResult<string>, { ok: false }>;
+
 type Base<I extends z.ZodType> = { name: string; description: string; input: I };
 
 /** Looks something up and returns it at once. */
@@ -38,12 +41,14 @@ export type ReadTool<I extends z.ZodType = z.ZodType> = Base<I> & {
 
 /**
  * Changes something. The model only proposes it: the person sees a confirm card, and `exec` runs
- * when they tap Confirm, with the proposal id as the idempotency key.
+ * when they tap Confirm, with the proposal id as the idempotency key. A `cardOnly` tool is not
+ * offered to the model at all: it runs only from a button on a card, such as a filled-in form.
  */
 export type WriteTool<I extends z.ZodType = z.ZodType> = Base<I> & {
   kind: "write";
+  cardOnly?: boolean;
   propose: (ctx: AiContext, input: z.infer<I>) => Promise<Proposal | { error: string }>;
-  exec: (ctx: AiContext, args: z.infer<I>, key: string) => Promise<ActionResult<string>>;
+  exec: (ctx: AiContext, args: z.infer<I>, key: string) => Promise<ExecResult>;
 };
 
 export type AiTool = ReadTool | WriteTool;
@@ -54,6 +59,11 @@ export function readTool<I extends z.ZodType>(tool: Omit<ReadTool<I>, "kind">): 
 
 export function writeTool<I extends z.ZodType>(tool: Omit<WriteTool<I>, "kind">): WriteTool {
   return { kind: "write", ...tool } as unknown as WriteTool;
+}
+
+/** A change made only from a card's own button; the model never sees or proposes it. */
+export function cardTool<I extends z.ZodType>(tool: Omit<WriteTool<I>, "kind" | "cardOnly" | "propose">): WriteTool {
+  return writeTool({ ...tool, cardOnly: true, propose: async () => ({ error: "This runs from its card." }) });
 }
 
 /** The Claude tool definition: name, description and a JSON Schema built from the Zod input. */

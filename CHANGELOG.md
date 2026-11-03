@@ -2,6 +2,17 @@
 
 All notable changes are listed here. The format follows Keep a Changelog, and versions follow semantic versioning.
 
+## [Unreleased]
+
+### Added
+- **Order now:** "order one bag of rice now" shows one confirm card that orders only that item and leaves the cart as it is. When several products match, Tradelink AI picks the likely one and offers the other as a follow-up. Product cards also have an Order now button, which needs a second tap.
+- **New products and suppliers from chat:** buyers get a filled-in form card to add a product, and to add a supplier who is not on Tradelink yet, either with the product or on its own. Suppliers get a form card to add a product with opening stock and a reorder level. Nothing is added until the person taps the card's button. The database function `buyer_add_supplier` is new.
+
+### Changed
+- **Cart card:** lines are grouped by supplier with subtotals, and each line has minus and plus buttons. Lines asking for more than is in stock are marked, with a one-tap fix. Place order shows the total and stays off until every line is fixed. Long carts expand in place.
+- **Waiting:** one avatar while Tradelink AI works, with the progress line inside its reply.
+- **Follow-ups:** never offer what a card already lets the person do.
+
 ## [0.6.0] - 2026-11-03
 
 ### Added

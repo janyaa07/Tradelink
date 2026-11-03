@@ -352,17 +352,28 @@ function AiReply({
   streaming,
   onAsk,
   onCard,
+  waiting,
 }: {
   message: ChatMessage;
   handlers: ReplyHandlers;
   streaming: boolean;
   onAsk: ((text: string) => void) | null;
   onCard: (card: AiCard) => void;
+  /** The rotating line shown while Tradelink AI works, inside this reply so there is one avatar. */
+  waiting: ReactNode;
 }) {
   const { blocks, asks } = parseReply(message.reply.text, streaming);
   const cards = new Map(
     message.reply.cards.filter((card): card is AiCard => card.kind.startsWith("ai_")).map((card) => [card.key, card]),
   );
+  if (blocks.length === 0 && message.reply.actions.length === 0) {
+    return waiting ? (
+      <div className="flex items-center gap-3">
+        <AssistantAvatar />
+        {waiting}
+      </div>
+    ) : null;
+  }
   return (
     <div className="flex gap-3">
       <AssistantAvatar />
@@ -388,6 +399,7 @@ function AiReply({
           const card = cards.get(block.key);
           return card ? <AiCardView key={`${block.key}-${index}`} card={card} onChange={onCard} /> : null;
         })}
+        {waiting}
         {message.reply.actions.length > 0 ? (
           <ReplyActions actions={message.reply.actions} done={message.done} resolved={message.resolved ?? {}} handlers={handlers} />
         ) : null}
@@ -922,19 +934,18 @@ export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName
                   streaming={thinking && index === messages.length - 1}
                   onAsk={!thinking && index === messages.length - 1 ? (ask) => void send(ask) : null}
                   onCard={(card) => updateCard(message.id, card)}
+                  waiting={
+                    thinking && index === messages.length - 1 && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
+                      <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
+                        {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}...
+                      </p>
+                    ) : null
+                  }
                 />
               ) : (
                 <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
               ),
             )}
-            {thinking && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
-              <div className="flex items-center gap-3" aria-live="polite">
-                <AssistantAvatar />
-                <p key={`${status ?? ""}${waitStep}`} className={cx(styles.thinking, styles.waitLine, "font-medium")}>
-                  {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}...
-                </p>
-              </div>
-            ) : null}
           </div>
           <div ref={endRef} aria-hidden="true" className="scroll-mb-40" />
         </div>

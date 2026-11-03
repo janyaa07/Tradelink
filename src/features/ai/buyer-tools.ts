@@ -1,7 +1,8 @@
 import "server-only";
 import { z } from "zod";
+import { getCatalogue } from "@/data/catalogue";
 import { callRpc } from "@/data/rpc";
-import { plural } from "@/domain/catalogue";
+import { plural, UNITS, type CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, toCents } from "@/domain/money";
 import { addToCartAction, placeCartAction } from "@/features/ask/actions";
 import { productCartLine } from "@/features/ask/cart-lines";
@@ -17,7 +18,8 @@ import {
 import { PROBLEM_TYPES } from "@/features/buyer/problem";
 import { getReorderPlan } from "@/features/buyer/reorder-plan";
 import { getTodos } from "@/features/buyer/todo-queries";
-import { getDraft } from "@/features/ordering/queries";
+import type { PlacedOrders } from "@/features/ordering/actions";
+import { getDraft, readDraft } from "@/features/ordering/queries";
 import { quantitiesByProduct } from "@/features/ordering/line-ops";
 import { getOrders, OPEN_STATUSES } from "@/features/orders/queries";
 import { setCartQuantityAction } from "@/features/products/actions";
@@ -26,7 +28,7 @@ import type { AiCard } from "@/domain/ask/types";
 import { formatDaysLeft } from "@/domain/reorder";
 import { weekdayName } from "@/domain/singapore-time";
 import { orderCard, productCard, tag } from "./cards";
-import { readTool, writeTool, type AiTool } from "./registry";
+import { cardTool, readTool, writeTool, type AiContext, type AiTool, type ExecResult } from "./registry";
 import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
 const productId = z.uuid().describe("product_id from find_products, get_cart or get_order");
@@ -47,6 +49,75 @@ const ORDER_FILTERS = {
 
 async function cartQuantities(userId: string): Promise<Map<string, number>> {
   return quantitiesByProduct((await getDraft(userId)).lines);
+}
+
+/** The cart as a card: every line with its supplier, price and the stock free to order now. */
+async function cartCard(userId: string, fresh = false): Promise<Extract<AiCard, { kind: "ai_cart" }>> {
+  const [draft, byId] = await Promise.all([fresh ? readDraft(userId) : getDraft(userId), catalogueById()]);
+  const lines = draft.lines.map((line) => {
+    const item = line.productId ? byId.get(line.productId) : undefined;
+    return item
+      ? {
+          productId: item.id,
+          name: item.name,
+          qty: line.qty,
+          unit: item.unit,
+          supplier: item.supplierName,
+          lineCents: toCents(item.price) * line.qty,
+          available: item.status === "unconfirmed" ? null : item.available,
+        }
+      : { productId: null, name: line.sourceText, qty: line.qty, unit: "", supplier: null, lineCents: null, available: null };
+  });
+  return {
+    kind: "ai_cart",
+    key: "CART",
+    cart: {
+      version: draft.version,
+      lines,
+      totalCents: lines.reduce((sum, line) => sum + (line.lineCents ?? 0), 0),
+      suppliers: new Set(lines.map((line) => line.supplier).filter(Boolean)).size,
+      unresolved: lines.filter((line) => !line.productId).length,
+    },
+  };
+}
+
+const itemsInput = z.object({ items: z.array(z.object({ product_id: productId, qty })).min(1).max(30) });
+
+/** Checks requested items against what the buyer can see and what is free to order. */
+function checkItems(items: z.infer<typeof itemsInput>["items"], byId: Map<string, CatalogueItem>): string | null {
+  for (const entry of items) {
+    const item = byId.get(entry.product_id);
+    if (!item) return "One of those products is not in the catalogue. Search again with find_products.";
+    if (item.status === "active" && entry.qty > item.available) {
+      return item.available > 0 ? `Only ${plural(item.available, item.unit)} of ${item.name} available.` : `${item.name} is out of stock.`;
+    }
+  }
+  return null;
+}
+
+function supplierError(result: { error: string; reason?: string; detail?: string }): string {
+  if (result.reason !== "DUPLICATE") return result.error;
+  return result.detail === "connected"
+    ? "That supplier is already one of yours. Choose it from the list."
+    : "A supplier with that name is already on Tradelink. Ask Tradelink support to connect you.";
+}
+
+/** The supplier for a new product: one the buyer has, or a new one added first. */
+async function supplierForProduct(ctx: AiContext, supplierId: string | undefined, newSupplier: string | undefined, key: string) {
+  if (supplierId) return { ok: true as const, id: supplierId, created: false };
+  const added = await callRpc<{ supplierId: string }>("buyer_add_supplier", { p_name: newSupplier, p_contact: null, p_phone: null, p_key: key });
+  if (added.ok) return { ok: true as const, id: added.data.supplierId, created: true };
+  if (added.reason === "DUPLICATE" && added.detail === "connected") {
+    // Added on an earlier tap whose product then failed: use it.
+    const existing = (await getConnectedSuppliers(ctx.session.orgId)).find((entry) => entry.name.toLowerCase() === newSupplier?.toLowerCase());
+    if (existing) return { ok: true as const, id: existing.id, created: false };
+  }
+  return { ok: false as const, error: supplierError(added) };
+}
+
+/** A product card for something just added, so the card says so. */
+function freshCard(card: AiCard): AiCard {
+  return card.kind === "ai_product" ? { ...card, product: { ...card.product, added: true } } : card;
 }
 
 export const BUYER_TOOLS: AiTool[] = [
@@ -112,32 +183,23 @@ export const BUYER_TOOLS: AiTool[] = [
   }),
   readTool({
     name: "get_cart",
-    description: "What is in the buyer's cart now, with prices, the cart version and a cart card tag.",
+    description: "What is in the buyer's cart now, with prices, stock free to order, the cart version and a cart card tag. The card lets them change quantities and place the cart.",
     input: z.object({}),
     run: async (ctx) => {
-      const [draft, byId] = await Promise.all([getDraft(ctx.session.userId), catalogueById()]);
-      const lines = draft.lines.map((line) => {
-        const item = line.productId ? byId.get(line.productId) : undefined;
-        return item
-          ? { product_id: item.id, item: item.name, qty: line.qty, unit: item.unit, supplier: item.supplierName, lineCents: toCents(item.price) * line.qty }
-          : { product_id: null, item: line.sourceText, qty: line.qty, unit: "", supplier: null, lineCents: null };
-      });
-      const card: AiCard = {
-        kind: "ai_cart",
-        key: "CART",
-        cart: {
-          version: draft.version,
-          lines: lines.map((line) => ({ name: line.item, qty: line.qty, unit: line.unit, supplier: line.supplier, lineCents: line.lineCents })),
-          totalCents: lines.reduce((sum, line) => sum + (line.lineCents ?? 0), 0),
-          suppliers: new Set(lines.map((line) => line.supplier).filter(Boolean)).size,
-          unresolved: lines.filter((line) => !line.product_id).length,
-        },
-      };
+      const card = await cartCard(ctx.session.userId);
       return {
         data: {
           card: tag(card),
-          version: draft.version,
-          lines: lines.map((line) => ({ ...line, line_total: line.lineCents === null ? null : formatMoney(line.lineCents), lineCents: undefined })),
+          version: card.cart.version,
+          lines: card.cart.lines.map((line) => ({
+            product_id: line.productId,
+            item: line.name,
+            qty: line.qty,
+            unit: line.unit,
+            supplier: line.supplier,
+            line_total: line.lineCents === null ? null : formatMoney(line.lineCents),
+            available: line.available,
+          })),
         },
         cards: [card],
       };
@@ -258,12 +320,11 @@ export const BUYER_TOOLS: AiTool[] = [
 
   writeTool({
     name: "add_to_cart",
-    description: "Add products to the buyer's cart. Use product_id values from find_products. The buyer places orders from the cart.",
-    input: z.object({ items: z.array(z.object({ product_id: productId, qty })).min(1).max(30) }),
+    description: "Add products to the buyer's cart to order later. Use product_id values from find_products. When they say to order or buy now, use order_now instead.",
+    input: itemsInput,
     propose: async (_ctx, { items }) => {
       const byId = await catalogueById();
-      const missing = items.find((entry) => !byId.has(entry.product_id));
-      if (missing) return { error: "One of those products is not in the catalogue. Search again with find_products." };
+      if (!items.every((entry) => byId.has(entry.product_id))) return { error: "One of those products is not in the catalogue. Search again with find_products." };
       return {
         title: `Add ${items.length} ${items.length === 1 ? "item" : "items"} to your cart`,
         details: items.map((entry) => {
@@ -296,9 +357,53 @@ export const BUYER_TOOLS: AiTool[] = [
         args: input,
       };
     },
-    exec: async (_ctx, input) => {
+    exec: async (ctx, input): Promise<ExecResult> => {
       const result = await setCartQuantityAction(input.product_id, input.qty);
-      return result.ok ? { ok: true, data: "Cart updated." } : result;
+      if (!result.ok) return result;
+      return { ok: true, data: input.qty === 0 ? "Removed from your cart." : "Cart updated.", card: await cartCard(ctx.session.userId, true) };
+    },
+  }),
+  writeTool({
+    name: "order_now",
+    description:
+      "Place an order straight away for just these products, one order per supplier, without using or changing the cart. Use when the person says to order or buy something now. Use product_id values from find_products.",
+    input: itemsInput,
+    propose: async (_ctx, { items }) => {
+      const byId = await catalogueById();
+      const problem = checkItems(items, byId);
+      if (problem) return { error: problem };
+      const suppliers = new Set(items.map((entry) => byId.get(entry.product_id)?.supplierName));
+      const total = items.reduce((sum, entry) => sum + toCents(byId.get(entry.product_id)?.price ?? "0") * entry.qty, 0);
+      const first = items[0];
+      const firstItem = first ? byId.get(first.product_id) : undefined;
+      return {
+        title:
+          items.length === 1 && first && firstItem
+            ? `Order ${plural(first.qty, firstItem.unit)} of ${firstItem.name} now · ${formatMoney(total)}`
+            : `Order ${items.length} items now · ${formatMoney(total)}`,
+        details: [
+          ...items.map((entry) => {
+            const item = byId.get(entry.product_id);
+            return `${entry.qty} × ${item?.name ?? ""} · ${item?.supplierName ?? ""} · ${formatMoney(toCents(item?.price ?? "0") * entry.qty)}`;
+          }),
+          "Your cart stays as it is.",
+        ],
+        confirmLabel: suppliers.size === 1 ? "Place order" : `Place ${suppliers.size} orders`,
+        args: { items },
+      };
+    },
+    exec: async (_ctx, { items }, key): Promise<ExecResult> => {
+      const byId = await catalogueById();
+      const problem = checkItems(items, byId);
+      if (problem) return { ok: false, error: problem };
+      const result = await callRpc<PlacedOrders>("place_orders", {
+        p_lines: items.map((entry) => ({ productId: entry.product_id, qty: entry.qty, sourceText: "Ordered with Tradelink AI" })),
+        p_draft_version: null,
+        p_key: key,
+      });
+      if (!result.ok) return result.reason === "STOCK_SHORT" ? { ok: false, error: "Some of that just sold out. Ask again to see what is left." } : result;
+      const placed = result.data.orders.map((order) => `${orderNumber(order.number)} to ${order.supplierName}`).join(", ");
+      return { ok: true, data: `Placed ${placed}. Your cart is unchanged.` };
     },
   }),
   writeTool({
@@ -328,6 +433,122 @@ export const BUYER_TOOLS: AiTool[] = [
       if (!result.ok) return result;
       const placed = result.data.orders.map((order) => `${orderNumber(order.number)} to ${order.supplierName}`).join(", ");
       return { ok: true, data: `Placed and stock reserved: ${placed}.` };
+    },
+  }),
+  readTool({
+    name: "new_product_form",
+    description:
+      "Show a form card to add a product that is not in the catalogue, filled in from the request. Pass the supplier name they gave, even if it is new: the form then adds that supplier too. The person checks the details and taps Add product.",
+    input: z.object({
+      name: z.string().trim().min(2).max(80),
+      unit: z.enum(UNITS).optional().describe("Best guess from the product, such as bag for rice or dal, bottle for oil"),
+      price: z.number().gt(0).max(99999).optional().describe("Only a price the person gave"),
+      supplier: z.string().trim().min(2).max(120).optional().describe("Supplier name the person gave"),
+    }),
+    run: async (ctx, input) => {
+      const [suppliers, catalogue] = await Promise.all([getConnectedSuppliers(ctx.session.orgId), getBuyerCatalogue()]);
+      const wanted = input.supplier?.toLowerCase();
+      const match = wanted ? suppliers.find((entry) => entry.name.toLowerCase() === wanted || entry.name.toLowerCase().includes(wanted)) : undefined;
+      const similar = catalogue.filter((item) => item.name.toLowerCase().includes(input.name.toLowerCase())).slice(0, 3);
+      const card: AiCard = {
+        kind: "ai_new_product",
+        key: ctx.cardKey("NEW"),
+        view: "buyer",
+        form: {
+          name: input.name,
+          unit: input.unit ?? null,
+          priceCents: input.price ? toCents(input.price) : null,
+          suppliers: suppliers.map((entry) => ({ id: entry.id, name: entry.name })),
+          supplierId: match?.id ?? (!input.supplier && suppliers.length === 1 ? (suppliers[0]?.id ?? null) : null),
+          newSupplier: input.supplier && !match ? input.supplier : null,
+          category: null,
+          opening: null,
+          reorder: null,
+        },
+      };
+      return {
+        data: {
+          card: tag(card),
+          new_supplier: input.supplier && !match ? input.supplier : null,
+          similar_in_catalogue: similar.map((item) => `${item.name} from ${item.supplierName}`),
+          note: "Nothing is added until they tap Add product on the card.",
+        },
+        cards: [card],
+      };
+    },
+  }),
+  readTool({
+    name: "new_supplier_form",
+    description: "Show a form card to add a supplier who is not on Tradelink yet, filled in from the request. The person checks it and taps Add supplier.",
+    input: z.object({
+      name: z.string().trim().min(2).max(120),
+      contact: z.string().trim().max(120).optional(),
+      phone: z.string().trim().max(20).optional(),
+    }),
+    run: async (ctx, input) => {
+      const card: AiCard = { kind: "ai_new_supplier", key: ctx.cardKey("NS"), form: { name: input.name, contact: input.contact ?? null, phone: input.phone ?? null } };
+      return { data: { card: tag(card), note: "Nothing is added until they tap Add supplier on the card." }, cards: [card] };
+    },
+  }),
+  cardTool({
+    name: "add_product",
+    description: "Adds the product from a new product card.",
+    input: z
+      .object({
+        name: z.string().trim().min(2).max(80),
+        unit: z.enum(UNITS),
+        price: z.number().gt(0).max(99999),
+        supplier_id: z.uuid().optional(),
+        new_supplier: z.string().trim().min(2).max(120).optional(),
+      })
+      .refine((value) => Boolean(value.supplier_id) !== Boolean(value.new_supplier)),
+    exec: async (ctx, input, key): Promise<ExecResult> => {
+      const supplier = await supplierForProduct(ctx, input.supplier_id, input.new_supplier, key);
+      if (!supplier.ok) return { ok: false, error: supplier.error };
+      const result = await callRpc<{ productId: string }>("buyer_add_product", {
+        p_name: input.name,
+        p_unit: input.unit,
+        p_price: input.price,
+        p_supplier: supplier.id,
+        p_key: key,
+      });
+      if (!result.ok) {
+        return { ok: false, error: result.reason === "DUPLICATE" ? `${input.name} is already in that supplier's catalogue. Search for it instead.` : result.error };
+      }
+      const item = (await getCatalogue()).find((entry) => entry.id === result.data.productId);
+      const who = item?.supplierName ?? input.new_supplier ?? "The supplier";
+      return {
+        ok: true,
+        data: `Added ${input.name}${supplier.created ? ` and ${who} as a new supplier` : ""}. ${who} confirms the price and stock.`,
+        ...(item ? { card: freshCard(productCard(item, 0, "P0")) } : {}),
+      };
+    },
+  }),
+  cardTool({
+    name: "add_supplier",
+    description: "Adds the supplier from a new supplier card.",
+    input: z.object({
+      name: z.string().trim().min(2).max(120),
+      contact: z.string().trim().max(120).optional(),
+      phone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/).optional(),
+    }),
+    exec: async (_ctx, input, key): Promise<ExecResult> => {
+      const result = await callRpc<{ supplierId: string; name: string }>("buyer_add_supplier", {
+        p_name: input.name,
+        p_contact: input.contact ?? null,
+        p_phone: input.phone ?? null,
+        p_key: key,
+      });
+      if (!result.ok) return { ok: false, error: supplierError(result) };
+      return {
+        ok: true,
+        data: `Added ${result.data.name}. Tradelink invites them, and you can add their products now.`,
+        card: {
+          kind: "ai_supplier",
+          key: "SUP0",
+          supplier: { name: result.data.name, invited: true, onTimePercent: null, deliveries: 0, cutOff: null, deliveryDays: null },
+        },
+      };
     },
   }),
   ...orderWriteTools(),

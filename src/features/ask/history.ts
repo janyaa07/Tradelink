@@ -71,7 +71,7 @@ const aiCardSchema = z.custom<AiCard>(
     typeof value === "object" &&
     value !== null &&
     typeof (value as { kind?: unknown }).kind === "string" &&
-    /^ai_[a-z]+$/.test((value as { kind: string }).kind) &&
+    /^ai_[a-z_]+$/.test((value as { kind: string }).kind) &&
     typeof (value as { key?: unknown }).key === "string",
 );
 

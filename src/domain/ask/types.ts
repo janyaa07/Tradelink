@@ -50,7 +50,9 @@ export type AiCard =
   | { kind: "ai_alert"; key: string; alert: AiAlert }
   | { kind: "ai_cart"; key: string; cart: AiCart }
   | { kind: "ai_spend"; key: string; spend: { spentCents: number; budgetCents: number } }
-  | { kind: "ai_supplier"; key: string; supplier: AiSupplier };
+  | { kind: "ai_supplier"; key: string; supplier: AiSupplier }
+  | { kind: "ai_new_product"; key: string; view: "buyer" | "supplier"; form: AiNewProduct }
+  | { kind: "ai_new_supplier"; key: string; form: AiNewSupplier };
 
 export type AiOrder = {
   id: string;
@@ -66,6 +68,8 @@ export type AiOrder = {
 };
 
 export type AiProduct = {
+  /** Just added from a Tradelink AI form card. */
+  added?: boolean;
   id: string;
   name: string;
   unit: string;
@@ -83,6 +87,8 @@ export type AiProduct = {
 };
 
 export type AiStock = {
+  /** Just added from a Tradelink AI form card. */
+  added?: boolean;
   id: string;
   name: string;
   sku: string;
@@ -114,17 +120,49 @@ export type AiAlert = {
   tone: "good" | "warn" | "bad";
 };
 
+export type AiCartLine = {
+  /** Null while the line still needs a product chosen on the Cart page. */
+  productId: string | null;
+  name: string;
+  qty: number;
+  unit: string;
+  supplier: string | null;
+  lineCents: number | null;
+  /** Stock free to order now; null when the supplier has not confirmed it yet. */
+  available: number | null;
+};
+
 export type AiCart = {
   version: number;
-  lines: { name: string; qty: number; unit: string; supplier: string | null; lineCents: number | null }[];
+  lines: AiCartLine[];
   totalCents: number;
   suppliers: number;
   /** Lines that still need a product chosen on the Cart page. */
   unresolved: number;
 };
 
+/** A form Tradelink AI fills in from the request; the person checks it and taps Add. */
+export type AiNewProduct = {
+  name: string;
+  unit: string | null;
+  priceCents: number | null;
+  /** Buyer: the person's suppliers to choose from. */
+  suppliers: { id: string; name: string }[];
+  supplierId: string | null;
+  /** Buyer: a supplier not on Tradelink yet, added together with the product. */
+  newSupplier: string | null;
+  /** Supplier: the category and stock to start with. */
+  category: string | null;
+  opening: number | null;
+  reorder: number | null;
+};
+
+export type AiNewSupplier = { name: string; contact: string | null; phone: string | null };
+
 export type AiSupplier = {
   name: string;
+  /** Added by the buyer and not on Tradelink yet. */
+  invited?: boolean;
   onTimePercent: number | null;
   deliveries: number;
   cutOff: string | null;

@@ -38,6 +38,8 @@ const STATUS: Record<string, string> = {
   get_inventory: "Checking stock",
   get_problems: "Checking problems",
   get_business_profile: "Checking your terms",
+  new_product_form: "Filling in the form",
+  new_supplier_form: "Filling in the form",
 };
 
 /** The same for every request, so it is cached with the tools (prompt caching keeps replies fast). */
@@ -53,7 +55,8 @@ const RULES = [
   "Cards already show items, quantities, prices, totals, status and dates, so never repeat those in words. One short sentence before the cards is usually enough.",
   "Answer in one or two short sentences, under 40 words, unless the person asks for detail. With a confirm card, say in one short line what it will do, plus a warning only if one matters (below minimum, out of stock, price change).",
   "Plain sentences in the person's language. No headings, tables, bold, emoji or exclamation marks. A short list only for facts no card shows, at most 4 lines.",
-  "End with up to 2 likely next questions the person could tap, each on its own line as [[ask:short question]], for example [[ask:What is low in stock?]]. They must lead somewhere new: never repeat a button the cards already have (such as accepting or confirming the order shown). Leave them out when nothing is clearly useful.",
+  "Doing what was asked: when the person says to order or buy something now, find the product, then call order_now for just that so they get its confirm card; never use the cart and do not show product cards for it. When several products match, pick the one in their cart, usual items or past orders (otherwise the best-selling or cheapest), name it in a few words and offer the other as a follow-up such as [[ask:Basmati rice instead]]; ask only when the products are too different to guess. To add a product or a supplier, use new_product_form or new_supplier_form; the form card does the adding, so never say you cannot.",
+  "End with up to 2 likely next questions the person could tap, each on its own line as [[ask:short question]], for example [[ask:What is low in stock?]]. They must lead somewhere new: never repeat what a card or confirm card above already lets them do (adding, ordering, accepting, confirming, changing quantities), and never offer the same thing for a different item. Leave them out when nothing is clearly useful.",
   "For anything outside ordering, stock, deliveries, suppliers and spend on Tradelink, say in one line what you can help with.",
 ].join("\n");
 
@@ -99,7 +102,7 @@ async function runTool(ctx: AiContext, tool: AiTool | undefined, name: string, i
  * person; changes come back as confirm cards that run only on their tap (src/features/ai/execute.ts).
  */
 export async function runAgent(ctx: AiContext, history: AskTurn[], message: string, emit: (event: AiStreamEvent) => void): Promise<void> {
-  const tools = toolsFor(ctx.role);
+  const tools = toolsFor(ctx.role).filter((tool) => tool.kind === "read" || !tool.cardOnly);
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   const messages: Anthropic.MessageParam[] = [
     ...history.map((turn): Anthropic.MessageParam => ({ role: turn.role === "buyer" ? "user" : "assistant", content: turn.text || "…" })),
