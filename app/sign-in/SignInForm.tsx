@@ -1,37 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { signIn, type SignInState } from "@/features/auth/actions";
+import { authCardClass, authErrorClass, authInputClass, authLabelClass, authLinkClass, authSubmitClass } from "@/features/auth/authStyles";
 
 const initialState: SignInState = { error: null, email: "" };
-const inputClass =
-  "w-full rounded-md border border-control-line bg-surface px-3 py-2.5 text-ink";
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(signIn, initialState);
   return (
-    <form action={action} className="flex flex-col gap-4 rounded-xl bg-surface p-5 text-ink shadow-card" noValidate>
+    <form action={action} className={authCardClass} noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
-      <label className="flex flex-col gap-1 text-[0.84rem] font-semibold text-muted">
+      <label className={authLabelClass}>
         Email
-        <input className={inputClass} name="email" type="email" autoComplete="email" required defaultValue={state.email} />
+        <input className={authInputClass} name="email" type="email" autoComplete="email" required defaultValue={state.email} />
       </label>
-      <label className="flex flex-col gap-1 text-[0.84rem] font-semibold text-muted">
+      <label className={authLabelClass}>
         Password
-        <input className={inputClass} name="password" type="password" autoComplete="current-password" required />
+        <input className={authInputClass} name="password" type="password" autoComplete="current-password" required />
       </label>
       {state.error ? (
-        <p role="alert" className="text-[0.84rem] font-semibold text-bad">
+        <p role="alert" className={authErrorClass}>
           {state.error}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 rounded-md bg-accent px-4 py-2.5 font-bold text-on-accent disabled:opacity-50"
-      >
+      <button type="submit" disabled={pending} className={authSubmitClass}>
         {pending ? "Signing in..." : "Sign in"}
       </button>
+      <Link href="/forgot-password" className={authLinkClass}>
+        Forgot your password?
+      </Link>
     </form>
   );
 }

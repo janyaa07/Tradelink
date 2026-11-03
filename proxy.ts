@@ -1,23 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-const PUBLIC_PATHS = ["/sign-in", "/api/health"];
-const ROLE_HOME = { buyer: "/buyer", supplier: "/supplier", platform: "/admin" } as const;
-type OrgKind = keyof typeof ROLE_HOME;
-
-function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-}
-
-function roleOfPath(pathname: string): OrgKind | null {
-  if (pathname.startsWith("/buyer")) return "buyer";
-  if (pathname.startsWith("/supplier")) return "supplier";
-  if (pathname.startsWith("/admin")) return "platform";
-  return null;
-}
+import { decideRoute, isOtherRolePath } from "@/features/auth/routing";
 
 /**
- * Refreshes the Supabase session and routes each role to its own area (ADR 0011).
+ * Refreshes the Supabase session, routes each role to its own area and holds platform users at
+ * two-factor setup or verification until their session reaches aal2 (ADR 0011, AUTH-04).
  * This is a convenience only: RLS and database functions enforce every permission.
  */
 export async function proxy(request: NextRequest) {
@@ -47,21 +34,25 @@ export async function proxy(request: NextRequest) {
     return redirect;
   };
 
-  if (!data.user) {
-    if (isPublic(pathname)) return response;
-    const next = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname)}`;
-    return redirectTo(`/sign-in${next}`);
+  let kind: string | null = null;
+  let currentLevel: string | null = null;
+  let nextLevel: string | null = null;
+  if (data.user) {
+    const { data: who } = await supabase.rpc("whoami");
+    kind = who && typeof who === "object" && "kind" in who ? String(who.kind) : null;
+    if (kind === "platform") {
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      currentLevel = aal?.currentLevel ?? null;
+      nextLevel = aal?.nextLevel ?? null;
+    }
   }
 
-  const { data: who } = await supabase.rpc("whoami");
-  const kind = who && typeof who === "object" && "kind" in who ? String(who.kind) : null;
-  const home = kind && kind in ROLE_HOME ? ROLE_HOME[kind as OrgKind] : "/sign-in";
-  if (pathname === "/" || pathname === "/sign-in") return redirectTo(home);
-
-  const pathRole = roleOfPath(pathname);
-  if (pathRole && pathRole !== kind) {
-    await supabase.rpc("log_denied", { p_action: `Blocked from opening ${pathname}` });
-    return redirectTo(home);
+  const decision = decideRoute({ pathname, signedIn: Boolean(data.user), kind, currentLevel, nextLevel });
+  if (decision !== "allow") {
+    if (data.user && kind && isOtherRolePath(pathname, kind)) {
+      await supabase.rpc("log_denied", { p_action: `Blocked from opening ${pathname}` });
+    }
+    return redirectTo(decision);
   }
 
   response.headers.set("x-request-id", requestId);

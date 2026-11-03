@@ -14,6 +14,19 @@ All demo accounts use the password `Tradelink-demo-2026`. They exist only for de
 | Supplier | daniel@freshlane.example | Fresh Lane Produce |
 | Admin | hannah@tradelink.example | Tradelink Operations |
 
+### Two-factor sign-in for admins
+
+Admins must use two-factor sign-in. The demo admin (`hannah@tradelink.example`) is already enrolled with this **demo-only** authenticator secret:
+
+`ONGB725AO77LRT3ONS4BJWS7LROEB2HC`
+
+To sign in as Hannah:
+1. In any authenticator app (Google Authenticator, Microsoft Authenticator, 1Password and others), add an account by entering this setup key manually, as a time-based code.
+2. Sign in with the email and password above.
+3. Enter the 6-digit code the app shows.
+
+Because this secret is published, the demo admin account offers no real protection. Remove or re-enrol it before any real business uses Tradelink. The other admin accounts are asked to set up their own authenticator the first time they sign in.
+
 ## Buyer walkthrough (Mei's Noodle House)
 
 1. **Sign in** as Mei. Home shows what to do first:
