@@ -36,7 +36,7 @@ export type FilterTab = {
 /** Segmented filters with a count on each; scrolls sideways on a phone instead of wrapping. */
 export function FilterTabs({ label, tabs }: { label: string; tabs: FilterTab[] }) {
   return (
-    <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 rail:mx-0 rail:px-0">
+    <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] rail:mx-0 rail:px-0">
       <div className="inline-flex gap-0.5 rounded-[10px] bg-sunken p-[3px]">
         {tabs.map((tab) => (
           <Link

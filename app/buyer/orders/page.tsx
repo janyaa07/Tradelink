@@ -110,9 +110,11 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
               defaultValue={q}
               keep={{ filter: filter === "all" ? undefined : filter }}
             />
-            <LinkButton href="/buyer/products" variant="primary" className="hidden rail:inline-flex">
-              New order
-            </LinkButton>
+            <span className="hidden rail:block">
+              <LinkButton href="/buyer/products" variant="primary">
+                New order
+              </LinkButton>
+            </span>
           </>
         }
       />
