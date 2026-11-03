@@ -36,7 +36,7 @@ export function ThreadFeed({ threadId }: { threadId: string }) {
   const { items, status, upsertCard } = useThreadFeed(threadId);
   if (status === "loading") return <Skeleton />;
   if (status === "error") return <p className="text-muted">The chat could not be loaded. Refresh to try again.</p>;
-  if (items.length === 0) return <p className="text-muted">No messages yet. Cards from Restock will show here.</p>;
+  if (items.length === 0) return <p className="text-muted">No messages yet. Cards from Tradelink AI will show here.</p>;
   return (
     <ol className="flex flex-col gap-3" aria-label="Chat">
       {items.map((item) => (

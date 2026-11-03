@@ -14,7 +14,7 @@ import {
   type RefObject,
 } from "react";
 import { addedToCartText, ASK_COPY, greetingText, placeCartLabel, placedText, textReply } from "@/domain/ask/replies";
-import type { AskAction, AskCard, AskReply, AskTurn, CartLine, LineRow, ReadLineStatus } from "@/domain/ask/types";
+import type { AiProposal, AskAction, AskCard, AskReply, AskTurn, CartLine, LineRow, ReadLineStatus } from "@/domain/ask/types";
 import { formatMoney } from "@/domain/money";
 import { StatusPill } from "@/features/orders/OrderCard";
 import { Button } from "@/ui/Button";
@@ -24,7 +24,8 @@ import { Icon, type IconName } from "@/ui/Icon";
 import { LinkButton } from "@/ui/LinkButton";
 import { Pill, type PillTone } from "@/ui/Pill";
 import { ProductImage } from "@/ui/ProductImage";
-import { addToCartAction, askAction, placeCartAction } from "./actions";
+import { executeAiAction } from "@/features/ai/execute";
+import { addToCartAction, placeCartAction } from "./actions";
 import styles from "./assistant.module.css";
 import {
   conversationsSnapshot,
@@ -38,12 +39,46 @@ import {
   type Conversation,
 } from "./history";
 
-const SUGGESTIONS: { text: string; icon: IconName }[] = [
-  { text: "Order my usual", icon: "repeat" },
-  { text: "What's arriving today?", icon: "truck" },
-  { text: "How much did I spend this week?", icon: "receipt" },
-  { text: "What's in my cart?", icon: "cart" },
-];
+export type AiRole = "buyer" | "supplier";
+
+const SUGGESTIONS: Record<AiRole, { text: string; icon: IconName }[]> = {
+  buyer: [
+    { text: "Order my usual", icon: "repeat" },
+    { text: "What's arriving today?", icon: "truck" },
+    { text: "How much did I spend this week?", icon: "receipt" },
+    { text: "What's in my cart?", icon: "cart" },
+  ],
+  supplier: [
+    { text: "What new orders do I have?", icon: "list" },
+    { text: "What's low in stock?", icon: "stock" },
+    { text: "Any problems I need to answer?", icon: "flag" },
+    { text: "What goes out for delivery today?", icon: "truck" },
+  ],
+};
+
+const PLACEHOLDER = "Ask anything, or tell me what to do";
+
+type StreamEvent =
+  | { type: "text"; delta: string }
+  | { type: "status"; text: string }
+  | { type: "cards"; cards: AskCard[] }
+  | { type: "proposal"; proposal: AiProposal }
+  | { type: "error"; message: string }
+  | { type: "done" };
+
+/** Where the person goes next after a confirmed change. */
+function linkAfter(role: AiRole, tool: string): AskAction | null {
+  if (role === "supplier") {
+    return ["receive_stock", "change_price"].includes(tool)
+      ? { kind: "link", label: "Open inventory", href: "/supplier/inventory" }
+      : { kind: "link", label: "View orders", href: "/supplier/orders" };
+  }
+  if (["add_to_cart", "set_cart_quantity"].includes(tool)) return { kind: "link", label: "View cart", href: "/buyer/cart" };
+  if (["place_order", "cancel_order", "confirm_delivery", "report_not_here", "report_problem"].includes(tool)) {
+    return { kind: "link", label: "View orders", href: "/buyer/orders" };
+  }
+  return null;
+}
 
 const MAX_CHARS = 2000;
 const MAX_HISTORY = 20;
@@ -163,18 +198,74 @@ function CardView({ card }: { card: AskCard }) {
 type ReplyHandlers = {
   onAdd: (lines: CartLine[]) => Promise<void>;
   onPlace: (draftVersion: number) => Promise<void>;
+  onConfirm: (proposal: AiProposal) => Promise<void>;
+  onSkip: (proposal: AiProposal) => void;
 };
+
+/** A change Tradelink AI wants to make. Nothing happens until the person taps the button. */
+function ConfirmCard({
+  proposal,
+  state,
+  handlers,
+}: {
+  proposal: AiProposal;
+  state: "done" | "skipped" | undefined;
+  handlers: ReplyHandlers;
+}) {
+  const [busy, start] = useTransition();
+  return (
+    <div className={cx(cardClass, "gap-2 p-3.5")}>
+      <div className="flex items-start justify-between gap-3">
+        <b className="[overflow-wrap:anywhere]">{proposal.title}</b>
+        {state ? <Pill tone={state === "done" ? "good" : "plain"}>{state === "done" ? "Done" : "Not now"}</Pill> : null}
+      </div>
+      {proposal.details.length > 0 ? (
+        <ul className="flex flex-col gap-0.5 text-[.875rem] text-muted">
+          {proposal.details.map((detail, index) => (
+            <li key={index} className="[overflow-wrap:anywhere]">
+              {detail}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {state ? null : (
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button variant="primary" aria-busy={busy || undefined} disabled={busy} onClick={() => start(() => handlers.onConfirm(proposal))}>
+            {busy ? "Working..." : proposal.confirmLabel}
+          </Button>
+          <Button disabled={busy} onClick={() => handlers.onSkip(proposal)}>
+            Not now
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Buttons under a reply. Add to cart only fills the cart. Place order places the cart as the
  * assistant showed it, and only when the buyer taps it.
  */
-function ReplyActions({ actions, done, handlers }: { actions: AskAction[]; done: boolean; handlers: ReplyHandlers }) {
+function ReplyActions({
+  actions,
+  done,
+  resolved,
+  handlers,
+}: {
+  actions: AskAction[];
+  done: boolean;
+  resolved: Record<string, "done" | "skipped">;
+  handlers: ReplyHandlers;
+}) {
   const [busy, start] = useTransition();
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex w-full flex-wrap gap-2">
       {actions.map((action) => {
         switch (action.kind) {
+          case "confirm":
+            return (
+              <ConfirmCard key={action.proposal.id} proposal={action.proposal} state={resolved[action.proposal.id]} handlers={handlers} />
+            );
           case "link":
             return (
               <LinkButton key={action.label} href={action.href}>
@@ -227,14 +318,18 @@ function MessageView({ message, handlers }: { message: ChatMessage; handlers: Re
     <div className="flex gap-3">
       <AssistantAvatar />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-3 pt-1">
-        <p className="whitespace-pre-line leading-relaxed [overflow-wrap:anywhere]">
-          <span className="sr-only">Tradelink Assistant: </span>
-          {text}
-        </p>
+        {text.trim() ? (
+          <p className="whitespace-pre-line leading-relaxed [overflow-wrap:anywhere]">
+            <span className="sr-only">Tradelink AI: </span>
+            {text.trim()}
+          </p>
+        ) : null}
         {cards.map((card, index) => (
           <CardView key={index} card={card} />
         ))}
-        {actions.length > 0 ? <ReplyActions actions={actions} done={message.done} handlers={handlers} /> : null}
+        {actions.length > 0 ? (
+          <ReplyActions actions={actions} done={message.done} resolved={message.resolved ?? {}} handlers={handlers} />
+        ) : null}
       </div>
     </div>
   );
@@ -339,7 +434,7 @@ function newConversationId(): string {
  * Tradelink Assistant chat (BUY-47). Each chat is saved on this device so the buyer can come back
  * to it; only the open chat's last turns go to the server, as context for the next answer.
  */
-export function AssistantChat({ firstName, userId }: { firstName: string; userId: string }) {
+export function AssistantChat({ firstName, userId, role = "buyer" }: { firstName: string; userId: string; role?: AiRole }) {
   const router = useRouter();
   const inputId = useId();
   const [now] = useState(() => new Date());
@@ -352,6 +447,7 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const nextId = useRef(1);
   const currentIdRef = useRef(currentId);
@@ -394,6 +490,19 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
   const append = (from: ChatMessage["from"], reply: AskReply) =>
     commit([...messagesRef.current, { id: nextId.current++, from, reply, done: false }]);
 
+  /** Streaming updates to the reply being written: shown at once, saved when the reply ends. */
+  const patch = (messageId: number, change: (message: ChatMessage) => ChatMessage) => {
+    messagesRef.current = messagesRef.current.map((message) => (message.id === messageId ? change(message) : message));
+    setMessages(messagesRef.current);
+  };
+
+  const resolve = (messageId: number, proposalId: string, state: "done" | "skipped") =>
+    commit(
+      messagesRef.current.map((message) =>
+        message.id === messageId ? { ...message, resolved: { ...message.resolved, [proposalId]: state } } : message,
+      ),
+    );
+
   const markDone = (messageId: number) =>
     commit(messagesRef.current.map((message) => (message.id === messageId ? { ...message, done: true } : message)));
 
@@ -430,19 +539,80 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
     append("buyer", textReply(question));
     setDraft("");
     setThinking(true);
-    let reply: AskReply;
+    setStatus(null);
+    const replyId = nextId.current++;
+    commit([...messagesRef.current, { id: replyId, from: "tradelink", reply: { text: "", cards: [], actions: [] }, done: false }]);
+    const addText = (text: string) =>
+      patch(replyId, (message) => ({ ...message, reply: { ...message.reply, text: message.reply.text + text } }));
     try {
-      reply = await askAction(question, history);
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: question, history }),
+      });
+      if (!response.body) throw new Error("no body");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const raw of lines) {
+          if (!raw.trim()) continue;
+          const event = JSON.parse(raw) as StreamEvent;
+          if (event.type === "text") {
+            addText(event.delta);
+            setStatus(null);
+          } else if (event.type === "status") setStatus(event.text);
+          else if (event.type === "error") addText(event.message);
+          else if (event.type === "cards") {
+            patch(replyId, (message) => ({ ...message, reply: { ...message.reply, cards: [...message.reply.cards, ...event.cards] } }));
+          } else if (event.type === "proposal") {
+            patch(replyId, (message) => ({
+              ...message,
+              reply: { ...message.reply, actions: [...message.reply.actions, { kind: "confirm", proposal: event.proposal }] },
+            }));
+          }
+        }
+      }
     } catch {
-      reply = textReply(ASK_COPY.unavailable);
+      addText(ASK_COPY.unavailable);
     }
+    const reply = messagesRef.current.find((message) => message.id === replyId);
+    if (reply && !reply.reply.text.trim() && reply.reply.cards.length === 0 && reply.reply.actions.length === 0) addText(ASK_COPY.unavailable);
+    commit(messagesRef.current);
     pending.current = false;
     setThinking(false);
-    append("tradelink", reply);
+    setStatus(null);
     focusInput();
   }
 
   const handlersFor = (messageId: number): ReplyHandlers => ({
+    onConfirm: async (proposal) => {
+      setWorking(true);
+      let result: Awaited<ReturnType<typeof executeAiAction>>;
+      try {
+        result = await executeAiAction({ id: proposal.id, tool: proposal.tool, args: proposal.args });
+      } catch {
+        result = { ok: false, error: ASK_COPY.unavailable };
+      }
+      setWorking(false);
+      if (!result.ok) {
+        append("tradelink", textReply(result.error));
+        return;
+      }
+      resolve(messageId, proposal.id, "done");
+      const link = linkAfter(role, proposal.tool);
+      append("tradelink", { text: result.data, cards: [], actions: link ? [link] : [] });
+      router.refresh();
+    },
+    onSkip: (proposal) => {
+      resolve(messageId, proposal.id, "skipped");
+      append("tradelink", textReply("Okay, nothing changed."));
+    },
     onAdd: async (lines) => {
       setWorking(true);
       let result: Awaited<ReturnType<typeof addToCartAction>>;
@@ -546,7 +716,7 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
                 <span className="text-muted">{greeting.ask}</span>
               </p>
               <div role="group" aria-label="Suggestions" className="grid grid-cols-2 gap-3 min-[640px]:grid-cols-4">
-                {SUGGESTIONS.map((suggestion) => (
+                {SUGGESTIONS[role].map((suggestion) => (
                   <button
                     key={suggestion.text}
                     type="button"
@@ -568,16 +738,16 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
           <div
             role="log"
             aria-live="polite"
-            aria-label="Conversation with Tradelink Assistant"
+            aria-label="Conversation with Tradelink AI"
             className={cx("flex flex-col gap-6", !empty && "py-4")}
           >
             {messages.map((message) => (
               <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
             ))}
-            {thinking ? (
+            {thinking && (status || !messages.at(-1)?.reply.text.trim()) ? (
               <div className="flex items-center gap-3">
                 <AssistantAvatar />
-                <p className={cx(styles.thinking, "font-medium")}>Thinking...</p>
+                <p className={cx(styles.thinking, "font-medium")}>{status ? `${status}...` : "Thinking..."}</p>
               </div>
             ) : null}
           </div>
@@ -595,7 +765,7 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
             className={cx(styles.composer, "flex items-end gap-2 rounded-[28px] py-1.5 pr-1.5 pl-5")}
           >
             <label htmlFor={inputId} className="sr-only">
-              Message Tradelink Assistant
+              Message Tradelink AI
             </label>
             <textarea
               id={inputId}
@@ -605,7 +775,7 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
               maxLength={MAX_CHARS}
               autoComplete="off"
               enterKeyHint="send"
-              placeholder="Type a question or an order"
+              placeholder={PLACEHOLDER}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={onKeyDown}
               className="max-h-[200px] min-w-0 flex-1 resize-none self-center border-0 bg-transparent py-2 text-base leading-6 text-ink outline-none placeholder:text-muted"
@@ -622,7 +792,7 @@ export function AssistantChat({ firstName, userId }: { firstName: string; userId
               <SendIcon />
             </button>
           </form>
-          <p className="mt-1.5 text-center text-[.75rem] text-muted">Nothing is ordered until you tap Place order.</p>
+          <p className="mt-1.5 text-center text-[.75rem] text-muted">Tradelink AI asks you to confirm before it changes anything.</p>
         </div>
       </div>
     </div>

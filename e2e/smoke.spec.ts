@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// A fictional Restock owner from supabase/restock-mock-data.sql. Override for other environments.
+// A fictional Tradelink AI owner from supabase/restock-mock-data.sql. Override for other environments.
 const OWNER_EMAIL = process.env.E2E_OWNER_EMAIL ?? "tan@kopicorner.example";
 const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD ?? "Tradelink-demo-2026";
 
@@ -12,11 +12,11 @@ test("the sign-in page renders", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
 });
 
-test("the web app manifest is served for Restock", async ({ page, request }) => {
+test("the web app manifest is served for Tradelink AI", async ({ page, request }) => {
   const response = await request.get("/manifest.webmanifest");
   expect(response.ok()).toBe(true);
   const manifest = (await response.json()) as { name: string; short_name: string; start_url: string; display: string; icons: Array<{ src: string; purpose?: string }> };
-  expect(manifest).toMatchObject({ name: "Restock by Ledger", short_name: "Restock", start_url: "/r", display: "standalone" });
+  expect(manifest).toMatchObject({ name: "Tradelink AI", short_name: "Tradelink AI", start_url: "/r", display: "standalone" });
   expect(manifest.icons.some((icon) => icon.purpose === "maskable")).toBe(true);
   for (const icon of manifest.icons) {
     expect((await request.get(icon.src)).ok(), icon.src).toBe(true);
@@ -39,7 +39,7 @@ test("the offline page renders without signing in", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Try again" })).toHaveAttribute("href", "/");
 });
 
-test("a signed-in Restock owner reaches /r", async ({ page }) => {
+test("a signed-in Tradelink AI owner reaches /r", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(OWNER_EMAIL);
   await page.getByLabel("Password").fill(OWNER_PASSWORD);
@@ -50,7 +50,7 @@ test("a signed-in Restock owner reaches /r", async ({ page }) => {
   // to /r, so open /r directly to check the session is allowed there.
   await page.goto("/r");
   await expect(page).toHaveURL(/\/r(?:[/?#]|$)/);
-  await expect(page.getByRole("alertdialog", { name: "Update Restock to keep ordering" })).toHaveCount(0);
+  await expect(page.getByRole("alertdialog", { name: "Update Tradelink AI to keep ordering" })).toHaveCount(0);
 });
 
 test("the service worker shows the offline page when the network is gone", async ({ page, context }) => {

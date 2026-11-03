@@ -7,7 +7,7 @@
 -- supplier_po            {{1}} shop name, {{2}} line count, {{3}} delivery day
 -- po_change_result       {{1}} supplier name, {{2}} delivery day, {{3}} short change summary
 -- arrival_check          {{1}} supplier name
--- agent_action_notice    {{1}} what Restock did, {{2}} undo deadline
+-- agent_action_notice    {{1}} what Tradelink AI did, {{2}} undo deadline
 -- support_reply          {{1}} support person's first name
 -- daily_plan_ready       {{1}} delivery day, {{2}} item count, {{3}} cut-off time
 insert into public.notification_type (name, language, channel, title, body) values
@@ -36,10 +36,10 @@ insert into public.notification_type (name, language, channel, title, body) valu
   ('arrival_check', 'ms', 'push', 'Adakah penghantaran daripada {{1}} sudah tiba?', 'Beritahu kami jika semua sudah tiba, ada masalah, atau belum sampai.'),
   ('arrival_check', 'ta', 'push', '{{1}} டெலிவரி வந்ததா?', 'எல்லாம் வந்ததா, ஏதாவது பிரச்சனையா, அல்லது இன்னும் வரவில்லையா என்று சொல்லுங்கள்.'),
 
-  ('agent_action_notice', 'en', 'push', 'Restock made a change for you', '{{1}}. You can undo this until {{2}}.'),
-  ('agent_action_notice', 'zh', 'push', 'Restock 已为您做出更改', '{{1}}。您可以在{{2}}前撤销。'),
-  ('agent_action_notice', 'ms', 'push', 'Restock membuat perubahan untuk anda', '{{1}}. Anda boleh membatalkannya sehingga {{2}}.'),
-  ('agent_action_notice', 'ta', 'push', 'Restock உங்களுக்காக ஒரு மாற்றம் செய்தது', '{{1}}. {{2}} வரை இதைச் செயல்தவிர்க்கலாம்.'),
+  ('agent_action_notice', 'en', 'push', 'Tradelink AI made a change for you', '{{1}}. You can undo this until {{2}}.'),
+  ('agent_action_notice', 'zh', 'push', 'Tradelink AI 已为您做出更改', '{{1}}。您可以在{{2}}前撤销。'),
+  ('agent_action_notice', 'ms', 'push', 'Tradelink AI membuat perubahan untuk anda', '{{1}}. Anda boleh membatalkannya sehingga {{2}}.'),
+  ('agent_action_notice', 'ta', 'push', 'Tradelink AI உங்களுக்காக ஒரு மாற்றம் செய்தது', '{{1}}. {{2}} வரை இதைச் செயல்தவிர்க்கலாம்.'),
 
   ('support_reply', 'en', 'push', 'Support replied', '{{1}} replied to your message. Open the chat to read it.'),
   ('support_reply', 'zh', 'push', '客服已回复', '{{1}}回复了您的消息。打开聊天查看。'),

@@ -66,9 +66,20 @@ const cardSchema = z.discriminatedUnion("kind", [
 ]);
 
 const actionSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("link"), label: z.enum(ASK_LINK_LABELS), href: z.string().startsWith("/buyer") }),
+  z.object({ kind: z.literal("link"), label: z.enum(ASK_LINK_LABELS), href: z.string().regex(/^\/(buyer|supplier)(\/|$)/) }),
   z.object({ kind: z.literal("add_to_cart"), lines: z.array(cartLineSchema) }),
   z.object({ kind: z.literal("place_cart"), draftVersion: z.number(), orders: z.number() }),
+  z.object({
+    kind: z.literal("confirm"),
+    proposal: z.object({
+      id: z.uuid(),
+      tool: z.string().regex(/^[a-z_]{2,40}$/),
+      args: z.record(z.string(), z.unknown()),
+      title: z.string().max(200),
+      details: z.array(z.string().max(300)).max(40),
+      confirmLabel: z.string().max(40),
+    }),
+  }),
 ]);
 
 const messageSchema = z.object({
@@ -77,6 +88,8 @@ const messageSchema = z.object({
   reply: z.object({ text: z.string(), cards: z.array(cardSchema), actions: z.array(actionSchema) }),
   /** The reply's button was used: Add to cart added, or Place order placed. */
   done: z.boolean(),
+  /** Tradelink AI confirm cards the person answered, by proposal id. */
+  resolved: z.record(z.string(), z.enum(["done", "skipped"])).optional(),
 });
 
 const conversationSchema = z.object({
@@ -86,7 +99,13 @@ const conversationSchema = z.object({
   messages: z.array(messageSchema).max(MAX_MESSAGES),
 });
 
-export type ChatMessage = { id: number; from: "buyer" | "tradelink"; reply: AskReply; done: boolean };
+export type ChatMessage = {
+  id: number;
+  from: "buyer" | "tradelink";
+  reply: AskReply;
+  done: boolean;
+  resolved?: Record<string, "done" | "skipped">;
+};
 export type Conversation = { id: string; title: string; updatedAt: string; messages: ChatMessage[] };
 
 function storageKey(userId: string): string {

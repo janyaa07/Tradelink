@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import { IndexedDbOutboxStorage } from "./indexedDbStorage";
 import { fetchSender, MemoryOutboxStorage, Outbox, type OutboxItem } from "./outbox";
 
-const LOCK_NAME = "restock-outbox";
+const LOCK_NAME = "tradelink-ai-outbox";
 
 /** What happened to one item: sent now, refused by the server (roll back), or queued for later. */
 export type SendOutcome =

@@ -2,6 +2,15 @@
 
 All notable changes are listed here. The format follows Keep a Changelog, and versions follow semantic versioning.
 
+## [0.6.0] - 2026-11-03
+
+### Added
+- **Tradelink AI for buyers and suppliers:** a Claude agent that uses the same actions as the app, replacing the fixed-phrase Assistant. It looks things up itself in several steps, streams its answer, and shows order cards.
+  - **Buyers:** find products, orders, cart, spend, alerts, usual items and suppliers. Every change shows a confirm card first and runs only on the person's tap, through the same database functions as the screens: add to cart, change the cart, place the order, cancel, All here, Not here yet, report a problem, acknowledge a price change, mark a credit received, set the budget, and change usual items.
+  - **Suppliers:** new and accepted orders, inventory and low stock, problems and terms, with the same confirm cards for accept, reject, out for delivery, delivered, answer a problem, receive stock and change a price.
+  - **Where it lives:** `/supplier/assistant` is new, and Tradelink AI is in both navigations and on both home pages.
+- **Foundations for the larger Tradelink AI build** (from M0): database tables, the card system, timed jobs, notifications, the installable app shell and the offline outbox. Most of this is not visible yet.
+
 ## [0.5.0] - 2026-11-03
 
 ### Changed (buyer, second round of owner feedback)

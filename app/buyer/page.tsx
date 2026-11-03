@@ -36,7 +36,7 @@ export default async function BuyerHomePage() {
       promptIcon="chat"
     >
       <ServiceGrid columns={6}>
-        <ServiceTile label="Assistant" icon="chat" href="/buyer/assistant" />
+        <ServiceTile label="Tradelink AI" icon="chat" href="/buyer/assistant" />
         <MyUsualTile />
         <ServiceTile label="Products" icon="box" href="/buyer/products" />
         <ServiceTile label="Orders" icon="list" href="/buyer/orders" />

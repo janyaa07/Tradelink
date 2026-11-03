@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { resolveLanguage, t } from "@/i18n";
 
-export const metadata: Metadata = { title: "Offline · Restock" };
+export const metadata: Metadata = { title: "Offline · Tradelink AI" };
 
 // The service worker serves this page when the network is gone, so its stylesheet may not load.
 // Inline styles with token fallbacks keep it readable on its own.
@@ -39,7 +39,7 @@ export default async function OfflinePage() {
   return (
     <main style={styles.main}>
       {/* eslint-disable-next-line @next/next/no-img-element -- cached by the service worker for offline use */}
-      <img src="/icon.svg" alt="Restock" width={56} height={56} />
+      <img src="/icon.svg" alt="Tradelink AI" width={56} height={56} />
       <h1 style={styles.title}>{t(lang, "offline.page.title")}</h1>
       <p style={styles.body}>{t(lang, "offline.page.body")}</p>
       {/* A plain link, not next/link: it must work before any script has loaded. */}

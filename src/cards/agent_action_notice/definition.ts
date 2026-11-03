@@ -19,7 +19,7 @@ const ActionRowSchema = z
 export function noticeText(action: string, inputs: Record<string, unknown> | null): string {
   const summary = inputs?.summary;
   if (typeof summary === "string" && summary.trim()) return summary.trim().slice(0, 240);
-  return `Restock did this for you: ${action.replaceAll(/[._]/g, " ")}.`;
+  return `Tradelink AI did this for you: ${action.replaceAll(/[._]/g, " ")}.`;
 }
 
 export function canUndo(data: AgentActionNoticeData, now: Date): boolean {

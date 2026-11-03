@@ -51,7 +51,15 @@ export type CartLine = {
   qtyAssumed: boolean;
 };
 
-export const ASK_LINK_LABELS = ["Open Insights", "See all suppliers", "View cart", "Review cart", "View orders"] as const;
+export const ASK_LINK_LABELS = [
+  "Open Insights",
+  "See all suppliers",
+  "View cart",
+  "Review cart",
+  "View orders",
+  "Open order",
+  "Open inventory",
+] as const;
 export type AskLinkLabel = (typeof ASK_LINK_LABELS)[number];
 
 export type AskAction =
@@ -61,6 +69,21 @@ export type AskAction =
    * Place the cart as it was when the assistant read it: one order per supplier. Only the buyer's
    * tap places it; the server refuses if the cart has changed since (draftVersion).
    */
-  | { kind: "place_cart"; draftVersion: number; orders: number };
+  | { kind: "place_cart"; draftVersion: number; orders: number }
+  /** A change Tradelink AI proposes. It runs only when the person taps Confirm. */
+  | { kind: "confirm"; proposal: AiProposal };
+
+/**
+ * A change proposed by Tradelink AI: which tool, its checked arguments, and the words shown on the
+ * confirm card. The id doubles as the idempotency key, so a second tap does nothing twice.
+ */
+export type AiProposal = {
+  id: string;
+  tool: string;
+  args: Record<string, unknown>;
+  title: string;
+  details: string[];
+  confirmLabel: string;
+};
 
 export type AskReply = { text: string; cards: AskCard[]; actions: AskAction[] };

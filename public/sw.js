@@ -1,8 +1,8 @@
-// Restock service worker (ADR 0016). Plain JavaScript with no build step.
+// Tradelink AI service worker (ADR 0016). Plain JavaScript with no build step.
 // It caches only the offline page and the icons. Next.js pages, RSC payloads and API calls always
 // go to the network, so an old cached app can never be served after a deploy.
 
-const CACHE_PREFIX = "restock-";
+const CACHE_PREFIX = "tradelink-ai-";
 const CACHE_NAME = `${CACHE_PREFIX}v1`;
 const OFFLINE_URL = "/offline";
 const STATIC_ASSETS = [
@@ -75,7 +75,7 @@ function readPayload(data) {
     raw = { body: data ? data.text() : "" };
   }
   return {
-    title: typeof raw.title === "string" && raw.title ? raw.title : "Restock",
+    title: typeof raw.title === "string" && raw.title ? raw.title : "Tradelink AI",
     body: typeof raw.body === "string" ? raw.body : "",
     url: safePath(raw.url),
     notificationId: typeof raw.notificationId === "string" ? raw.notificationId : null,

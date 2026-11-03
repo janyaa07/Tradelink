@@ -34,8 +34,8 @@ export const ms: Dictionary = {
   "offline.page.body": "Semak sambungan anda, kemudian cuba lagi. Apa-apa yang anda hantar akan sampai apabila anda kembali dalam talian.",
 
   "update.ready": "Versi baharu sudah sedia.",
-  "update.gate.title": "Kemas kini Restock untuk terus membuat pesanan",
-  "update.gate.body": "Versi Restock ini terlalu lama untuk membuat pesanan. Muat semula untuk mendapatkan versi terkini.",
+  "update.gate.title": "Kemas kini Tradelink AI untuk terus membuat pesanan",
+  "update.gate.body": "Versi Tradelink AI ini terlalu lama untuk membuat pesanan. Muat semula untuk mendapatkan versi terkini.",
 
-  "push.needsInstall": "Untuk menerima makluman pada iPhone, tambah Restock ke Skrin Utama dahulu.",
+  "push.needsInstall": "Untuk menerima makluman pada iPhone, tambah Tradelink AI ke Skrin Utama dahulu.",
 };

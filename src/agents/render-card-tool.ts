@@ -43,7 +43,7 @@ export const RENDER_CARD_TOOL: Anthropic.Tool = {
   description: [
     "Shows the owner a card instead of a prose reply. Always use it when a card fits.",
     "order_summary shows a shop_order with its lines, prices, totals and buttons; agent_action_notice tells the owner",
-    "what Restock did (subject agent_action) and offers Undo; question asks one short question about any subject.",
+    "what Tradelink AI did (subject agent_action) and offers Undo; question asks one short question about any subject.",
     "Pass only the card type, the subject reference and wording. The server loads every item, price, total, date",
     "and state from the database, so never put them in the reason or the question.",
     "If the tool returns an error, nothing was shown: fix the input or answer without a card.",

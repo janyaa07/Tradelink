@@ -4,14 +4,14 @@ import type { MetadataRoute } from "next";
 const THEME_COLOR = "#0B4F37";
 const BACKGROUND_COLOR = "#0A3A29";
 
-/** The installable Restock app (ADR 0016). PNG icons come from `node scripts/build-icons.mjs`. */
+/** The installable Tradelink AI app (ADR 0016). PNG icons come from `node scripts/build-icons.mjs`. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/r",
-    name: "Restock by Ledger",
-    short_name: "Restock",
+    name: "Tradelink AI",
+    short_name: "Tradelink AI",
     description: "Order stock by chat and keep every supplier on track.",
-    start_url: "/r",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

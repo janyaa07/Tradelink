@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   title: "Tradelink",
   description: "Order, deliver and check stock between small food businesses and their suppliers.",
   icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Restock", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Tradelink AI", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

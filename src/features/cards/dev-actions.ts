@@ -155,7 +155,7 @@ export async function createDemoQuestionCardAction(): Promise<DemoResult> {
       shopId: shop.shopId,
       threadId,
       question: {
-        text: "Should Restock order bean sprouts on Saturdays too?",
+        text: "Should Tradelink AI order bean sprouts on Saturdays too?",
         options: [
           { id: "yes", label: "Yes, add Saturday" },
           { id: "no", label: "No, keep weekdays" },

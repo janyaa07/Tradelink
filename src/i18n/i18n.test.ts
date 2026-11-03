@@ -29,7 +29,7 @@ describe("dictionaries", () => {
   it("keeps English in sentence case", () => {
     for (const [key, message] of Object.entries(dictionaries.en)) {
       const words = message.split(/(?<=\.)\s+/).flatMap((sentence) => sentence.split(/\s+/).slice(1));
-      const capitalised = words.filter((word) => /^[A-Z][a-z]/.test(word) && !["Restock", "Home", "Screen", "iPhone"].includes(word.replace(/[.,]$/, "")));
+      const capitalised = words.filter((word) => /^[A-Z][a-z]/.test(word) && !["Tradelink", "AI", "Home", "Screen", "iPhone"].includes(word.replace(/[.,]$/, "")));
       expect(capitalised, key).toEqual([]);
     }
   });

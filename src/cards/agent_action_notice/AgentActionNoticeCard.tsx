@@ -45,7 +45,7 @@ function NoticeBody({ card, data, onUpdate }: Props & { data: AgentActionNoticeD
   return (
     <CardShell
       card={card}
-      title="Restock did this for you"
+      title="Tradelink AI did this for you"
       subjectLabel={formatDateTime(data.createdAt)}
       state={optimisticUndo ? "undone" : undefined}
       footerActions={
@@ -65,12 +65,12 @@ function NoticeBody({ card, data, onUpdate }: Props & { data: AgentActionNoticeD
   );
 }
 
-/** A notice for something Restock did, with Undo while its undo window is open (US-71). */
+/** A notice for something Tradelink AI did, with Undo while its undo window is open (US-71). */
 export function AgentActionNoticeCard({ card, onUpdate }: Props) {
   const parsed = useMemo(() => AgentActionNoticeDataSchema.safeParse(card.data), [card.data]);
   if (!parsed.success) {
     return (
-      <CardShell card={card} title="Restock did this for you">
+      <CardShell card={card} title="Tradelink AI did this for you">
         <p className="text-muted">This card could not be shown. Refresh to try again.</p>
       </CardShell>
     );

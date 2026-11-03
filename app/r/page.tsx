@@ -5,17 +5,17 @@ import { ThreadFeed } from "@/features/cards/ThreadFeed";
 import { EmptyState } from "@/ui/EmptyState";
 import { LinkButton } from "@/ui/LinkButton";
 
-export const metadata: Metadata = { title: "Restock" };
+export const metadata: Metadata = { title: "Tradelink AI" };
 export const dynamic = "force-dynamic";
 
-/** Restock home (M0): the shop's chat thread with its cards. */
-export default async function RestockHomePage() {
+/** Tradelink AI home (M0): the shop's chat thread with its cards. */
+export default async function AiHomePage() {
   const shop = await getMyShop();
   if (!shop) {
     return (
       <main className="mx-auto flex w-full max-w-[560px] flex-col gap-4 px-4 py-6">
-        <h1>Restock</h1>
-        <EmptyState>Your account is not linked to a shop yet. Ask your Restock contact to add you.</EmptyState>
+        <h1>Tradelink AI</h1>
+        <EmptyState>Your account is not linked to a shop yet. Ask your Tradelink AI contact to add you.</EmptyState>
       </main>
     );
   }
@@ -25,7 +25,7 @@ export default async function RestockHomePage() {
     <main className="mx-auto flex w-full max-w-[560px] flex-col gap-4 px-4 py-6">
       <header className="flex items-end justify-between gap-3">
         <div className="flex min-w-0 flex-col">
-          <span className="text-[.82rem] font-semibold text-muted">Restock</span>
+          <span className="text-[.82rem] font-semibold text-muted">Tradelink AI</span>
           <h1 className="[overflow-wrap:anywhere]">{shop.shopName}</h1>
         </div>
         {devPagesEnabled() && shop.role === "owner" ? (

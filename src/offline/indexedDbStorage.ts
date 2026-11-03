@@ -1,6 +1,6 @@
 import { MemoryOutboxStorage, sortBySeq, type OutboxStorage, type QueuedItem } from "./outbox";
 
-const DB_NAME = "restock-outbox";
+const DB_NAME = "tradelink-ai-outbox";
 const DB_VERSION = 1;
 const STORE = "items";
 

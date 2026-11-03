@@ -34,8 +34,8 @@ export const zh: Dictionary = {
   "offline.page.body": "请检查网络连接后重试。你已发送的内容会在恢复联网后送出。",
 
   "update.ready": "新版本已就绪。",
-  "update.gate.title": "请更新 Restock 以继续下单",
-  "update.gate.body": "当前版本的 Restock 过旧，无法下单。请刷新以获取最新版本。",
+  "update.gate.title": "请更新 Tradelink AI 以继续下单",
+  "update.gate.body": "当前版本的 Tradelink AI 过旧，无法下单。请刷新以获取最新版本。",
 
-  "push.needsInstall": "如需在 iPhone 上接收提醒，请先将 Restock 添加到主屏幕。",
+  "push.needsInstall": "如需在 iPhone 上接收提醒，请先将 Tradelink AI 添加到主屏幕。",
 };

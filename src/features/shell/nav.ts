@@ -8,13 +8,14 @@ import type { NavItem, ShellRole } from "@/ui/shell/types";
 export const NAV: Record<ShellRole, NavItem[]> = {
   buyer: [
     { href: "/buyer", label: "Home", icon: "home" },
-    { href: "/buyer/assistant", label: "Assistant", icon: "chat" },
+    { href: "/buyer/assistant", label: "Tradelink AI", icon: "chat" },
     { href: "/buyer/orders", label: "Orders", icon: "list" },
     { href: "/buyer/products", label: "Products", icon: "box" },
     { href: "/buyer/insights", label: "Insights", icon: "trend" },
   ],
   supplier: [
     { href: "/supplier", label: "Home", icon: "home" },
+    { href: "/supplier/assistant", label: "Tradelink AI", icon: "chat" },
     { href: "/supplier/orders", label: "Orders", icon: "list" },
     { href: "/supplier/inventory", label: "Inventory", icon: "stock" },
     { href: "/supplier/activity", label: "Activity", icon: "pulse" },

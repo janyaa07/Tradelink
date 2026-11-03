@@ -37,8 +37,9 @@ export default async function SupplierHomePage() {
       greeting={greeting(now)}
       firstName={session.fullName.split(" ")[0] ?? session.fullName}
       orgName={session.orgName}
-      prompt="Find a product in your inventory"
-      promptHref="/supplier/inventory#inventory-search"
+      prompt="Ask Tradelink AI about orders or stock"
+      promptHref="/supplier/assistant"
+      promptIcon="chat"
     >
       <ServiceGrid>
         <ServiceTile href="/supplier/orders" label="Orders" icon="list" count={pending.length} />

@@ -5,7 +5,7 @@ import { APP_VERSION } from "./version";
 
 export const SUBSCRIBE_URL = "/api/push/subscribe";
 /** The window event PwaProvider fires when a push arrives while the app is open and in front. */
-export const FOREGROUND_PUSH_EVENT = "restock:push";
+export const FOREGROUND_PUSH_EVENT = "tradelink-ai:push";
 
 export type PushPayload = {
   title: string;
@@ -48,7 +48,7 @@ function browserSupportsPush(): boolean {
 }
 
 /**
- * Whether this device can receive push now. On iPhone and iPad, web push works only once Restock
+ * Whether this device can receive push now. On iPhone and iPad, web push works only once Tradelink AI
  * is added to the Home Screen (iOS 16.4 and later), so a Safari tab returns false.
  */
 export function canUsePush(): boolean {

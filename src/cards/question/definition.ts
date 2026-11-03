@@ -38,7 +38,7 @@ async function subjectOf({ db, subject, shopId }: BuildContext): Promise<{ label
         "agent action",
       );
       if (!row) throw notFound("agent action");
-      return { label: "Something Restock did", version: 1 };
+      return { label: "Something Tradelink AI did", version: 1 };
     }
     case "shop": {
       if (subject.id !== shopId) throw notFound("shop");

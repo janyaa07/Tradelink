@@ -35,10 +35,10 @@ export const en = {
   "offline.page.body": "Check your connection, then try again. Anything you sent will go through once you are back online.",
 
   "update.ready": "New version ready.",
-  "update.gate.title": "Update Restock to keep ordering",
-  "update.gate.body": "This version of Restock is too old to place orders. Refresh to get the latest version.",
+  "update.gate.title": "Update Tradelink AI to keep ordering",
+  "update.gate.body": "This version of Tradelink AI is too old to place orders. Refresh to get the latest version.",
 
-  "push.needsInstall": "To get alerts on iPhone, add Restock to your Home Screen first.",
+  "push.needsInstall": "To get alerts on iPhone, add Tradelink AI to your Home Screen first.",
 } as const satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;
