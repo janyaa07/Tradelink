@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { deliveryDaysLabel, firstName, issueTypeLabel, timeLabel } from "./labels";
-import { auditHref, isUuid, param, parseAuditQuery, parseOrderNumber, parseOrderStatus } from "./params";
+import {
+  auditHref,
+  isUuid,
+  listHref,
+  matchesSearch,
+  param,
+  parseAuditQuery,
+  parseOrderNumber,
+  parseOrderStatus,
+  parseOrgStatusFilter,
+  searchText,
+} from "./params";
 
 const ORG = "3f2b8c1e-5d4a-4b7c-9e8f-1a2b3c4d5e6f";
 
@@ -51,6 +62,31 @@ describe("auditHref", () => {
   it("keeps filters and leaves out defaults", () => {
     expect(auditHref({ orgId: null, outcome: "all", page: 1 })).toBe("/admin/audit");
     expect(auditHref({ orgId: ORG, outcome: "allowed", page: 2 })).toBe(`/admin/audit?org=${ORG}&outcome=allowed&page=2`);
+  });
+});
+
+describe("list filters", () => {
+  it("reads the supplier status filter", () => {
+    expect(parseOrgStatusFilter("suspended")).toBe("suspended");
+    expect(parseOrgStatusFilter("deleted")).toBe("all");
+    expect(parseOrgStatusFilter(undefined)).toBe("all");
+  });
+
+  it("trims and caps the search", () => {
+    expect(searchText({ q: "  Harbour  " })).toBe("Harbour");
+    expect(searchText({ q: "x".repeat(80) })).toHaveLength(60);
+    expect(searchText({})).toBe("");
+  });
+
+  it("matches every word in any field, ignoring case", () => {
+    expect(matchesSearch("", ["Anything"])).toBe(true);
+    expect(matchesSearch("harbour wei", ["Harbour Dry Goods", "Wei Ling Tan", null])).toBe(true);
+    expect(matchesSearch("harbour ravi", ["Harbour Dry Goods", "Wei Ling Tan"])).toBe(false);
+  });
+
+  it("builds list links without defaults", () => {
+    expect(listHref("/admin/suppliers", { status: "all", selected: null })).toBe("/admin/suppliers");
+    expect(listHref("/admin/suppliers", { status: "active", selected: ORG })).toBe(`/admin/suppliers?status=active&selected=${ORG}`);
   });
 });
 

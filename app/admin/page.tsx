@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
 import { formatMoney } from "@/domain/money";
-import { AttentionIcon, PriorityPill } from "@/features/admin/components/AttentionCard";
+import { AttentionIcon, PriorityPill } from "@/features/admin/components/AttentionQueue";
 import { Columns, MiniRow } from "@/features/admin/components/Layout";
 import { firstName } from "@/features/admin/labels";
 import { summariseOrders } from "@/features/admin/orderStats";
@@ -47,7 +47,12 @@ export default async function AdminHomePage() {
 
   return (
     <>
-      <HomeGreeting eyebrow={`${formatLongDate(now)} · ${session.orgName}`} title={`${greeting(now)}, ${firstName(session.fullName)}`} line={line} ai={false} />
+      <HomeGreeting
+        eyebrow={`${formatLongDate(now)} · ${session.orgName}`}
+        title={`${greeting(now)}, ${firstName(session.fullName)}`}
+        line={line}
+        ai={false}
+      />
 
       <Tiles
         items={[
@@ -58,7 +63,14 @@ export default async function AdminHomePage() {
         ]}
       />
 
-      <Panel title="Needs attention" action={<LinkButton href="/admin/attention" variant="text">See all</LinkButton>}>
+      <Panel
+        title="Needs attention"
+        action={
+          <LinkButton href="/admin/attention" variant="text">
+            See all
+          </LinkButton>
+        }
+      >
         {items.length === 0 ? (
           <p className="text-muted">Nothing needs attention right now.</p>
         ) : (
@@ -77,7 +89,14 @@ export default async function AdminHomePage() {
       </Panel>
 
       <Columns>
-        <Panel title="Recent activity" action={<LinkButton href="/admin/audit" variant="text">See all</LinkButton>}>
+        <Panel
+          title="Recent activity"
+          action={
+            <LinkButton href="/admin/audit" variant="text">
+              See all
+            </LinkButton>
+          }
+        >
           {activity.length === 0 ? (
             <p className="text-muted">No activity yet.</p>
           ) : (
@@ -119,7 +138,14 @@ export default async function AdminHomePage() {
           )}
         </Panel>
 
-        <Panel title="Platform" action={<LinkButton href="/admin/operators" variant="text">Operators</LinkButton>}>
+        <Panel
+          title="Platform"
+          action={
+            <LinkButton href="/admin/operators" variant="text">
+              Operators
+            </LinkButton>
+          }
+        >
           <div>
             <MiniRow title="Operators online" sub={`${operators.length} on the team`} end={<b className="num">{online}</b>} />
             <MiniRow title="Unread alerts" sub="Invitations, disputes and security" end={<b className="num">{unread}</b>} />

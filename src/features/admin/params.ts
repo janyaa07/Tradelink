@@ -59,3 +59,37 @@ export function auditHref(query: AuditQuery): string {
   const text = search.toString();
   return text ? `/admin/audit?${text}` : "/admin/audit";
 }
+
+/** The status filters on the Suppliers list. */
+export const ORG_STATUS_FILTERS = ["all", "active", "invited", "suspended", "declined"] as const;
+export type OrgStatusFilter = (typeof ORG_STATUS_FILTERS)[number];
+
+export function parseOrgStatusFilter(value: string | undefined): OrgStatusFilter {
+  return ORG_STATUS_FILTERS.find((filter) => filter === value) ?? "all";
+}
+
+/** A typed search from ?q=, trimmed and capped. Empty when there is none. */
+export function searchText(params: SearchParams): string {
+  return (param(params, "q") ?? "").trim().slice(0, 60);
+}
+
+/** True when every word of the search appears in one of the fields, ignoring case. An empty search matches all. */
+export function matchesSearch(search: string, fields: readonly (string | null)[]): boolean {
+  const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const text = fields
+    .filter((field): field is string => Boolean(field))
+    .join(" ")
+    .toLowerCase();
+  return words.every((word) => text.includes(word));
+}
+
+/** A list page's query string, leaving out empty values and the default filter. */
+export function listHref(path: string, query: Record<string, string | null | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    if (value && value !== "all") search.set(name, value);
+  }
+  const text = search.toString();
+  return text ? `${path}?${text}` : path;
+}

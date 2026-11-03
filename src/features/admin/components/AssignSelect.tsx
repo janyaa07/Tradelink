@@ -28,9 +28,11 @@ export function AssignSelect({ itemKey, assignedUserId, operators }: Props) {
 
   const error = state.status === "error" ? state.message : null;
   return (
-    <form ref={formRef} action={formAction} className="flex min-w-[160px] flex-col gap-0.5 text-[.72rem] text-muted">
+    <form ref={formRef} action={formAction} className="flex w-full min-w-[160px] flex-col gap-0.5 text-[.72rem] text-muted min-[420px]:w-auto">
       <input type="hidden" name="item" value={itemKey} />
-      <label htmlFor={selectId}>Assigned to</label>
+      <label htmlFor={selectId} className="sr-only">
+        Assigned to
+      </label>
       <select
         id={selectId}
         name="user"
@@ -42,7 +44,7 @@ export function AssignSelect({ itemKey, assignedUserId, operators }: Props) {
           setValue(event.target.value);
           formRef.current?.requestSubmit();
         }}
-        className="min-h-8 rounded-[10px] border border-control-line bg-sunken px-2 py-[5px] text-[.84rem] text-ink disabled:opacity-50"
+        className="min-h-8 w-full rounded-lg border border-line bg-surface px-2 py-[5px] text-[.84rem] text-ink disabled:opacity-50"
       >
         <option value="">Unassigned</option>
         {operators.map((operator) => (
