@@ -7,7 +7,8 @@ import type { OrderStatus } from "@/ui/ProgressSteps";
 
 export const OPEN_STATUSES: OrderStatus[] = ["pending", "accepted", "out_for_delivery"];
 
-const orgSchema = z.object({ id: z.uuid(), name: z.string() });
+const orgSchema = z.object({ id: z.uuid(), name: z.string() }).nullable();
+const HIDDEN_ORG = { id: "", name: "Business no longer connected" };
 const rowSchema = z.object({
   id: z.uuid(),
   number: z.number(),
@@ -92,8 +93,8 @@ function toView(row: z.infer<typeof rowSchema>): OrderView {
     requestedDeliveryDate: row.requested_delivery_date,
     confirmedDeliveryDate: row.confirmed_delivery_date,
     createdAt: row.created_at,
-    buyer: row.buyer,
-    supplier: row.supplier,
+    buyer: row.buyer ?? HIDDEN_ORG,
+    supplier: row.supplier ?? HIDDEN_ORG,
     lines,
     totalCents: lines.reduce((total, line) => total + toCents(line.unitPrice) * line.qty, 0),
   };

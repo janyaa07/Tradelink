@@ -10,6 +10,8 @@ const signInSchema = z.object({
   next: z.string().startsWith("/").optional(),
 });
 
+const ROLE_HOME: Record<string, string> = { buyer: "/buyer", supplier: "/supplier", platform: "/admin" };
+
 export type SignInState = { error: string | null; email: string };
 
 export async function signIn(_previous: SignInState, formData: FormData): Promise<SignInState> {
@@ -27,7 +29,10 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
     const limited = error.status === 429;
     return { error: limited ? "Too many attempts. Try again in a few minutes." : "Check your email and password.", email };
   }
-  redirect(parsed.data.next && !parsed.data.next.startsWith("//") ? parsed.data.next : "/");
+  if (parsed.data.next && !parsed.data.next.startsWith("//")) redirect(parsed.data.next);
+  const { data: who } = await supabase.rpc("whoami");
+  const kind = who && typeof who === "object" && "kind" in who ? String(who.kind) : "";
+  redirect(ROLE_HOME[kind] ?? "/");
 }
 
 export async function signOut(): Promise<void> {
