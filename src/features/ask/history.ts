@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ASK_LINK_LABELS, type AskReply } from "@/domain/ask/types";
+import { ASK_LINK_LABELS, type AiCard, type AskReply } from "@/domain/ask/types";
 import { ART_KINDS, CATEGORIES } from "@/domain/catalogue";
 import { DRAFT_STATES } from "@/features/ordering/draft";
 
@@ -65,7 +65,15 @@ const cardSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-const aiCardSchema = z.looseObject({ kind: z.string().regex(/^ai_[a-z]+$/), key: z.string().max(20) });
+/** Tradelink AI cards our own server built, saved on this device: kept when they have an ai_ kind and a key. */
+const aiCardSchema = z.custom<AiCard>(
+  (value) =>
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { kind?: unknown }).kind === "string" &&
+    /^ai_[a-z]+$/.test((value as { kind: string }).kind) &&
+    typeof (value as { key?: unknown }).key === "string",
+);
 
 const actionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("link"), label: z.enum(ASK_LINK_LABELS), href: z.string().regex(/^\/(buyer|supplier)(\/|$)/) }),
