@@ -1,5 +1,7 @@
 # Tonight's plan: working app by 23:00 SGT, 3 November 2026
 
+> **Outcome:** production went live at 18:05 SGT at https://tradelink-nine.vercel.app with the full scope in section 2. The stretch items Ask and Insights followed by 18:45. Still after tonight: invoices, invitation emails, two-factor sign-in and password reset, email notifications, minimum-order negotiation, buyer delivery-date requests, offline mode, and the full end-to-end, accessibility and visual suites.
+
 Start: 16:15 SGT. Deadline: 23:00 SGT. That leaves about 6 hours 45 minutes.
 
 "Fully working" here means every feature in scope works end to end against a real database, with real sign-in, real permissions and real stock reservations. Nothing is simulated, and the app is deployed on Vercel with demo accounts. It does **not** mean all 135 stories in `USER_STORIES.md`; the rest of that plan continues after tonight on the same architecture.
