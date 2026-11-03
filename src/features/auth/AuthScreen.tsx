@@ -7,7 +7,7 @@ type AuthScreenProps = {
   children: ReactNode;
 };
 
-/** The hero layout shared by Sign in and every password and two-factor page. */
+/** The hero layout shared by Sign in, Create an account and the password pages. */
 export function AuthScreen({ title, lead, children }: AuthScreenProps) {
   return (
     <main className="min-h-dvh bg-gradient-to-br from-hero to-hero-2 px-4 py-10 text-on-hero">

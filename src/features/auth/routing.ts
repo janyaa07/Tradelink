@@ -1,21 +1,23 @@
 /**
- * Pure routing rules for the request proxy (ADR 0011, AUTH-03, AUTH-04, AUTH-06).
+ * Pure routing rules for the request proxy (ADR 0011, AUTH-03, AUTH-06, AUTH-10).
  * The proxy is a convenience only: RLS and database functions enforce every permission.
  */
 
 export const ROLE_HOME = { buyer: "/buyer", supplier: "/supplier", platform: "/admin" } as const;
 export type OrgKind = keyof typeof ROLE_HOME;
 
-/** Open to everyone, signed in or not. */
-const PUBLIC_PATHS = ["/sign-in", "/forgot-password", "/auth/callback", "/api/health"] as const;
-
-/** Need a signed-in user, but skip role and two-factor routing so the user can finish signing in. */
-const AUTH_FLOW_PATHS = ["/reset-password", "/two-factor"] as const;
-
 export const SIGN_IN_PATH = "/sign-in";
+export const SIGN_UP_PATH = "/sign-up";
+export const RESET_PASSWORD_PATH = "/reset-password";
 export const EXPIRED_RESET_PATH = "/forgot-password?expired=1";
-export const TWO_FACTOR_SETUP_PATH = "/two-factor/setup";
-export const TWO_FACTOR_VERIFY_PATH = "/two-factor/verify";
+/** Where an expired or already-used sign-up confirmation link lands. */
+export const EXPIRED_LINK_PATH = "/sign-in?link=expired";
+
+/** Open to everyone, signed in or not. */
+const PUBLIC_PATHS = ["/forgot-password", "/auth/callback", "/api/health"] as const;
+
+/** For signed-out users only: a signed-in user is sent to their home. */
+const SIGNED_OUT_PATHS = [SIGN_IN_PATH, SIGN_UP_PATH] as const;
 
 function matches(pathname: string, paths: readonly string[]): boolean {
   return paths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
@@ -67,9 +69,6 @@ export type RouteInput = {
   signedIn: boolean;
   /** `whoami().kind`, or null when the user has no organisation. */
   kind: string | null;
-  /** From `mfa.getAuthenticatorAssuranceLevel()`. Only read for platform users. */
-  currentLevel: string | null;
-  nextLevel: string | null;
 };
 
 /** "allow", or the path to redirect to. */
@@ -79,23 +78,15 @@ function withNext(path: string, next: string): string {
   return `${path}?next=${encodeURIComponent(next)}`;
 }
 
-/** Where a platform user must go before any other page, or null when two-factor is complete. */
-function twoFactorGate(pathname: string, currentLevel: string | null, nextLevel: string | null): string | null {
-  if (nextLevel !== "aal2") return TWO_FACTOR_SETUP_PATH;
-  if (currentLevel === "aal2") return null;
-  const returnTo = matches(pathname, ["/admin"]) && pathname !== "/admin" ? pathname : null;
-  return returnTo ? withNext(TWO_FACTOR_VERIFY_PATH, returnTo) : TWO_FACTOR_VERIFY_PATH;
-}
-
-export function decideRoute({ pathname, signedIn, kind, currentLevel, nextLevel }: RouteInput): RouteDecision {
+export function decideRoute({ pathname, signedIn, kind }: RouteInput): RouteDecision {
   if (!signedIn) {
-    if (matches(pathname, PUBLIC_PATHS)) return "allow";
-    if (matches(pathname, ["/reset-password"])) return EXPIRED_RESET_PATH;
+    if (matches(pathname, PUBLIC_PATHS) || matches(pathname, SIGNED_OUT_PATHS)) return "allow";
+    if (matches(pathname, [RESET_PASSWORD_PATH])) return EXPIRED_RESET_PATH;
     return pathname === "/" ? SIGN_IN_PATH : withNext(SIGN_IN_PATH, pathname);
   }
 
-  if (matches(pathname, AUTH_FLOW_PATHS)) return "allow";
-  if (pathname !== SIGN_IN_PATH && matches(pathname, PUBLIC_PATHS)) return "allow";
+  // Set a new password needs a session but no organisation, so a user can always finish a reset.
+  if (matches(pathname, PUBLIC_PATHS) || matches(pathname, [RESET_PASSWORD_PATH])) return "allow";
 
   const home = homeFor(kind);
   if (!home) {
@@ -103,12 +94,7 @@ export function decideRoute({ pathname, signedIn, kind, currentLevel, nextLevel 
     return pathname === SIGN_IN_PATH ? "allow" : SIGN_IN_PATH;
   }
 
-  if (kind === "platform") {
-    const gate = twoFactorGate(pathname, currentLevel, nextLevel);
-    if (gate) return gate;
-  }
-
-  if (pathname === "/" || pathname === SIGN_IN_PATH) return home;
+  if (pathname === "/" || matches(pathname, SIGNED_OUT_PATHS)) return home;
   if (isOtherRolePath(pathname, kind)) return home;
   return "allow";
 }

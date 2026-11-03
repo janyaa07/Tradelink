@@ -2,6 +2,15 @@
 
 All notable changes are listed here. The format follows Keep a Changelog, and versions follow semantic versioning.
 
+## [0.3.0] - 2026-11-03
+
+### Added
+- **Create an account**: buyers and suppliers can sign up themselves. New accounts are connected to active businesses of the other kind (ADR 0024).
+- **More mock data**: extra businesses, accounts and orders in every state, for testing (`supabase/mock-data.sql`).
+
+### Removed
+- **Two-factor sign-in**, removed for now by owner decision (ADR 0024). Existing demo enrolments were removed.
+
 ## [0.2.0] - 2026-11-03
 
 ### Added

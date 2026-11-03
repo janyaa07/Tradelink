@@ -3,7 +3,6 @@ import { requireRole } from "@/data/session";
 import { PageHead, ProfileList } from "@/features/admin/components/Layout";
 import { getTeam } from "@/features/admin/queries/people";
 import { signOut } from "@/features/auth/actions";
-import { TwoFactorPanel } from "@/features/auth/TwoFactorPanel";
 import { Button } from "@/ui/Button";
 import { Panel } from "@/ui/Panel";
 import { ThemeSetting } from "@/ui/ThemeSetting";
@@ -30,7 +29,6 @@ export default async function AdminSettingsPage() {
           ]}
         />
       </Panel>
-      <TwoFactorPanel />
       <form action={signOut}>
         <Button type="submit">Sign out</Button>
       </form>

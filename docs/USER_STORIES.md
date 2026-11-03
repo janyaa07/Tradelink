@@ -138,6 +138,7 @@ As a user, I want to reset my password by email, so that I can get back in.
 3. A used or expired link shows "This link has expired. Ask for a new one."
 
 ### AUTH-04 Two-factor sign-in for admins (Must)
+Deferred on 3 November 2026: two-factor removed by owner decision (D12).
 As an admin, I want two-factor sign-in, so that admin access is safe even if my password leaks (D2).
 1. An admin without a factor is sent to setup after password sign-in and cannot open any admin page until setup is complete.
 2. Setup shows a QR code and the secret for manual entry, then asks for a 6-digit code.
@@ -145,6 +146,7 @@ As an admin, I want two-factor sign-in, so that admin access is safe even if my 
 4. Database tests show an admin session without two-factor (`aal1`) can read no admin data and call no admin function.
 
 ### AUTH-05 Optional two-factor for buyers and suppliers (Should)
+Deferred on 3 November 2026: two-factor removed by owner decision (D12).
 1. Settings offers "Turn on two-factor sign-in" with the same setup; once on, sign-in asks for a code.
 2. Turning it off needs a code and a recent sign-in.
 
@@ -156,6 +158,7 @@ Refs: SECURITY section 4.
 3. Every N cell in the permissions matrix has a passing test.
 
 ### AUTH-07 Accept an invitation and create an account (Must)
+Deferred on 3 November 2026: two-factor removed, so criterion 5 does not apply by owner decision (D12).
 As an invited buyer, colleague or admin, I want to accept my invitation and set a password, so that I can start using Tradelink (D9).
 Refs: ADR 0011.
 1. The link opens a page showing who invited me and to which business.
@@ -169,6 +172,19 @@ Refs: ADR 0011.
 
 ### AUTH-09 Session expiry (Must)
 1. When a session expires, the next action sends the user to Sign in and returns them to the same page afterwards, keeping their order draft.
+
+### AUTH-10 Create an account (Must)
+As a buyer or supplier, I want to create my own account, so that I can start using Tradelink without waiting for an invitation (D13).
+1. Sign in shows "New to Tradelink? Create an account", which opens Create an account. Create an account shows "Already have an account? Sign in". A signed-in user who opens Create an account is sent to their role's home.
+2. The form has visible labels for: Account type ("I buy supplies (buyer)" or "I sell supplies (supplier)"), Business name (2 to 120 characters), Your name (2 to 120 characters), Phone (optional, 8 to 16 digits or spaces with an optional leading +), Email, Password (12 to 72 characters) and Confirm password.
+3. Invalid input shows one message under the form listing every fix, for example "Enter your business name, 2 to 120 characters. The passwords do not match." Each field it names is marked invalid and points to the message with `aria-describedby`. Entered values are kept, except passwords.
+4. A valid form creates the user with Supabase Auth. A database trigger creates the business, profile, membership and settings, and connects the business to every active business of the other kind, so a buyer can order straight away and a supplier's products can be ordered.
+5. When email confirmation is off, the user is signed in and lands on their role's home with the toast "Welcome to Tradelink, {business}."
+6. When email confirmation is on, the form shows "Check your email to confirm your account, then sign in." The emailed link signs the user in and opens their home. An expired or used link opens Sign in with "This link has expired or was already used. Try signing in." Signing in before confirming shows "Confirm your email first. Open the link we sent you, then sign in."
+7. An email that already has an account shows "An account with this email already exists. Sign in instead."
+8. A business name already used by a business of the same kind shows "We could not create this account. That business name may already be in use. Try another name."
+9. Too many attempts show "Too many attempts. Try again in a few minutes." A leaked or weak password shows the same reason as Set a new password.
+10. Sign-up can only create buyer or supplier businesses. The trigger rejects any other account type, so an admin account can never be created this way.
 
 ---
 
@@ -788,5 +804,5 @@ Refs: ADR 0010.
 | Invoice rules (6.5) | BUY-32 to BUY-36 |
 | Validation copy (6.8), toasts (6.9) | the stories quoting each message, SH-05 |
 | State machines (DATA_MODEL 3) | OPS-04 and the stories for each action |
-| Decisions D1 to D11 | D1: BUY-14, BUY-42, AI-02; D2: AUTH-04, AUTH-05; D3: ADM-16; D4: BUY-21, SUP-04, BUY-40; D5: BUY-24, BUY-25, SUP-08, AI-08; D6, D7: BUY-34, SUP-19; D8: BUY-20, BUY-33; D9: ADM-15, AUTH-07; D10: SH-14 |
+| Decisions D1 to D13 | D1: BUY-14, BUY-42, AI-02; D2: AUTH-04, AUTH-05 (deferred by D12); D3: ADM-16; D4: BUY-21, SUP-04, BUY-40; D5: BUY-24, BUY-25, SUP-08, AI-08; D6, D7: BUY-34, SUP-19; D8: BUY-20, BUY-33; D9: ADM-15, AUTH-07; D10: SH-14; D12: AUTH-04, AUTH-05, AUTH-07; D13: AUTH-10 |
 | Gaps fixed (DISCOVERY 8) | 1: SH-02; 2: BUY-39; 6: SH-08; 7: BUY-24; 8: BUY-21; 10: SH-09; 11: BUY-03; 12: BUY-32; 13: BUY-01; 14: ADM-01; 15: SH-01; 16: SUP-18, SUP-19; 17: SUP-15; 19: SH-14, ADM-15; 20: BUY-46 |

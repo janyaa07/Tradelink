@@ -7,7 +7,8 @@ import { createSupabaseServerClient } from "@/data/supabase/server";
 import { logger } from "@/lib/logger";
 import { resolveOrigin } from "./origin";
 import { passwordUpdateError, validateNewPassword, type PasswordErrors } from "./password";
-import { EXPIRED_RESET_PATH, homeFor, safeNextPath, SIGN_IN_PATH, TWO_FACTOR_VERIFY_PATH } from "./routing";
+import { EXPIRED_RESET_PATH, homeFor, RESET_PASSWORD_PATH, safeNextPath, SIGN_IN_PATH } from "./routing";
+import { readSignUpForm, SIGN_UP_MESSAGES, signUpMetadata, signUpOutcome, validateSignUp, welcomeToast, type SignUpFormState } from "./signUp";
 
 const signInSchema = z.object({
   email: z.email(),
@@ -23,9 +24,18 @@ const newPasswordSchema = z.object({
 });
 
 const PASSWORD_UPDATED = "Password updated.";
-const RESET_PATH = "/reset-password";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+/** The allowlisted origin for links in auth emails, or null when none can be trusted. */
+async function emailLinkOrigin(): Promise<string | null> {
+  const requestHeaders = await headers();
+  return resolveOrigin({
+    forwardedProto: requestHeaders.get("x-forwarded-proto"),
+    host: requestHeaders.get("host"),
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+  });
+}
 
 async function roleHome(supabase: SupabaseServerClient): Promise<string> {
   const { data: who } = await supabase.rpc("whoami");
@@ -47,8 +57,10 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password });
   if (error) {
-    const limited = error.status === 429;
-    return { error: limited ? "Too many attempts. Try again in a few minutes." : "Check your email and password.", email };
+    if (error.status === 429) return { error: "Too many attempts. Try again in a few minutes.", email };
+    // Supabase only reports this after the password matched, so it does not reveal accounts.
+    if (error.code === "email_not_confirmed") return { error: "Confirm your email first. Open the link we sent you, then sign in.", email };
+    return { error: "Check your email and password.", email };
   }
   const next = safeNextPath(parsed.data.next, "");
   redirect(next || (await roleHome(supabase)));
@@ -72,12 +84,7 @@ export async function requestPasswordReset(_previous: ResetRequestState, formDat
   if (!parsed.success) return { sent: false, error: "Enter a valid email address.", email };
 
   const sent: ResetRequestState = { sent: true, error: null, email };
-  const requestHeaders = await headers();
-  const origin = resolveOrigin({
-    forwardedProto: requestHeaders.get("x-forwarded-proto"),
-    host: requestHeaders.get("host"),
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-  });
+  const origin = await emailLinkOrigin();
   if (!origin) {
     logger.error("auth.password_reset.untrusted_origin");
     return sent;
@@ -85,7 +92,7 @@ export async function requestPasswordReset(_previous: ResetRequestState, formDat
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-    redirectTo: `${origin}/auth/callback?next=${RESET_PATH}`,
+    redirectTo: `${origin}/auth/callback?next=${RESET_PASSWORD_PATH}`,
   });
   if (error) {
     const limited = error.status === 429 || error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit";
@@ -108,17 +115,48 @@ export async function updatePassword(_previous: NewPasswordState, formData: Form
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect(EXPIRED_RESET_PATH);
 
-  const verifyFirst = `${TWO_FACTOR_VERIFY_PATH}?next=${encodeURIComponent(RESET_PATH)}`;
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") redirect(verifyFirst);
-
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
-    if (error.code === "insufficient_aal") redirect(verifyFirst);
     if (error.code === "session_not_found" || error.code === "session_expired") redirect(EXPIRED_RESET_PATH);
     logger.warn("auth.password_update.rejected", { errorCode: error.code ?? null, status: error.status ?? null });
     return { errors: { password: passwordUpdateError(error) } };
   }
 
   redirect(`${await roleHome(supabase)}?toast=${encodeURIComponent(PASSWORD_UPDATED)}`);
+}
+
+/**
+ * Creates a buyer or supplier account (AUTH-10). The `app.handle_new_user` trigger creates the
+ * business; with email confirmation on, the account is usable once the emailed link is opened.
+ */
+export async function createAccount(_previous: SignUpFormState, formData: FormData): Promise<SignUpFormState> {
+  const { password, confirm, ...values } = readSignUpForm(formData);
+  const state = (error: string, invalid: SignUpFormState["invalid"] = []): SignUpFormState => ({ error, invalid, notice: null, values });
+
+  const valid = validateSignUp({ ...values, password, confirm });
+  if (!valid.ok) return state(valid.error, valid.invalid);
+
+  const origin = await emailLinkOrigin();
+  if (!origin) {
+    logger.error("auth.sign_up.untrusted_origin");
+    return state(SIGN_UP_MESSAGES.failed);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.auth.signUp({
+    email: valid.data.email,
+    password: valid.data.password,
+    options: { data: signUpMetadata(valid.data), emailRedirectTo: `${origin}/auth/callback?next=/` },
+  });
+
+  const outcome = signUpOutcome(result);
+  if (outcome.kind === "error") {
+    const log = outcome.reason === "unknown" ? logger.error : logger.warn;
+    log("auth.sign_up.failed", { reason: outcome.reason, errorCode: result.error?.code ?? null, status: result.error?.status ?? null });
+    return state(outcome.message, outcome.invalid);
+  }
+  if (outcome.kind === "confirmEmail") return { error: null, invalid: [], notice: outcome.message, values };
+
+  const home = homeFor(valid.data.kind) ?? "/";
+  redirect(`${home}?toast=${encodeURIComponent(welcomeToast(valid.data.businessName))}`);
 }

@@ -25,6 +25,7 @@ function routeFor(role: Role, link: string): string {
   if (section === "orders" || section === "issues") return `/${role}/orders`;
   if (section === "inventory") return role === "supplier" ? "/supplier/inventory" : `/${role}`;
   if (section === "suppliers" && id) return role === "admin" ? `/admin/suppliers/${id}` : `/${role}`;
+  if (section === "buyers" && id) return role === "admin" ? `/admin/users/buyers/${id}` : `/${role}`;
   return `/${role}`;
 }
 

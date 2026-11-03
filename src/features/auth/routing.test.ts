@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { decideRoute, homeFor, isOtherRolePath, safeNextPath, type RouteInput } from "./routing";
 
-const signedOut: RouteInput = { pathname: "/", signedIn: false, kind: null, currentLevel: null, nextLevel: null };
-const buyer: RouteInput = { pathname: "/buyer", signedIn: true, kind: "buyer", currentLevel: "aal1", nextLevel: "aal1" };
+const signedOut: RouteInput = { pathname: "/", signedIn: false, kind: null };
+const buyer: RouteInput = { pathname: "/buyer", signedIn: true, kind: "buyer" };
 const supplier: RouteInput = { ...buyer, pathname: "/supplier", kind: "supplier" };
-const adminDone: RouteInput = { pathname: "/admin", signedIn: true, kind: "platform", currentLevel: "aal2", nextLevel: "aal2" };
-const adminNeedsCode: RouteInput = { ...adminDone, currentLevel: "aal1", nextLevel: "aal2" };
-const adminNoFactor: RouteInput = { ...adminDone, currentLevel: "aal1", nextLevel: "aal1" };
+const admin: RouteInput = { pathname: "/admin", signedIn: true, kind: "platform" };
 
 describe("decideRoute: signed out", () => {
-  it.each(["/sign-in", "/forgot-password", "/auth/callback", "/api/health", "/api/health/deep"])("allows public %s", (pathname) => {
+  it.each(["/sign-in", "/sign-up", "/forgot-password", "/auth/callback", "/api/health", "/api/health/deep"])("allows public %s", (pathname) => {
     expect(decideRoute({ ...signedOut, pathname })).toBe("allow");
   });
 
@@ -19,10 +17,7 @@ describe("decideRoute: signed out", () => {
 
   it("sends a protected page to Sign in and returns there afterwards", () => {
     expect(decideRoute({ ...signedOut, pathname: "/buyer/orders" })).toBe("/sign-in?next=%2Fbuyer%2Forders");
-  });
-
-  it("sends two-factor pages to Sign in", () => {
-    expect(decideRoute({ ...signedOut, pathname: "/two-factor/verify" })).toBe("/sign-in?next=%2Ftwo-factor%2Fverify");
+    expect(decideRoute({ ...signedOut, pathname: "/admin" })).toBe("/sign-in?next=%2Fadmin");
   });
 
   it("treats Set a new password without a session as an expired link", () => {
@@ -31,72 +26,57 @@ describe("decideRoute: signed out", () => {
 
   it("does not treat look-alike paths as public", () => {
     expect(decideRoute({ ...signedOut, pathname: "/sign-in-now" })).toBe("/sign-in?next=%2Fsign-in-now");
+    expect(decideRoute({ ...signedOut, pathname: "/sign-up-free" })).toBe("/sign-in?next=%2Fsign-up-free");
+  });
+
+  it("has no two-factor pages any more", () => {
+    expect(decideRoute({ ...signedOut, pathname: "/two-factor/verify" })).toBe("/sign-in?next=%2Ftwo-factor%2Fverify");
   });
 });
 
-describe("decideRoute: auth flow pages skip role and two-factor routing", () => {
-  it.each(["/reset-password", "/two-factor/setup", "/two-factor/verify"])("allows %s for an admin without two-factor", (pathname) => {
-    expect(decideRoute({ ...adminNoFactor, pathname })).toBe("allow");
-    expect(decideRoute({ ...adminNeedsCode, pathname })).toBe("allow");
+describe("decideRoute: signed in on auth pages", () => {
+  it.each([
+    ["buyer", buyer, "/buyer"],
+    ["supplier", supplier, "/supplier"],
+    ["admin", admin, "/admin"],
+  ] as const)("sends a signed-in %s from Sign in and Create an account to their home", (_role, input, home) => {
+    expect(decideRoute({ ...input, pathname: "/sign-in" })).toBe(home);
+    expect(decideRoute({ ...input, pathname: "/sign-up" })).toBe(home);
+    expect(decideRoute({ ...input, pathname: "/" })).toBe(home);
   });
 
-  it("allows a buyer to set a new password", () => {
+  it("allows Set a new password for every role", () => {
     expect(decideRoute({ ...buyer, pathname: "/reset-password" })).toBe("allow");
+    expect(decideRoute({ ...admin, pathname: "/reset-password" })).toBe("allow");
   });
 
-  it("allows public pages other than Sign in while signed in", () => {
-    expect(decideRoute({ ...adminNoFactor, pathname: "/auth/callback" })).toBe("allow");
+  it("allows public pages other than Sign in and Create an account", () => {
+    expect(decideRoute({ ...admin, pathname: "/auth/callback" })).toBe("allow");
     expect(decideRoute({ ...buyer, pathname: "/forgot-password" })).toBe("allow");
-    expect(decideRoute({ ...adminNeedsCode, pathname: "/api/health" })).toBe("allow");
+    expect(decideRoute({ ...supplier, pathname: "/api/health" })).toBe("allow");
   });
 });
 
-describe("decideRoute: platform two-factor", () => {
-  it("sends an admin without a verified factor to setup from any page", () => {
-    for (const pathname of ["/admin", "/admin/orders", "/", "/sign-in", "/buyer"]) {
-      expect(decideRoute({ ...adminNoFactor, pathname })).toBe("/two-factor/setup");
-    }
+describe("decideRoute: admins", () => {
+  it("allows admin pages straight after password sign-in", () => {
+    expect(decideRoute(admin)).toBe("allow");
+    expect(decideRoute({ ...admin, pathname: "/admin/settings" })).toBe("allow");
   });
 
-  it("treats an unknown assurance level as no factor", () => {
-    expect(decideRoute({ ...adminDone, currentLevel: null, nextLevel: null })).toBe("/two-factor/setup");
+  it("keeps an admin out of other roles' areas", () => {
+    expect(decideRoute({ ...admin, pathname: "/buyer/orders" })).toBe("/admin");
+    expect(decideRoute({ ...admin, pathname: "/supplier" })).toBe("/admin");
   });
 
-  it("asks an admin with a factor for a code before any admin page", () => {
-    expect(decideRoute(adminNeedsCode)).toBe("/two-factor/verify");
-    expect(decideRoute({ ...adminNeedsCode, pathname: "/" })).toBe("/two-factor/verify");
-    expect(decideRoute({ ...adminNeedsCode, pathname: "/sign-in" })).toBe("/two-factor/verify");
-  });
-
-  it("returns to the admin page asked for after the code", () => {
-    expect(decideRoute({ ...adminNeedsCode, pathname: "/admin/users" })).toBe("/two-factor/verify?next=%2Fadmin%2Fusers");
-  });
-
-  it("allows admin pages at aal2", () => {
-    expect(decideRoute(adminDone)).toBe("allow");
-    expect(decideRoute({ ...adminDone, pathname: "/admin/settings" })).toBe("allow");
-  });
-
-  it("sends an aal2 admin from the root and Sign in to admin home", () => {
-    expect(decideRoute({ ...adminDone, pathname: "/" })).toBe("/admin");
-    expect(decideRoute({ ...adminDone, pathname: "/sign-in" })).toBe("/admin");
-  });
-
-  it("keeps an aal2 admin out of other roles' areas", () => {
-    expect(decideRoute({ ...adminDone, pathname: "/buyer/orders" })).toBe("/admin");
+  it("does not route anyone to the removed two-factor pages", () => {
+    expect(decideRoute({ ...admin, pathname: "/two-factor/setup" })).toBe("allow");
   });
 });
 
 describe("decideRoute: buyers and suppliers", () => {
-  it("does not force two-factor on buyers or suppliers", () => {
+  it("allows each role's own area", () => {
     expect(decideRoute(buyer)).toBe("allow");
     expect(decideRoute(supplier)).toBe("allow");
-    expect(decideRoute({ ...buyer, currentLevel: "aal1", nextLevel: "aal2" })).toBe("allow");
-  });
-
-  it("sends the root and Sign in to the role's home", () => {
-    expect(decideRoute({ ...buyer, pathname: "/" })).toBe("/buyer");
-    expect(decideRoute({ ...supplier, pathname: "/sign-in" })).toBe("/supplier");
   });
 
   it("keeps each role in its own area", () => {
@@ -120,6 +100,7 @@ describe("decideRoute: signed in without an organisation", () => {
   it("sends every other page to Sign in", () => {
     expect(decideRoute({ ...orphan, pathname: "/buyer" })).toBe("/sign-in");
     expect(decideRoute({ ...orphan, pathname: "/" })).toBe("/sign-in");
+    expect(decideRoute({ ...orphan, pathname: "/sign-up" })).toBe("/sign-in");
   });
 
   it("treats an unknown kind like no organisation", () => {

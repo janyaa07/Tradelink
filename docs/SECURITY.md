@@ -2,6 +2,8 @@
 
 Status: Phase 1 draft for review. This document holds the threat model, the permissions matrix and the security controls. It is updated in every phase.
 
+> **Update 3 November 2026:** two-factor sign-in is switched off and buyers and suppliers can create their own accounts, by owner decision. See ADR 0024, which supersedes the two-factor and invitation-only parts below.
+
 ## 1. Assets
 
 | Asset | Why it matters |

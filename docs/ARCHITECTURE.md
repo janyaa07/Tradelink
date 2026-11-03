@@ -2,6 +2,8 @@
 
 Status: Phase 1 draft for review. Decisions referenced as D1 to D11 are in `docs/DISCOVERY.md` section 11. ADRs are in `docs/adr/`.
 
+> **Update 3 November 2026:** two-factor sign-in is switched off and buyers and suppliers can create their own accounts, by owner decision. See ADR 0024, which supersedes the two-factor and invitation-only parts below.
+
 ## 1. Goals and constraints
 
 - Replace WhatsApp ordering between small food businesses and their suppliers with one secure web app that matches the approved prototype.

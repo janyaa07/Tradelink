@@ -7,11 +7,16 @@ import { authCardClass, authErrorClass, authInputClass, authLabelClass, authLink
 
 const initialState: SignInState = { error: null, email: "" };
 
-export function SignInForm({ next }: { next?: string }) {
+export function SignInForm({ next, linkExpired = false }: { next?: string; linkExpired?: boolean }) {
   const [state, action, pending] = useActionState(signIn, initialState);
   return (
     <form action={action} className={authCardClass} noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      {linkExpired && !state.error ? (
+        <p role="status" className="text-[0.9rem] font-semibold text-ink">
+          This link has expired or was already used. Try signing in.
+        </p>
+      ) : null}
       <label className={authLabelClass}>
         Email
         <input className={authInputClass} name="email" type="email" autoComplete="email" required defaultValue={state.email} />
@@ -31,6 +36,12 @@ export function SignInForm({ next }: { next?: string }) {
       <Link href="/forgot-password" className={authLinkClass}>
         Forgot your password?
       </Link>
+      <p className="text-[0.9rem] text-muted">
+        New to Tradelink?{" "}
+        <Link href="/sign-up" className={authLinkClass}>
+          Create an account
+        </Link>
+      </p>
     </form>
   );
 }

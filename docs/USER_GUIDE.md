@@ -10,20 +10,34 @@ All demo accounts use the password `Tradelink-demo-2026`. They exist only for de
 | --- | --- | --- |
 | Buyer | mei@noodlehouse.example | Mei's Noodle House |
 | Buyer | arif@seaside.example | Seaside Kopitiam |
+| Buyer | siti@lotusleaf.example | Lotus Leaf Vegetarian |
+| Buyer | weijie@goldencrust.example | Golden Crust Bakery |
 | Supplier | priya@harbourdry.example | Harbour Dry Goods |
 | Supplier | daniel@freshlane.example | Fresh Lane Produce |
-| Admin | hannah@tradelink.example | Tradelink Operations |
+| Supplier | ravi@islandspice.example | Island Spice Traders |
+| Admin | hannah@tradelink.example | Tradelink Operations (also farid@, grace@ and vikram@tradelink.example) |
 
-### Two-factor sign-in for admins
+### What to try with each account
 
-Admins must use two-factor sign-in. The demo admin (`hannah@tradelink.example`) is already enrolled with a demo-only authenticator secret. The secret is not stored in this repository: the project owner keeps it in `.env.local` as `DEMO_ADMIN_TOTP_SECRET` and shares it privately with people testing the demo.
+The mock data (`supabase/mock-data.sql`) puts orders in every state, so each account has something to do:
 
-To sign in as Hannah:
-1. In any authenticator app (Google Authenticator, Microsoft Authenticator, 1Password and others), add an account by entering the shared setup key manually, as a time-based code.
-2. Sign in with the email and password above.
-3. Enter the 6-digit code the app shows.
+| Account | Things to try |
+| --- | --- |
+| **Siti** (Lotus Leaf) | Ready for tomorrow shows tofu and noodles. Check 3 deliveries, two of them out for delivery. Follow up the late report and the open problem. Acknowledge the coconut milk price alert. Cancel pending ORD-1064. |
+| **Wei Jie** (Golden Crust) | Answer the part-delivery notice on ORD-1063. Mark the S$52.00 credit received. See the disputed problem ISS-305. Ready for tomorrow shows three items. |
+| **Ravi** (Island Spice) | Accept, part accept or reject ORD-1064 and ORD-1065. Mark ORD-1058 delivered. Restock dried chillies (out) and star anise (low). Change a price. |
+| **Priya** (Harbour) | Answer problem ISS-302. Move accepted orders out for delivery and deliver them. |
+| **Daniel** (Fresh Lane) | Answer the late report on ORD-1061 with "It is on the way". Mark it delivered. |
+| **Hannah** (admin) | Resolve the ISS-305 dispute in Needs attention. Assign items to operators. Suspend and reactivate a supplier. Read the audit log. |
+| **Mei and Arif** | Type an order in Order or Ask (Claude reads it), review it, and confirm and reserve stock. |
 
-Anyone with the shared secret can pass the demo admin's second step, so remove or re-enrol that account before any real business uses Tradelink. The other admin accounts are asked to set up their own authenticator the first time they sign in. To re-enrol a demo admin, run `scripts/enrol-demo-admin-mfa.mjs` (see the comments in the file).
+### Create your own account
+
+On the sign-in page, choose **Create an account**. Pick buyer or supplier, then enter your business name, your name, an optional phone number, your email and a password of at least 12 characters.
+
+A new buyer is connected to every active supplier, so the catalogue is ready to order from straight away. A new supplier is connected to every active buyer. Admin accounts cannot be created this way.
+
+Two-factor sign-in is switched off for now (owner decision, 3 November 2026).
 
 ## Buyer walkthrough (Mei's Noodle House)
 

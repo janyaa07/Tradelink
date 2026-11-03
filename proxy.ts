@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { decideRoute, isOtherRolePath } from "@/features/auth/routing";
 
 /**
- * Refreshes the Supabase session, routes each role to its own area and holds platform users at
- * two-factor setup or verification until their session reaches aal2 (ADR 0011, AUTH-04).
+ * Refreshes the Supabase session, keeps signed-out users on Sign in, Create an account and the
+ * password reset pages, and routes each role to its own area (ADR 0011, AUTH-06, AUTH-10).
  * This is a convenience only: RLS and database functions enforce every permission.
  */
 export async function proxy(request: NextRequest) {
@@ -35,19 +35,12 @@ export async function proxy(request: NextRequest) {
   };
 
   let kind: string | null = null;
-  let currentLevel: string | null = null;
-  let nextLevel: string | null = null;
   if (data.user) {
     const { data: who } = await supabase.rpc("whoami");
     kind = who && typeof who === "object" && "kind" in who ? String(who.kind) : null;
-    if (kind === "platform") {
-      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      currentLevel = aal?.currentLevel ?? null;
-      nextLevel = aal?.nextLevel ?? null;
-    }
   }
 
-  const decision = decideRoute({ pathname, signedIn: Boolean(data.user), kind, currentLevel, nextLevel });
+  const decision = decideRoute({ pathname, signedIn: Boolean(data.user), kind });
   if (decision !== "allow") {
     if (data.user && kind && isOtherRolePath(pathname, kind)) {
       await supabase.rpc("log_denied", { p_action: `Blocked from opening ${pathname}` });

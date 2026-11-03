@@ -29,3 +29,4 @@ Any new dependency or service needs an ADR before it is used. To change a decisi
 | [0021](0021-bank-detail-fingerprints.md) | Bank detail fingerprints for invoice checks | Proposed |
 | [0022](0022-environments-migrations-ci.md) | Environments, migrations and CI | Proposed |
 | [0023](0023-ask-with-grounded-facts.md) | Ask answers from grounded facts, not a tool runner | Accepted |
+| [0024](0024-self-sign-up-without-two-factor.md) | Self sign-up for buyers and suppliers; two-factor sign-in removed for now | Accepted |

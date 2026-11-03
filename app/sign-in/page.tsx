@@ -5,13 +5,13 @@ import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = { title: "Sign in · Tradelink" };
 
-type Props = { searchParams: Promise<{ next?: string }> };
+type Props = { searchParams: Promise<{ next?: string; link?: string }> };
 
 export default async function SignInPage({ searchParams }: Props) {
-  const { next } = await searchParams;
+  const { next, link } = await searchParams;
   return (
     <AuthScreen title="Sign in" lead="Order, deliver and check stock in one place.">
-      <SignInForm next={safeNextPath(next, "") || undefined} />
+      <SignInForm next={safeNextPath(next, "") || undefined} linkExpired={link === "expired"} />
     </AuthScreen>
   );
 }

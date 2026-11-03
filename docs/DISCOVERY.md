@@ -368,6 +368,8 @@ Questions 1 to 6 change the data model or security design, so I need answers bef
 | D9 | Buyer organisations join by admin invitation only. | Owner |
 | D10 | An organisation can have several users, all with equal rights within their role. Members can invite colleagues. | Default (owner had no preference) |
 | D11 | Questions 7, 8, 9, 10, 11, 13 and 14 use the defaults below. Question 12 (accounts and plans) is needed before Phase 2. | Default |
+| D12 | Two-factor sign-in removed for now (supersedes D2). Admins, buyers and suppliers sign in with email and password only. | Owner, 3 November 2026 |
+| D13 | Buyers and suppliers can create their own accounts; new accounts are connected to all active businesses of the other kind (supersedes D9 for now). | Owner, 3 November 2026 |
 
 Defaults for questions 7 to 14:
 - **Q7 Notifications:** in-app for every role (a bell and a Notifications page, reusing the admin design) and email for invitations, password reset, disputes, bank changes and negotiation messages. Web push is deferred. The email provider is chosen in an ADR.

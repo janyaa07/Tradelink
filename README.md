@@ -63,4 +63,4 @@ The GitHub repository is connected to Vercel. Pushes to `develop` create preview
 
 ## Status
 
-Built on 3 November 2026 to the scope in [docs/TONIGHT_PLAN.md](docs/TONIGHT_PLAN.md). The rest of the approved plan, including invoices, invitations, two-factor sign-in, email, Ask, Insights and negotiation, is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Built on 3 November 2026 to the scope in [docs/TONIGHT_PLAN.md](docs/TONIGHT_PLAN.md), plus Ask, Insights, password reset and self sign-up. Two-factor sign-in is switched off for now (ADR 0024). The rest of the approved plan, including invoices, invitations, email and negotiation, is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).

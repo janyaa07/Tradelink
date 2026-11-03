@@ -2,6 +2,8 @@
 
 Status: Proposed
 
+> **Update 3 November 2026:** two-factor sign-in is switched off and buyers and suppliers can create their own accounts, by owner decision. See ADR 0024, which supersedes the two-factor and invitation-only parts below.
+
 ## Context
 This ADR implements decisions D2 (two-factor sign-in), D9 (buyers join by admin invitation) and D10 (several users per organisation). Invitation tokens must be single-use, expiring and hashed.
 
