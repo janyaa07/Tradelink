@@ -28,8 +28,12 @@ All demo accounts use the password `Tradelink-demo-2026`. They exist only for de
 
    Fix any lines with too much quantity, then check the split by supplier and the cut-off times. Nothing is sent until you tap **Confirm and reserve stock**.
 4. **Orders**: track each order. When a delivery comes, tap **All here**, **Report a problem** or **Not here yet**.
-5. **Availability**: browse and search your suppliers' products.
-6. **Settings**: set the weekly budget, the alerts and your usual items.
+5. **Ask**: ask about prices, deliveries, spending or which supplier is most reliable, or type an order. Ask only sees your own business, and an order typed there goes to review; Ask never sends it.
+6. **Insights**: weekly spend against your budget, spend by supplier, each supplier's on-time record, and price changes on your usual items.
+7. **Availability**: browse and search your suppliers' products.
+8. **Settings**: set the weekly budget, the alerts and your usual items.
+
+The live app is at https://tradelink-nine.vercel.app.
 
 ## Supplier walkthrough (Harbour Dry Goods)
 
