@@ -15,8 +15,14 @@ test("the sign-in page renders", async ({ page }) => {
 test("the web app manifest is served for Tradelink AI", async ({ page, request }) => {
   const response = await request.get("/manifest.webmanifest");
   expect(response.ok()).toBe(true);
-  const manifest = (await response.json()) as { name: string; short_name: string; start_url: string; display: string; icons: Array<{ src: string; purpose?: string }> };
-  expect(manifest).toMatchObject({ name: "Tradelink AI", short_name: "Tradelink AI", start_url: "/r", display: "standalone" });
+  const manifest = (await response.json()) as {
+    name: string;
+    short_name: string;
+    start_url: string;
+    display: string;
+    icons: Array<{ src: string; purpose?: string }>;
+  };
+  expect(manifest).toMatchObject({ name: "Tradelink AI", short_name: "Tradelink AI", start_url: "/", display: "standalone" });
   expect(manifest.icons.some((icon) => icon.purpose === "maskable")).toBe(true);
   for (const icon of manifest.icons) {
     expect((await request.get(icon.src)).ok(), icon.src).toBe(true);

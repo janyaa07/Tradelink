@@ -57,6 +57,7 @@ export function ProductTile({ item, qty, onChange }: Props) {
           onClick={() => onChange(item, 1)}
           disabled={!availability.orderable}
           aria-describedby={availability.reason ? reasonId : undefined}
+          aria-label={`Add to cart, ${item.name}`}
           className="min-h-10 w-full text-[.84rem] hover:border-accent hover:text-accent disabled:border-line disabled:bg-sunken disabled:text-muted disabled:opacity-100 rail:min-h-0"
         >
           Add to cart

@@ -54,6 +54,7 @@ function OrderRow({ row, today, columnCount, picked, onPick }: RowProps) {
     </>
   );
 
+  const advanceLabel = order.status === "accepted" ? "Mark out for delivery" : "Mark delivered";
   let actions = null;
   if (order.status === "pending" && open === null) {
     actions = (
@@ -64,10 +65,11 @@ function OrderRow({ row, today, columnCount, picked, onPick }: RowProps) {
           disabled={blocked}
           aria-describedby={blocked ? blockedId : undefined}
           onClick={() => setOpen("accept")}
+          aria-label={`Accept order, ${ref}`}
         >
           Accept order
         </Button>
-        <Button size="small" onClick={() => setOpen("part")}>
+        <Button size="small" onClick={() => setOpen("part")} aria-label={`Part accept, ${ref}`}>
           Part accept
         </Button>
         <form onSubmit={reject.onSubmit}>
@@ -82,8 +84,8 @@ function OrderRow({ row, today, columnCount, picked, onPick }: RowProps) {
     actions = (
       <form onSubmit={advance.onSubmit}>
         {hidden}
-        <Button type="submit" size="small" disabled={advance.pending}>
-          {order.status === "accepted" ? "Mark out for delivery" : "Mark delivered"}
+        <Button type="submit" size="small" disabled={advance.pending} aria-label={`${advanceLabel}, ${ref}`}>
+          {advanceLabel}
         </Button>
       </form>
     );
