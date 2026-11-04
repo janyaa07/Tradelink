@@ -2,13 +2,13 @@
 
 import { z } from "zod";
 import { requireRole } from "@/data/session";
-import { orderNumber } from "@/ui/format";
+import { formatDate, orderNumber } from "@/ui/format";
 import { isAllowedDeliveryDate } from "./dates";
 import { checkPartQuantities } from "./product";
 import { runRpc, type FormResult } from "./respond";
 import { acceptSchema, answerSchema, COPY, formValues, orderSchema, parseInput } from "./validation";
 
-type OrderResult = { number: number; status: string; reducedLines?: number };
+type OrderResult = { number: number; status: string; reducedLines?: number; laterDeliveryDate?: string | null };
 
 /** Accept order with a confirmed delivery date (SUP-04). */
 export async function acceptOrderAction(form: FormData): Promise<FormResult> {
@@ -28,12 +28,20 @@ const partLinesSchema = z
   .min(1)
   .max(60);
 
-/** Part accept: "How much can you send?" (SUP-05). All zeros rejects the order. */
+/**
+ * Part accept: "How much can you send?" (SUP-05). All zeros rejects the order. With a later date
+ * the rest stays on the order as a second delivery instead of being dropped.
+ */
 export async function partAcceptOrderAction(form: FormData): Promise<FormResult> {
   await requireRole("supplier");
   const order = parseInput(acceptSchema, formValues(form, ["orderId", "key", "date"]));
   if (!order.ok) return order;
   if (!isAllowedDeliveryDate(order.data.date, new Date())) return { ok: false, error: COPY.date };
+  const laterValue = form.get("laterDate");
+  const laterDate = typeof laterValue === "string" && laterValue !== "" ? laterValue : null;
+  if (laterDate !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(laterDate) || laterDate <= order.data.date)) {
+    return { ok: false, error: "The rest has to come after the first delivery." };
+  }
 
   const ids = form.getAll("line").filter((value): value is string => typeof value === "string");
   const text = (name: string) => {
@@ -45,18 +53,16 @@ export async function partAcceptOrderAction(form: FormData): Promise<FormResult>
     ids.map((id) => ({ productId: id, name: text(`name:${id}`), qty: Number(text(`max:${id}`)) })),
   );
   if (!lines.ok) return { ok: false, error: COPY.invalid };
-  const checked = checkPartQuantities(
-    lines.data,
-    Object.fromEntries(ids.map((id) => [id, text(`send:${id}`)])),
-  );
+  const checked = checkPartQuantities(lines.data, Object.fromEntries(ids.map((id) => [id, text(`send:${id}`)])));
   if (!checked.ok) return { ok: false, error: checked.error };
 
   return runRpc<OrderResult>(
     "part_accept_order",
-    { p_order: order.data.orderId, p_lines: checked.lines, p_date: order.data.date, p_key: order.data.key },
+    { p_order: order.data.orderId, p_lines: checked.lines, p_date: order.data.date, p_later_date: laterDate, p_key: order.data.key },
     (data) => {
       const ref = orderNumber(data.number);
       if (data.status === "rejected") return `${ref}: rejected.`;
+      if (data.laterDeliveryDate) return `${ref} accepted. The rest goes on ${formatDate(data.laterDeliveryDate)}. The buyer has been told.`;
       return data.reducedLines ? `${ref} part accepted. The buyer has been told.` : `${ref}: accepted.`;
     },
   );
@@ -96,7 +102,10 @@ export async function answerIssueAction(form: FormData): Promise<FormResult> {
   );
 }
 
-const sendOutSchema = z.array(z.object({ orderId: z.uuid(), key: z.uuid() })).min(1).max(30);
+const sendOutSchema = z
+  .array(z.object({ orderId: z.uuid(), key: z.uuid() }))
+  .min(1)
+  .max(30);
 
 /** "Mark all out for delivery" on Home: each of today's packed orders, one key per order (SUP-07). */
 export async function markAllOutForDeliveryAction(orders: z.infer<typeof sendOutSchema>): Promise<FormResult> {
@@ -105,9 +114,21 @@ export async function markAllOutForDeliveryAction(orders: z.infer<typeof sendOut
   if (!parsed.success) return { ok: false, error: COPY.invalid };
   const sent: string[] = [];
   for (const order of parsed.data) {
-    const result = await runRpc<OrderResult>("mark_out_for_delivery", { p_order: order.orderId, p_key: order.key }, (data) => orderNumber(data.number));
+    const result = await runRpc<OrderResult>("mark_out_for_delivery", { p_order: order.orderId, p_key: order.key }, (data) =>
+      orderNumber(data.number),
+    );
     if (!result.ok) return sent.length > 0 ? { ok: false, error: `${sent.join(", ")} went out, then: ${result.error}` } : result;
     sent.push(result.message);
   }
   return { ok: true, message: `${sent.join(", ")} out for delivery. Buyers have been told.` };
+}
+
+/** The rest of a part-accepted order is on its way. */
+export async function markRestOutForDeliveryAction(form: FormData): Promise<FormResult> {
+  return transition(form, "mark_rest_out_for_delivery", "the rest is out for delivery");
+}
+
+/** The rest of a part-accepted order arrived; it leaves stock now. */
+export async function deliverRestAction(form: FormData): Promise<FormResult> {
+  return transition(form, "deliver_rest", "the rest is delivered");
 }

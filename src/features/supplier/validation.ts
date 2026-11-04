@@ -106,11 +106,20 @@ export const profileSchema = z.object({
     .string()
     .trim()
     .regex(/^\+?[0-9 ()-]{6,20}$/, COPY.phone),
-  email: z.string().trim().max(254, COPY.email).pipe(z.email({ error: COPY.email })),
+  email: z
+    .string()
+    .trim()
+    .max(254, COPY.email)
+    .pipe(z.email({ error: COPY.email })),
   address: z.string().trim().max(200, COPY.address),
   range: z.string().trim().max(200, COPY.range),
   days: z
-    .array(z.string().regex(/^[1-7]$/, COPY.days).transform(Number))
+    .array(
+      z
+        .string()
+        .regex(/^[1-7]$/, COPY.days)
+        .transform(Number),
+    )
     .min(1, COPY.days)
     .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
   lead: wholeNumber(0, 14, COPY.lead),
@@ -149,6 +158,10 @@ export function supplierErrorCopy(failure: RpcFailure): string {
       return COPY.duplicate;
     case "STOCK_SHORT":
       return COPY.stockShort;
+    case "REST_NOT_IN_STOCK": {
+      const rest = /^only (\d+) free for (.+) \((\d+) needed\)$/.exec(detail);
+      return rest ? `Only ${rest[1]} ${rest[2]} free; the rest needs ${rest[3]}. Receive stock first.` : failure.error;
+    }
     case "INVALID_INPUT": {
       const part = /^enter 0 to (\d+) for (.+)$/.exec(detail);
       if (part) return `Enter 0 to ${part[1]} for ${part[2]}.`;

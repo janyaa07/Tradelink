@@ -17,6 +17,8 @@ const rowSchema = z.object({
   check_status: z.enum(["unchecked", "all_here", "problem"]),
   requested_delivery_date: z.string().nullable(),
   confirmed_delivery_date: z.string().nullable(),
+  later_delivery_date: z.string().nullable(),
+  later_status: z.enum(["waiting", "out_for_delivery", "delivered", "cancelled"]).nullable(),
   created_at: z.string(),
   buyer: orgSchema,
   supplier: orgSchema,
@@ -24,6 +26,7 @@ const rowSchema = z.object({
     z.object({
       id: z.uuid(),
       qty: z.number(),
+      later_qty: z.number(),
       asked_qty: z.number(),
       unit_price: z.union([z.string(), z.number()]),
       held: z.boolean(),
@@ -46,7 +49,10 @@ export type OrderLineView = {
   sku: string;
   unit: (typeof UNITS)[number];
   art: (typeof ART_KINDS)[number];
+  /** Coming with the first (or only) delivery. */
   qty: number;
+  /** Coming with the second delivery, when the supplier sends the rest later. */
+  laterQty: number;
   askedQty: number;
   unitPrice: string;
   held: boolean;
@@ -60,17 +66,21 @@ export type OrderView = {
   checkStatus: "unchecked" | "all_here" | "problem";
   requestedDeliveryDate: string | null;
   confirmedDeliveryDate: string | null;
+  /** The second delivery for the rest, when the supplier part accepted with a later date. */
+  later: { date: string; status: "waiting" | "out_for_delivery" | "delivered" | "cancelled" } | null;
   createdAt: string;
   buyer: { id: string; name: string };
   supplier: { id: string; name: string };
   lines: OrderLineView[];
+  /** What is coming now; the rest is in laterCents. */
   totalCents: number;
+  laterCents: number;
 };
 
-const SELECT = `id, number, status, check_status, requested_delivery_date, confirmed_delivery_date, created_at,
+const SELECT = `id, number, status, check_status, requested_delivery_date, confirmed_delivery_date, later_delivery_date, later_status, created_at,
   buyer:organisations!orders_buyer_org_id_fkey(id, name),
   supplier:organisations!orders_supplier_org_id_fkey(id, name),
-  order_lines(id, qty, asked_qty, unit_price, held, product:products(id, name, sku, unit, art, status))`;
+  order_lines(id, qty, later_qty, asked_qty, unit_price, held, product:products(id, name, sku, unit, art, status))`;
 
 function toView(row: z.infer<typeof rowSchema>): OrderView {
   const lines = row.order_lines.map((line) => ({
@@ -81,6 +91,7 @@ function toView(row: z.infer<typeof rowSchema>): OrderView {
     unit: line.product.unit,
     art: line.product.art,
     qty: line.qty,
+    laterQty: line.later_qty,
     askedQty: line.asked_qty,
     unitPrice: Number(line.unit_price).toFixed(2),
     held: line.held,
@@ -93,11 +104,13 @@ function toView(row: z.infer<typeof rowSchema>): OrderView {
     checkStatus: row.check_status,
     requestedDeliveryDate: row.requested_delivery_date,
     confirmedDeliveryDate: row.confirmed_delivery_date,
+    later: row.later_delivery_date && row.later_status ? { date: row.later_delivery_date, status: row.later_status } : null,
     createdAt: row.created_at,
     buyer: row.buyer ?? HIDDEN_ORG,
     supplier: row.supplier ?? HIDDEN_ORG,
     lines,
     totalCents: lines.reduce((total, line) => total + toCents(line.unitPrice) * line.qty, 0),
+    laterCents: lines.reduce((total, line) => total + toCents(line.unitPrice) * line.laterQty, 0),
   };
 }
 

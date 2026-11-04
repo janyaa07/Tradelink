@@ -15,6 +15,7 @@ const MESSAGES: Record<string, string> = {
   CONFIRM_STOCK_FIRST: "Confirm stock for the new products in this order first.",
   ALREADY_REPORTED: "You have already reported this order as late.",
   BELOW_RESERVED: "This leaves less stock than is reserved for open orders.",
+  REST_NOT_IN_STOCK: "There is not enough free stock for the rest yet. Receive stock first.",
   RATE_LIMITED: "Too many requests. Try again in a few minutes.",
   INVALID_INPUT: "Check the details and try again.",
   STALE_VERSION: "That was an older version. Here's the latest.",
@@ -38,6 +39,4 @@ export function messageFor(reason: string): string {
   return MESSAGES[reason] ?? FALLBACK;
 }
 
-export type ActionResult<T = undefined> =
-  | { ok: true; data: T; message?: string }
-  | { ok: false; error: string; reason?: string; detail?: string };
+export type ActionResult<T = undefined> = { ok: true; data: T; message?: string } | { ok: false; error: string; reason?: string; detail?: string };
