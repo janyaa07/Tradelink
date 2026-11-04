@@ -2,7 +2,8 @@
  * Exports the documents in docs/final/ to PDF, and saves each rendered Mermaid diagram as an SVG
  * in docs/final/assets/diagrams/.
  *
- *   node scripts/export-docs-pdf.mjs
+ *   node scripts/export-docs-pdf.mjs                      (all documents)
+ *   node scripts/export-docs-pdf.mjs User_Guide.md        (one document)
  *
  * Markdown is rendered with marked; Mermaid diagrams are drawn in Chromium (Mermaid is loaded from
  * cdn.jsdelivr.net, so this needs a network connection) and the page is printed with Playwright.
@@ -81,13 +82,14 @@ const CSS = `
   th, td { border: 1px solid #d6ddd9; padding: 4pt 5pt; text-align: left; vertical-align: top; }
   th { background: #eef3f0; }
   .id { white-space: nowrap; }
-  td code { overflow-wrap: anywhere; }
   code { font: 8.8pt/1.4 Consolas, "Cascadia Mono", monospace; background: #f3f5f4; padding: 0 2pt; border-radius: 2pt; }
   pre { background: #f6f8f7; border: 1px solid #e2e7e4; border-radius: 4pt; padding: 7pt; white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
   pre code { background: none; padding: 0; }
   pre.mermaid { background: #fff; border: none; text-align: center; }
   img { max-width: 100%; height: auto; break-inside: avoid; border: 1px solid #e2e7e4; border-radius: 4pt; }
   img[src$=".svg"] { border: none; }
+  img[src*="-laptop"] { max-height: 92mm; width: auto; }
+  img[src*="-phone"] { width: 52mm; }
   img[src*="logos/"] { width: 26mm; height: auto; }
   p:has(> img) { break-inside: avoid; text-align: center; }
   em { color: #4b5852; }
@@ -99,7 +101,8 @@ async function main() {
   fs.mkdirSync(DIAGRAMS, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  for (const doc of DOCS) {
+  const only = process.argv.slice(2);
+  for (const doc of DOCS.filter((entry) => only.length === 0 || only.includes(entry.file))) {
     const source = path.join(FINAL, doc.file);
     if (!fs.existsSync(source)) {
       console.log(`Skipped ${doc.file}: not found`);
@@ -142,7 +145,7 @@ async function main() {
     if (missing.length) console.log(`${doc.file}: ${missing.length} image(s) did not load\n  ${missing.join("\n  ")}`);
 
     const pdf = path.join(FINAL, doc.file.replace(".md", ".pdf"));
-    await page.pdf({
+    const bytes = await page.pdf({
       path: pdf,
       format: "A4",
       printBackground: true,
@@ -152,7 +155,9 @@ async function main() {
       margin: { top: "18mm", bottom: "20mm", left: "16mm", right: "16mm" },
     });
     fs.rmSync(htmlFile);
-    console.log(`Wrote ${path.relative(ROOT, pdf)}`);
+    // The page tree is nested; the root node carries the largest /Count, which is the page total.
+    const pages = Math.max(0, ...[...bytes.toString("latin1").matchAll(/\/Count\s+(\d+)/g)].map((match) => Number(match[1])));
+    console.log(`Wrote ${path.relative(ROOT, pdf)} (${pages} pages)`);
   }
   await browser.close();
 }
