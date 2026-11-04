@@ -67,7 +67,9 @@ Audit action text follows the prototype, for example "Placed ORD-1044", "Accepte
 | Function | Behaviour |
 | --- | --- |
 | `accept_order(p_order, p_date date, p_key)` (I) | Own supplier. `pending` to `accepted`. The date must be today or later (Asia/Singapore), stored as `confirmed_delivery_date`. Unheld lines whose product is still `unconfirmed` raise `CONFIRM_STOCK_FIRST`. Unheld lines with an active product are reserved now, set `held = true` and take the current price. |
-| `part_accept_order(p_order, p_lines jsonb, p_date, p_key)` (I) | `p_lines`: `[{productId, sendQty}]`, 0 to qty. All zero means reject. Otherwise reduces quantities, releases the difference, deletes zero lines, inserts `partial_fulfilments` for reduced lines, then accepts as above. |
+| `part_accept_order(p_order, p_lines jsonb, p_date, p_later_date date, p_key)` (I) | `p_lines`: `[{productId, sendQty}]`, 0 to qty. Without `p_later_date` (the four-argument form calls this with null): all zero means reject; otherwise reduces quantities, releases the difference, deletes zero lines, inserts `partial_fulfilments` for reduced lines, then accepts as above. With `p_later_date` (after `p_date`): something must go now; the rest stays on each line as `later_qty` (not reserved) and the order gets `later_delivery_date` and `later_status = 'waiting'`, so it comes in two deliveries. The buyer's alert lists what is not coming, or what comes later, and the new total. |
+| `mark_rest_out_for_delivery(p_order, p_key)` (I) | The rest of a two-delivery order: `later_status` `waiting` to `out_for_delivery`. Tells the buyer. |
+| `deliver_rest(p_order, p_key)` (I) | `later_status` `waiting` or `out_for_delivery` to `delivered`, while the order is accepted, out for delivery or delivered. Needs free stock for every `later_qty` (else `TL409:REST_NOT_IN_STOCK`); each line writes a stock history `delivered` row (on hand −later_qty, reserved 0), `later_qty` moves into `qty`, and `check_status` returns to `unchecked` so the buyer checks again. |
 | `reject_order(p_order, p_key)` (I) | `pending` to `rejected`. Releases held lines. |
 | `mark_out_for_delivery(p_order, p_key)` (I) | `accepted` to `out_for_delivery`. |
 | `mark_delivered(p_order, p_key)` (I) | `out_for_delivery` to `delivered`. Sets `delivered_at`. Each held line writes a stock history `delivered` row (on hand −qty, reserved −qty). |
@@ -78,6 +80,17 @@ Audit action text follows the prototype, for example "Placed ORD-1044", "Accepte
 | `change_price(p_product, p_price numeric, p_key)` (I) | Inserts into `price_changes` when the price differs. |
 | `adjust_stock(p_product, p_change int, p_reason text, p_note text, p_key)` (I) | Change from −9999 to 9999, not 0. On hand + change must be at least reserved, otherwise `BELOW_RESERVED`. Writes an `adjusted` stock history row. |
 | `update_business_profile(p_contact, p_phone, p_email, p_address, p_range, p_days smallint[], p_lead int, p_cutoff time, p_minimum numeric)` | Updates the supplier's business profile. |
+
+## Order requests and messages (buyer or supplier on the order)
+
+Stored in `order_requests` (read through the order's RLS). A delivery date only moves when the other side agrees.
+
+| Function | Rules |
+| --- | --- |
+| `propose_delivery_date(p_order, p_part text, p_date, p_note text, p_key)` (I) | `p_part` is `first` (order pending or accepted) or `rest` (`later_status = 'waiting'`, date after the first delivery). Date today or later and different from now; note up to 500 characters. Replaces an open request for the same part (`withdrawn`). Tells the other side. |
+| `answer_delivery_date(p_request, p_accept boolean, p_note text, p_key)` (I) | Only the other side, only while `open`. Accepting moves `requested_delivery_date` (pending), `confirmed_delivery_date` (accepted) or `later_delivery_date` (rest). Tells the side that asked. |
+| `send_order_message(p_order, p_body text, p_key)` (I) | 1 to 500 characters, 30 an hour per person (`TL429:RATE_LIMITED`). Tells the other side with the first 170 characters. |
+| `cancel_rest(p_order, p_key)` (I) | Either side, while `later_status = 'waiting'`. Clears `later_qty`, removes lines with nothing left, withdraws open date requests for the rest. Tells the other side. |
 
 ## Admin functions (`app.is_admin()`)
 
