@@ -3,7 +3,7 @@ import type { PillTone } from "@/ui/Pill";
 export type NotificationRole = "buyer" | "supplier" | "admin";
 
 const BAD_KINDS = new Set(["Dispute opened", "Bank details changed", "Invitation declined", "Order rejected", "Supplier suspended"]);
-const GOOD_KINDS = new Set(["Invitation accepted", "Order delivered", "Order accepted"]);
+const GOOD_KINDS = new Set(["Invitation accepted", "Order delivered", "Order accepted", "Credit received"]);
 
 export function toneOf(kind: string): PillTone {
   if (BAD_KINDS.has(kind)) return "bad";
@@ -41,6 +41,8 @@ export function actionFor(role: NotificationRole, note: { kind: string; title: s
       return { label: "See changes", hash: "" };
     case "Problem reported":
       return { label: "Answer", hash: "#problems" };
+    case "Credit received":
+      return { label: "View order", hash: "#problems" };
     case "Problem answered":
       return note.title.endsWith("credit promised") ? { label: "Confirm credit", hash: "#problems" } : { label: "View order", hash: "#problems" };
     default:
