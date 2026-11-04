@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
-import { formatMoney } from "@/domain/money";
+import { formatMoney, toCents } from "@/domain/money";
 import { countOrders, getOrders, OPEN_STATUSES, type OrderView } from "@/features/orders/queries";
 import { defaultDeliveryDate, todayInSingapore } from "@/features/supplier/dates";
 import { HashTarget } from "@/features/supplier/HashTarget";
@@ -90,6 +90,8 @@ export default async function SupplierOrdersPage({ searchParams }: Props) {
     getBusinessProfile(session.orgId),
   ]);
 
+  const minimumCents = toCents(profile.minimum);
+
   return (
     <div className="flex flex-col gap-4">
       <HashTarget />
@@ -157,8 +159,9 @@ export default async function SupplierOrdersPage({ searchParams }: Props) {
             }))}
             today={today}
             pickAll={tab === "to_pack"}
+            minimumCents={minimumCents}
             note={orders.length === LIMIT ? `Showing the newest ${LIMIT}. Search by order number to find an older one.` : undefined}
-            phone={<SupplierOrderList orders={orders} now={now} empty={EMPTY[tab]} />}
+            phone={<SupplierOrderList orders={orders} now={now} empty={EMPTY[tab]} minimumCents={minimumCents} />}
           />
         )}
       </section>

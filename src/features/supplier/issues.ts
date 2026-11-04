@@ -2,6 +2,7 @@ import type { CatalogueItem } from "@/domain/catalogue";
 import { formatMoney } from "@/domain/money";
 import type { ButtonVariant } from "@/ui/Button";
 import { orderNumber } from "@/ui/format";
+import type { PillTone } from "@/ui/Pill";
 import type { TodoTone } from "@/ui/TodoItem";
 import { inventoryHref } from "./stock";
 
@@ -31,6 +32,31 @@ export type IssueView = {
   orderNumber: number;
   buyerName: string;
   productName: string | null;
+};
+
+export const ISSUE_STATUSES = [
+  "open",
+  "credit_promised",
+  "replacement_promised",
+  "supplier_replied",
+  "disputed",
+  "closed",
+  "credit_received",
+] as const;
+export type IssueStatus = (typeof ISSUE_STATUSES)[number];
+
+/** A problem on one order, answered or not, for the supplier's order page. */
+export type OrderIssueView = IssueView & { status: IssueStatus };
+
+/** Where a problem stands, as the supplier sees it. */
+export const ISSUE_STATUS_PILLS: Record<IssueStatus, { label: string; tone: PillTone }> = {
+  open: { label: "To answer", tone: "bad" },
+  credit_promised: { label: "Credit promised", tone: "info" },
+  replacement_promised: { label: "Replacement promised", tone: "info" },
+  supplier_replied: { label: "Answered", tone: "info" },
+  disputed: { label: "Disputed", tone: "plain" },
+  closed: { label: "Closed", tone: "plain" },
+  credit_received: { label: "Credit received", tone: "good" },
 };
 
 /** The To do title for a problem (SUP-02). */
