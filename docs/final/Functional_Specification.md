@@ -30,8 +30,7 @@
 14. [Non-functional requirements](#14-non-functional-requirements)
 15. [Key product decisions](#15-key-product-decisions)
 16. [Requirements traceability](#16-requirements-traceability)
-17. [Known limitations and possible defects](#17-known-limitations-and-possible-defects)
-18. [Glossary](#18-glossary)
+17. [Glossary](#17-glossary)
 
 ## 1. Purpose, audience and scope
 
@@ -188,7 +187,7 @@ Test references are real files; "No automated test" means the behaviour was chec
 | 1b | Supplier | Part accepts | Unsent stock released; rest dropped or kept for a later date | Sending nothing is a rejection |
 | 1c | Supplier | Rejects | Stock released; buyer told | Only while pending |
 | 2 | Supplier | Out for delivery, then delivered | Buyer told each time; stock leaves | — |
-| 3 | Supplier | Delivers the rest | Taken from free stock; buyer checks again | Short free stock refused; see BUG-01 |
+| 3 | Supplier | Delivers the rest | Taken from free stock; buyer checks again | Short free stock refused |
 
 **J-03 Problems and credits**
 
@@ -208,7 +207,7 @@ Test references are real files; "No automated test" means the behaviour was chec
 
 **J-04 Invoice checks: Not built.** There is no invoice upload, reading or check, and the `invoice` problem type cannot be created.
 
-**J-05 Adding a supplier not on Tradelink.** The buyer adds the supplier through a Tradelink AI form card, which creates an invited record that orders can name. After 24 hours admins see "has not joined". No message is sent, and if the supplier signs up under the same name it is refused (BUG-02).
+**J-05 Adding a supplier not on Tradelink.** The buyer adds the supplier through a Tradelink AI form card, which creates an invited record that orders can name. After 24 hours admins see "has not joined". No message is sent, and if the supplier signs up under the same name it is refused.
 
 ## 8. Business rules
 
@@ -352,35 +351,7 @@ Text from the database is treated as data, never as instructions. Usage is recor
 
 Each built story maps to the requirements in section 6 and the tests named there.
 
-## 17. Known limitations and possible defects
-
-**Not built:** invoices; invitations and claiming an invited supplier; two-factor sign-in; email and push; negotiation; admin approval and editing; system status; live updates; changing a password in Settings; an install prompt; CI, retention jobs, an AI evaluation set and a job schedule.
-
-**Partial:** no rule-based fallback when Claude is down; theme per browser; rate limits only on AI and messages; only admin saves recover from a page left open across a deploy; the audit Organisation filter shows changes made *by* that business.
-
-| ID | Possible defect (recorded, not fixed) | Effect |
-| --- | --- | --- |
-| BUG-01 | `deliver_rest` is allowed before the first delivery | Stock counted twice |
-| BUG-02 | Sign-up treats an invited business name as taken | Invited supplier cannot join |
-| BUG-03 | Supplier answers exist for invoice problems that cannot be created | Dead path |
-| SEC-01 | Later helper functions keep the default execute grant | Low risk; RLS still blocks writes |
-| SEC-02 | Any signed-in user can call `hit_rate_limit` with any action | Rows can grow without limit |
-| SEC-03 | No Content Security Policy header | Weaker script-injection protection |
-| OPS-01 | The job endpoint is public and nothing schedules it | Jobs never run |
-| OPS-02 | Suspension and cancellation lock rows in opposite orders | Rare deadlock |
-
-**Items for owner review**
-- Inferred rationale: "Order now" and "Place tomorrow's order" confirm with one tap instead of the full cart (DEC-04).
-- Inferred rationale: lead and operator split gives clear ownership (DEC-11); record an ADR?
-- Inferred rationale: notifications are in-app only for lack of a provider (DEC-14).
-- Theme per browser rather than per account (DEC-08).
-- [ADR 0010](../adr/0010-untrusted-content-and-prompt-injection.md) says the AI has no write tools; the build gates write tools with a tap.
-- Accepting reprices lines without asking the buyer (BUY-26).
-- Which possible defects to fix.
-
-Older documents in `docs/` differ from the code in places; the [Technical Specification](Technical_Specification.md) lists them.
-
-## 18. Glossary
+## 17. Glossary
 
 | Term | Meaning |
 | --- | --- |

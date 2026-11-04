@@ -24,7 +24,6 @@
 8. [Testing](#8-testing)
 9. [Delivery and operations](#9-delivery-and-operations)
 10. [Running cost](#10-running-cost)
-11. [Decision log](#11-decision-log)
 
 **Purpose.** How Tradelink is built, what it uses and why, and what was left out and why. For engineers maintaining the code. Requirements are in the [Functional Specification](Functional_Specification.md). Where a reason was not recorded, it is marked **Inferred rationale**.
 
@@ -414,27 +413,3 @@ End-to-end tests read the demo password from `E2E_PASSWORD` in `.env.local`.
 **Measured AI use** (`public.ai_usage`, 3 to 4 November 2026): 135 Tradelink AI replies, averaging 6,551 input and 223 output tokens. That is at most about **US$0.015 per reply** (all input at the full rate; caching lowers it), or about **US$2.07** for all 135.
 
 Hosting prices are list prices from third-party summaries; check vercel.com/pricing and supabase.com/pricing before buying.
-
-## 11. Decision log
-
-Product decisions are in the [Functional Specification](Functional_Specification.md) as DEC-xx; shared ones: TD-01 = DEC-01, TD-02 and TD-03 = DEC-02, TD-05 = DEC-03, TD-06 = DEC-05, TD-08 = DEC-04, TD-10 = DEC-06, TD-12 = DEC-08, TD-18 = DEC-09, TD-19 = DEC-11.
-
-| ID | Decision | Why | Trade-off | Record |
-| --- | --- | --- | --- | --- |
-| TD-01 | Responsive PWA instead of native apps | One codebase for phone and laptop | No app store presence | [ADR 0016](../adr/0016-pwa-and-offline.md) |
-| TD-02 | Next.js App Router on Vercel | Keys and AI stay on the server; branch previews | Tied to Vercel runtime limits (60 s route) | [ADR 0002](../adr/0002-nextjs-on-vercel.md) |
-| TD-03 | Supabase for Postgres, Auth and RLS | Transactions and RLS fit stock and tenancy | Logic in SQL is harder to unit test | [ADR 0003](../adr/0003-supabase-platform.md) |
-| TD-04 | Writes only through definer functions | Role, state, stock, audit and notification in one transaction | More SQL to maintain | [ADR 0004](../adr/0004-writes-through-postgres-functions.md) |
-| TD-05 | Server checks plus RLS | Clear redirects; the database enforces for every caller, including the AI | Two places to keep in sync | [ADR 0005](../adr/0005-tenancy-and-connections.md) |
-| TD-06 | Stock reserved in the order transaction with ordered locks | No overselling, no deadlocks between stock functions | Lock waits under contention | [ADR 0006](../adr/0006-inventory-history-and-reservations.md) |
-| TD-08 | Every AI change needs a person's tap | People stay in control; same database functions apply | One extra tap | [ADR 0008](../adr/0008-claude-integration.md) |
-| TD-09 | Tool-using agent instead of grounded-facts Ask | **Inferred rationale:** the AI must be able to do what users can do | ADR 0023 is out of date | `src/features/ai/agent.ts` |
-| TD-10 | Self sign-up, no 2FA, instead of token invitations | Owner decision for a working demo | Invited suppliers have no join path | [ADR 0024](../adr/0024-self-sign-up-without-two-factor.md) |
-| TD-12 | Light and dark mode from design tokens | One token file for both themes | Token changes need `npm run tokens` | [ADR 0015](../adr/0015-design-tokens-and-tailwind.md) |
-| TD-13 | Theme in a per-browser cookie | **Inferred rationale:** the server renders the right theme before paint | Does not follow the person across devices | `src/ui/ThemeToggle.tsx` |
-| TD-18 | One order per supplier from one cart | Each supplier handles its own order | Several order numbers per checkout | `place_orders` |
-| TD-19 | Operations lead sees and assigns all attention items | Owner request, 4 November 2026 | One lead flag, no team management UI | `20261104040939_attention_lead_sees_all.sql` |
-| TD-20 | The second delivery is not reserved | **Inferred rationale:** the stock is not there yet | Can fail later with `REST_NOT_IN_STOCK` | `deliver_rest` |
-| TD-21 | Quick orders use one confirm tap, not the cart | **Inferred rationale:** a known short order should take one tap | Less review than the cart | `order_now` |
-
-**For owner review:** the inferred rationales (TD-09, TD-13, TD-20, TD-21).
