@@ -113,6 +113,8 @@ export async function runAgent(ctx: AiContext, history: AskTurn[], message: stri
   const started = Date.now();
   let inputTokens = 0;
   let outputTokens = 0;
+  let cacheReadTokens = 0;
+  let cacheWriteTokens = 0;
   let outcome: "ok" | "error" = "ok";
 
   const claudeTools = tools.map(toClaudeTool);
@@ -132,10 +134,16 @@ export async function runAgent(ctx: AiContext, history: AskTurn[], message: stri
         tools: claudeTools,
         messages,
         output_config: { effort: "low" },
+        // Tools and RULES carry their own breakpoint; this one follows the conversation as it grows, so each
+        // tool round and each new question reads the earlier turns from the cache instead of paying for them again.
+        cache_control: { type: "ephemeral" },
       });
       stream.on("text", (delta) => emit({ type: "text", delta }));
       const final = await stream.finalMessage();
-      inputTokens += final.usage.input_tokens;
+      // input_tokens is only the part after the last cache hit; the prompt is all three together.
+      cacheReadTokens += final.usage.cache_read_input_tokens ?? 0;
+      cacheWriteTokens += final.usage.cache_creation_input_tokens ?? 0;
+      inputTokens += final.usage.input_tokens + (final.usage.cache_read_input_tokens ?? 0) + (final.usage.cache_creation_input_tokens ?? 0);
       outputTokens += final.usage.output_tokens;
       messages.push({ role: "assistant", content: final.content });
 
@@ -166,6 +174,14 @@ export async function runAgent(ctx: AiContext, history: AskTurn[], message: stri
     logger.error("ai_agent_failed", { role: ctx.role, error: error instanceof Error ? error.message : "unknown" });
     emit({ type: "error", message: "Tradelink AI is not available right now. Try again in a moment." });
   } finally {
+    // Sizes in tokens, under names the logger does not redact.
+    logger.info("ai_agent_usage", {
+      role: ctx.role,
+      promptSize: inputTokens,
+      cacheRead: cacheReadTokens,
+      cacheWrite: cacheWriteTokens,
+      outputSize: outputTokens,
+    });
     const supabase = await createSupabaseServerClient();
     await supabase.rpc("record_ai_usage", {
       p_feature: "ask",
