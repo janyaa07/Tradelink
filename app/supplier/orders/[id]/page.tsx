@@ -6,8 +6,11 @@ import { getCatalogue } from "@/data/catalogue";
 import { requireRole } from "@/data/session";
 import { plural, type CatalogueItem } from "@/domain/catalogue";
 import { formatMoney, lineTotal, toCents } from "@/domain/money";
+import { singaporeDateOf } from "@/domain/singapore-time";
 import { StatusPill } from "@/features/orders/OrderCard";
+import { OrderConversation } from "@/features/orders/OrderConversation";
 import type { OrderLineView, OrderView } from "@/features/orders/queries";
+import { getOrderRequests } from "@/features/orders/requests";
 import { ConfirmAddedProducts } from "@/features/supplier/ConfirmAddedProducts";
 import { defaultDeliveryDate, todayInSingapore } from "@/features/supplier/dates";
 import { newIdempotencyKey } from "@/features/supplier/keys";
@@ -15,10 +18,11 @@ import { belowMinimumNote, orderBelowMinimum } from "@/features/supplier/minimum
 import { OrderPageActions } from "@/features/supplier/OrderPageActions";
 import { OrderProblem } from "@/features/supplier/OrderProblems";
 import { getBusinessProfile, getBuyerContact, getOrderIssues, getSupplierOrder, type BuyerContact } from "@/features/supplier/queries";
+import { RestActions } from "@/features/supplier/RestActions";
 import { SupplierOrderProgress } from "@/features/supplier/SupplierOrderProgress";
 import { BusinessLogo } from "@/ui/BusinessLogo";
 import { formatDate, formatDateTime, orderNumber } from "@/ui/format";
-import { Pill } from "@/ui/Pill";
+import { Pill, type PillTone } from "@/ui/Pill";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -37,10 +41,20 @@ function LineName({ line }: { line: OrderLineView }) {
   return (
     <>
       <span className="block font-semibold break-words">{line.name}</span>
-      {line.askedQty !== line.qty ? <span className="block text-[.75rem] text-muted">Buyer asked for {line.askedQty}</span> : null}
+      {line.askedQty !== line.qty + line.laterQty ? <span className="block text-[.75rem] text-muted">Buyer asked for {line.askedQty}</span> : null}
       {!line.held ? <span className="block text-[.75rem] font-semibold text-warn">Stock and price to confirm</span> : null}
     </>
   );
+}
+
+/** "S$40.00", or "S$40.00 now + S$12.00 later" while the rest is still to come. */
+function totalText(order: OrderView): string {
+  if (order.laterCents === 0) return formatMoney(order.totalCents);
+  return `${formatMoney(order.totalCents)} now + ${formatMoney(order.laterCents)} later`;
+}
+
+function LaterQty({ line }: { line: OrderLineView }) {
+  return line.laterQty > 0 ? <span className="block text-[.75rem] font-semibold text-info">+ {line.laterQty} later</span> : null;
 }
 
 function ItemsCard({ order }: { order: OrderView }) {
@@ -78,7 +92,10 @@ function ItemsCard({ order }: { order: OrderView }) {
                 <LineName line={line} />
               </td>
               <td className={`${TD} font-mono text-[.78rem] whitespace-nowrap text-muted`}>{line.sku}</td>
-              <td className={`${TD} num text-right whitespace-nowrap`}>{plural(line.qty, line.unit)}</td>
+              <td className={`${TD} num text-right whitespace-nowrap`}>
+                {plural(line.qty, line.unit)}
+                <LaterQty line={line} />
+              </td>
               <td className={`${TD} num text-right whitespace-nowrap`}>{formatMoney(line.unitPrice)}</td>
               <td className={`${TD} num text-right font-semibold whitespace-nowrap`}>{formatMoney(lineTotal(line.unitPrice, line.qty))}</td>
             </tr>
@@ -89,7 +106,7 @@ function ItemsCard({ order }: { order: OrderView }) {
             <td colSpan={4} className="px-4 py-3 text-right text-muted">
               Total
             </td>
-            <td className="num px-4 py-3 text-right text-[.95rem] font-bold whitespace-nowrap">{formatMoney(order.totalCents)}</td>
+            <td className="num px-4 py-3 text-right text-[.95rem] font-bold whitespace-nowrap">{totalText(order)}</td>
           </tr>
         </tfoot>
       </table>
@@ -102,13 +119,14 @@ function ItemsCard({ order }: { order: OrderView }) {
               <span className="num block text-[.8rem] text-muted">
                 <span className="font-mono">{line.sku}</span> · {plural(line.qty, line.unit)} × {formatMoney(line.unitPrice)}
               </span>
+              <LaterQty line={line} />
             </div>
             <span className="num font-semibold">{formatMoney(lineTotal(line.unitPrice, line.qty))}</span>
           </li>
         ))}
         <li className="flex items-center justify-between px-4 py-3">
           <span className="text-muted">Total</span>
-          <span className="num font-bold">{formatMoney(order.totalCents)}</span>
+          <span className="num text-right font-bold">{totalText(order)}</span>
         </li>
       </ul>
     </section>
@@ -131,8 +149,9 @@ function DetailsCard({ order, contact }: { order: OrderView; contact: BuyerConta
     ],
     ["Placed", formatDateTime(order.createdAt)],
     ["Delivery", deliveryText(order)],
-    ["Buyer", order.buyer.name],
   ];
+  if (order.later && order.later.status !== "cancelled") rows.push(["The rest", formatDate(order.later.date)]);
+  rows.push(["Buyer", order.buyer.name]);
   if (contact?.contact) rows.push(["Contact", contact.contact]);
   if (contact?.phone) {
     rows.push([
@@ -149,7 +168,7 @@ function DetailsCard({ order, contact }: { order: OrderView; contact: BuyerConta
     [
       "Total",
       <span key="total" className="num font-semibold">
-        {formatMoney(order.totalCents)}
+        {totalText(order)}
       </span>,
     ],
   );
@@ -168,6 +187,56 @@ function DetailsCard({ order, contact }: { order: OrderView; contact: BuyerConta
   );
 }
 
+const REST_STATUS: Record<NonNullable<OrderView["later"]>["status"], { label: string; tone: PillTone; note: string }> = {
+  waiting: { label: "Waiting", tone: "warn", note: "Not held in stock yet; it leaves stock when you deliver it." },
+  out_for_delivery: { label: "Out for delivery", tone: "info", note: "On the way to the buyer." },
+  delivered: { label: "Delivered", tone: "good", note: "These items are now in the order above." },
+  cancelled: { label: "Cancelled", tone: "plain", note: "The rest is not coming." },
+};
+
+/** The second delivery of a part-accepted order: what is still to come, when, and the supplier's next step. */
+function RestCard({ order, idemKey }: { order: OrderView; idemKey: string }) {
+  const later = order.later;
+  if (!later) return null;
+  const lines = order.lines.filter((line) => line.laterQty > 0);
+  const status = REST_STATUS[later.status];
+  return (
+    <section aria-labelledby="rest-title" className={CARD}>
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5">
+        <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id="rest-title">The rest</h2>
+            <Pill tone={status.tone}>{status.label}</Pill>
+          </div>
+          <p className="num text-[.8rem] text-muted">
+            Second delivery, {formatDate(later.date)}. {status.note}
+          </p>
+        </div>
+        <RestActions orderId={order.id} status={later.status} idemKey={idemKey} />
+      </div>
+      {lines.length > 0 ? (
+        <ul className="divide-y divide-line border-t border-line">
+          {lines.map((line) => (
+            <li key={line.id} className="flex items-start gap-3 px-4 py-2.5 text-[.875rem]">
+              <div className="min-w-0 flex-1">
+                <span className="block font-semibold break-words">{line.name}</span>
+                <span className="num block text-[.8rem] text-muted">
+                  <span className="font-mono">{line.sku}</span> · {plural(line.laterQty, line.unit)} × {formatMoney(line.unitPrice)}
+                </span>
+              </div>
+              <span className="num font-semibold">{formatMoney(lineTotal(line.unitPrice, line.laterQty))}</span>
+            </li>
+          ))}
+          <li className="flex items-center justify-between px-4 py-3">
+            <span className="text-muted">Total for the rest</span>
+            <span className="num font-bold">{formatMoney(order.laterCents)}</span>
+          </li>
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 /** The buyer-added products on this order that still need their stock confirmed, as catalogue items for the confirm form. */
 function addedProducts(order: OrderView, catalogue: CatalogueItem[]): CatalogueItem[] {
   const ids = new Set(order.lines.filter((line) => !line.held && line.productUnconfirmed).map((line) => line.productId));
@@ -182,11 +251,12 @@ export default async function SupplierOrderPage({ params }: Props) {
   if (!order) notFound();
 
   const unconfirmed = order.lines.filter((line) => !line.held && line.productUnconfirmed);
-  const [profile, issues, contact, catalogue] = await Promise.all([
+  const [profile, issues, contact, catalogue, requests] = await Promise.all([
     getBusinessProfile(session.orgId),
     getOrderIssues(session.orgId, order.id),
     getBuyerContact(order.buyer.id),
     unconfirmed.length > 0 ? getCatalogue({ supplierOrgId: session.orgId }) : Promise.resolve<CatalogueItem[]>([]),
+    getOrderRequests(order.id),
   ]);
 
   const now = new Date();
@@ -195,6 +265,8 @@ export default async function SupplierOrderPage({ params }: Props) {
   const minimumCents = toCents(profile.minimum);
   const gap = orderBelowMinimum(order, minimumCents);
   const toConfirm = addedProducts(order, catalogue);
+  const rest = order.later && order.later.status !== "cancelled" ? order.later : null;
+  const firstCanMove = order.status === "pending" || order.status === "accepted";
 
   return (
     <div className="flex flex-col gap-5">
@@ -234,6 +306,12 @@ export default async function SupplierOrderPage({ params }: Props) {
                   </span>
                 </>
               ) : null}
+              {rest ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>the rest {formatDate(rest.date)}</span>
+                </>
+              ) : null}
             </p>
             {gap > 0 ? <p className="num text-[.84rem] font-semibold text-warn">{belowMinimumNote(gap, minimumCents)}</p> : null}
           </div>
@@ -261,6 +339,8 @@ export default async function SupplierOrderPage({ params }: Props) {
 
             <ItemsCard order={order} />
 
+            <RestCard order={order} idemKey={newIdempotencyKey()} />
+
             {issues.length > 0 ? (
               <section id="problems" aria-labelledby="problems-title" className={`${CARD} scroll-mt-6`}>
                 <div className="px-4 py-3.5">
@@ -273,6 +353,16 @@ export default async function SupplierOrderPage({ params }: Props) {
                 </ul>
               </section>
             ) : null}
+
+            <OrderConversation
+              orderId={order.id}
+              myOrgId={session.orgId}
+              otherName={order.buyer.name}
+              requests={requests}
+              firstDate={firstCanMove ? (delivery?.slice(0, 10) ?? null) : null}
+              restDate={order.later?.status === "waiting" ? order.later.date : null}
+              today={singaporeDateOf(now)}
+            />
           </div>
 
           <DetailsCard order={order} contact={contact} />

@@ -7,6 +7,7 @@ import {
   matchesBuyer,
   parseOrderTab,
   parseSupplierSearch,
+  restLabel,
   supplierOrdersHref,
 } from "./orderFilters";
 
@@ -73,5 +74,18 @@ describe("linesSummary", () => {
         { qty: 4, name: "Ginger" },
       ]),
     ).toBe("12 × Coconut milk, 4 × Ginger");
+  });
+});
+
+describe("restLabel", () => {
+  it("names the rest's date until it arrives", () => {
+    expect(restLabel({ later: { date: "2026-11-09", status: "waiting" } })).toBe("Rest on Mon 9 Nov");
+    expect(restLabel({ later: { date: "2026-11-09", status: "out_for_delivery" } })).toBe("Rest on Mon 9 Nov");
+  });
+
+  it("is empty when there is no rest to come", () => {
+    expect(restLabel({ later: null })).toBeNull();
+    expect(restLabel({ later: { date: "2026-11-09", status: "delivered" } })).toBeNull();
+    expect(restLabel({ later: { date: "2026-11-09", status: "cancelled" } })).toBeNull();
   });
 });

@@ -4,11 +4,12 @@ import type { OrderView } from "@/features/orders/queries";
 
 /**
  * How far an order is under the supplier's current minimum order, in cents; 0 when it is not.
- * Rejected and cancelled orders never count, since nothing will be sent.
+ * Rejected and cancelled orders never count, since nothing will be sent. The rest still to come
+ * counts, since the supplier chose to send it in a second delivery.
  */
-export function orderBelowMinimum(order: Pick<OrderView, "status" | "totalCents">, minimumCents: Cents): Cents {
+export function orderBelowMinimum(order: Pick<OrderView, "status" | "totalCents" | "laterCents">, minimumCents: Cents): Cents {
   if (order.status === "rejected" || order.status === "cancelled") return 0;
-  return minimumGap(order.totalCents, minimumCents);
+  return minimumGap(order.totalCents + order.laterCents, minimumCents);
 }
 
 /** "S$38.05 below your S$40.00 minimum" */

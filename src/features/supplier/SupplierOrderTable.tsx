@@ -14,7 +14,7 @@ import { useToast } from "@/ui/Toast";
 import { AcceptForm, PartAcceptForm } from "./AcceptForms";
 import { orderBelowMinimum } from "./minimum";
 import { markAllOutForDeliveryAction, markDeliveredAction, markOutForDeliveryAction } from "./orderActions";
-import { deliveryDateOf, deliveryLabel, linesSummary } from "./orderFilters";
+import { deliveryDateOf, deliveryLabel, linesSummary, restLabel } from "./orderFilters";
 import { useSupplierForm } from "./useSupplierForm";
 
 /** One order with the idempotency key its forms send and the delivery date Accept starts with. */
@@ -55,6 +55,7 @@ function OrderRow({ row, today, columnCount, minimumCents, picked, onPick }: Row
   const summary = linesSummary(order.lines);
   const error = advance.error;
   const belowMinimum = orderBelowMinimum(order, minimumCents) > 0;
+  const rest = restLabel(order);
   const close = () => setOpen(null);
   const hidden = (
     <>
@@ -136,6 +137,7 @@ function OrderRow({ row, today, columnCount, minimumCents, picked, onPick }: Row
         <Cell>
           <span className="flex flex-wrap items-center gap-1">
             <StatusPill status={order.status} />
+            {rest ? <Pill tone="info">{rest}</Pill> : null}
             {order.checkStatus === "all_here" ? <Pill tone="good">All here</Pill> : null}
             {order.checkStatus === "problem" ? <Pill tone="warn">Problem reported</Pill> : null}
             {belowMinimum ? <Pill tone="warn">Below minimum</Pill> : null}

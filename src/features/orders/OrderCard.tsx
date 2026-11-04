@@ -66,10 +66,11 @@ export function OrderCard({ order, viewer, actions, children }: Props) {
               <ProductArt kind={line.art} size={26} />
               <span>
                 {line.qty} × {line.name}
+                {line.laterQty > 0 ? <span className="ml-1 text-[.75rem] text-muted">+ {line.laterQty} later</span> : null}
                 {!line.held ? <span className="ml-1 text-[.72rem] font-semibold text-warn">Stock and price to confirm</span> : null}
               </span>
             </span>
-            <span className="num text-muted">{formatMoney(lineTotal(line.unitPrice, line.qty))}</span>
+            <span className="num text-muted">{formatMoney(lineTotal(line.unitPrice, line.qty + line.laterQty))}</span>
           </li>
         ))}
       </ul>

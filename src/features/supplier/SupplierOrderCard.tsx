@@ -12,6 +12,7 @@ import { Pill } from "@/ui/Pill";
 import { AcceptForm, PartAcceptForm } from "./AcceptForms";
 import { belowMinimumNote, orderBelowMinimum } from "./minimum";
 import { markDeliveredAction, markOutForDeliveryAction, rejectOrderAction } from "./orderActions";
+import { restLabel } from "./orderFilters";
 import { useSupplierForm } from "./useSupplierForm";
 
 type Props = {
@@ -33,6 +34,7 @@ export function SupplierOrderCard({ order, idemKey, minDate, defaultDate, minimu
   const unconfirmed = order.lines.filter((line) => !line.held && line.productUnconfirmed).map((line) => line.name);
   const blockedId = `blocked-${order.id}`;
   const gap = orderBelowMinimum(order, minimumCents);
+  const rest = restLabel(order);
   const hidden = (
     <>
       <input type="hidden" name="orderId" value={order.id} />
@@ -86,6 +88,12 @@ export function SupplierOrderCard({ order, idemKey, minDate, defaultDate, minimu
         </>
       }
     >
+      {rest ? (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[.84rem] text-muted">
+          <Pill tone="info">{rest}</Pill>
+          <span>{order.later?.status === "out_for_delivery" ? "The rest is on the way." : "The rest comes in a second delivery."}</span>
+        </p>
+      ) : null}
       {gap > 0 ? (
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[.84rem] text-muted">
           <Pill tone="warn">Below minimum</Pill>

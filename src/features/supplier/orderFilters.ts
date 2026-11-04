@@ -75,3 +75,10 @@ export function deliveryLabel(date: string | null, today: string): string {
 export function linesSummary(lines: Pick<OrderLineView, "qty" | "name">[]): string {
   return lines.map((line) => `${line.qty} × ${line.name}`).join(", ");
 }
+
+/** "Rest on Mon 9 Nov" while the rest of a part-accepted order is still to arrive; null otherwise. */
+export function restLabel(order: Pick<OrderView, "later">): string | null {
+  const later = order.later;
+  if (!later || (later.status !== "waiting" && later.status !== "out_for_delivery")) return null;
+  return `Rest on ${formatDate(later.date)}`;
+}
