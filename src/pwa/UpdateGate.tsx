@@ -12,7 +12,7 @@ const RECHECK_MS = 10 * 60 * 1000;
 const releaseSchema = z.object({ min_version: z.string() });
 
 /**
- * The forced update rule for the web app (US-50, docs/PLAN.md section 2.1). When this build is older
+ * The forced update rule for the web app (US-50, docs/AI_DESIGN.md section 2.1). When this build is older
  * than `app_release.min_version` for 'web', ordering stops behind a full-screen Refresh. A failed
  * check never blocks: the server still validates every write.
  */

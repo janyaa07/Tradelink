@@ -36,7 +36,7 @@ export type NotifyOutcome = {
 };
 
 /**
- * The one entry point for telling someone something (docs/PLAN.md section 6). The in-app notification
+ * The one entry point for telling someone something (docs/AI_DESIGN.md section 6). The in-app notification
  * is always written; for unprompted and urgent messages about a shop, an alert goes to its Alerts
  * inbox (merged per item per day). The push is then sent now, held until quiet hours end (with a
  * notify.release job), or skipped, as policy.ts decides. Writes only through server-only functions.

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The card envelope stored in card_instance (docs/PLAN.md, section 4.3). Ids use z.guid() because the
+ * The card envelope stored in card_instance (docs/AI_DESIGN.md, section 4.3). Ids use z.guid() because the
  * demo rows use fixed ids that are not RFC 4122 variants.
  */
 

@@ -1,8 +1,7 @@
-# Plan: turning Tradelink into Tradelink AI
+# Tradelink AI design
 
-Source of truth: `the spec spreadsheet` (72 stories). Read with `docs/AUDIT.md`.
-
-**Status:** proposal. Nothing in this plan has been built. Building starts only after the owner's OK and answers to section 9.
+How the Tradelink AI layer works: agents, cards, the data model beside Tradelink, notifications and jobs.
+Code and older migrations cite it by section, for example "section 4.2" (older ones as `docs/AI_DESIGN.md`, its former name).
 
 ## 1. Fixed product decisions (from the owner, not up for change)
 

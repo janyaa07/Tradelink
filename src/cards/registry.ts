@@ -5,7 +5,7 @@ import { orderSummaryCard } from "./order_summary/definition";
 import { questionCard } from "./question/definition";
 import type { CardDefinition } from "./types";
 
-/** Every card type the server can render (docs/PLAN.md, section 4.2). Components live in CardRenderer. */
+/** Every card type the server can render (docs/AI_DESIGN.md, section 4.2). Components live in CardRenderer. */
 export const CARD_REGISTRY: { readonly [T in CardType]: CardDefinition<unknown> } = {
   order_summary: orderSummaryCard,
   agent_action_notice: agentActionNoticeCard,

@@ -4,7 +4,7 @@ Tradelink replaces WhatsApp ordering between small food businesses and their sup
 
 ## Demo accounts
 
-All demo accounts use the password `Tradelink-demo-2026`. They exist only for demonstration; change or remove them before real businesses use the app.
+All demo accounts share one password, which the project owner gives out privately; it is not stored in this repository. The accounts exist only for demonstration; change or remove them before real businesses use the app.
 
 | Role | Email | Business |
 | --- | --- | --- |

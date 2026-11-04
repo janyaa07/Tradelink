@@ -1,5 +1,5 @@
 /**
- * English source strings (docs/PLAN.md, section 6). Every other language must have exactly these keys,
+ * English source strings (docs/AI_DESIGN.md, section 6). Every other language must have exactly these keys,
  * which TypeScript checks through `Dictionary`. Variables use {name} and must match across languages.
  */
 export const en = {

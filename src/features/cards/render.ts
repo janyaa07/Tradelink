@@ -53,7 +53,7 @@ async function storedCard(db: SupabaseClient, id: unknown): Promise<CardEnvelope
 }
 
 /**
- * The server side of render_card (docs/PLAN.md, section 4.1): hydrates the card from the database
+ * The server side of render_card (docs/AI_DESIGN.md, section 4.1): hydrates the card from the database
  * (never from the model's numbers or items), validates it, works out the buttons for the subject's
  * state, stores it with rs_put_card (which supersedes older cards for the subject) and returns it.
  */

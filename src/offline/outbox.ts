@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The offline outbox (docs/PLAN.md, section 4.7; ADR 0016). Messages and card taps are stored with the
+ * The offline outbox (docs/AI_DESIGN.md, section 4.7; ADR 0016). Messages and card taps are stored with the
  * client id the caller already shows optimistically, then POSTed in order. The server de-duplicates by
  * that id (EC06) and still checks card versions, so a replay can never apply twice or apply to a stale card.
  * Storage sits behind `OutboxStorage`: IndexedDB in the browser, memory in tests.

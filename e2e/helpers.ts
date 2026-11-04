@@ -4,7 +4,8 @@ import { expect, type Browser, type Page } from "@playwright/test";
  * Demo accounts from supabase/mock-data.sql. Seaside Kopitiam is the test buyer because nobody demos
  * with it, so a test order never lands in a demo cart. Override them for other environments.
  */
-export const PASSWORD = process.env.E2E_PASSWORD ?? "Tradelink-demo-2026";
+/** The demo accounts' password, from E2E_PASSWORD in .env.local; it is never written in the repo. */
+export const PASSWORD = process.env.E2E_PASSWORD ?? "";
 export const BUYER_EMAIL = process.env.E2E_BUYER_EMAIL ?? "arif@seaside.example";
 export const SUPPLIER_EMAIL = process.env.E2E_SUPPLIER_EMAIL ?? "ravi@islandspice.example";
 

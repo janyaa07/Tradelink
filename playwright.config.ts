@@ -2,6 +2,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
+// Local settings such as E2E_PASSWORD live in .env.local, which is never committed.
+try {
+  process.loadEnvFile(".env.local");
+} catch {
+  // No .env.local: the settings come from the environment instead.
+}
+
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 /** End-to-end tests (ADR 0018). Reuses the dev server on :3000 when one is running. */

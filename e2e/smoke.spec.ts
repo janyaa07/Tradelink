@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // A fictional Tradelink AI owner from supabase/tradelink-ai-mock-data.sql. Override for other environments.
 const OWNER_EMAIL = process.env.E2E_OWNER_EMAIL ?? "tan@kopicorner.example";
-const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD ?? "Tradelink-demo-2026";
+const OWNER_PASSWORD = process.env.E2E_OWNER_PASSWORD ?? process.env.E2E_PASSWORD ?? "";
 
 test("the sign-in page renders", async ({ page }) => {
   await page.goto("/sign-in");

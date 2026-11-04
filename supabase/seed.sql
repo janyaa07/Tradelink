@@ -1,6 +1,6 @@
 -- Tradelink demo seed. Every person and business here is fictional (design-handoff/prototype.html, ACCOUNTS and seed()).
 -- Run once on a freshly migrated database. Times are relative to now(), as in the prototype ("minutes ago").
--- All demo accounts share the password Tradelink-demo-2026.
+-- Demo accounts get the password you put in place of __DEMO_PASSWORD__ below; never commit a real one.
 --
 -- Fixed ids keep the demo reproducible:
 --   organisations 00000000-0000-4000-8000-0000000000xx (b1, b2 buyers; c1, c2, c3 suppliers; a0 platform)
@@ -44,7 +44,7 @@ new_users as (
     confirmation_token, recovery_token, email_change, email_change_token_new)
   select
     '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.email,
-    extensions.crypt('Tradelink-demo-2026', extensions.gen_salt('bf')), now(),
+    extensions.crypt('__DEMO_PASSWORD__', extensions.gen_salt('bf')), now(),
     '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('full_name', p.full_name), now(), now(),
     '', '', '', ''
   from people p

@@ -1,6 +1,6 @@
 # Test plan
 
-Status: Phase 1 draft for review. Tooling is in ADR 0018. `docs/TESTING.md` (Phase 2) will explain how to run each suite.
+Tooling is in ADR 0018. How to run each suite is in the Testing section of the README.
 
 ## 1. Test levels
 

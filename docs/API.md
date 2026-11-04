@@ -1,6 +1,6 @@
 # API
 
-Status: Phase 1 draft for review. Tradelink has no public API. The browser talks to the app through **Server Actions** (forms and buttons) and a few **Route Handlers** (streaming, uploads, health, cron). Both call the `api` schema functions in `docs/DATA_MODEL.md` section 6.
+Tradelink has no public API. The browser talks to the app through **Server Actions** (forms and buttons) and a few **Route Handlers** (streaming, uploads, health, cron). Both call the `api` schema functions in `docs/DATA_MODEL.md` section 6.
 
 ## 1. Conventions
 

@@ -98,7 +98,7 @@ async function refreshed(card: CardEnvelope, after: AfterAct): Promise<CardRespo
 type Plan = (definition: CardDefinition<unknown>, ctx: ActContext) => { call: RpcCall; after: AfterAct };
 
 /**
- * One tap or edit on a card (docs/PLAN.md, section 4.4): the card is loaded as the user (RLS), a
+ * One tap or edit on a card (docs/AI_DESIGN.md, section 4.4): the card is loaded as the user (RLS), a
  * superseded, expired or older card is refused with the latest one, and the mapped function runs as
  * the user with p_key = clientActionId and p_version = subjectVersion.
  */

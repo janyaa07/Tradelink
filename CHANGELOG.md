@@ -12,7 +12,7 @@ All notable changes are listed here. The format follows Keep a Changelog, and ve
   - Figures sit together in one divided card.
   - Products use a quiet grey ground and outlined Add buttons.
   - Sign-in and the password pages use the same calm look.
-- **The AI layer:** a green Gemini-style gradient (deep green, emerald, teal, lime) marks only what Tradelink AI wrote or suggests. That covers the greeting, the ask bar, the Next up card, the spark icon, the Tradelink AI page and its input. "Why this?" shows the reasoning on a soft tint, and the ring drifts slowly unless motion is turned off.
+- **The AI layer:** a green gradient (deep green, emerald, teal, lime) marks only what Tradelink AI wrote or suggests. That covers the greeting, the ask bar, the Next up card, the spark icon, the Tradelink AI page and its input. "Why this?" shows the reasoning on a soft tint, and the ring drifts slowly unless motion is turned off.
 - **Home, one focus at a time:**
   - **Buyer:** a briefing line written from the data and an ask bar that opens Tradelink AI with the question. One Next up card, usually tomorrow's order, with Place orders (the cart stays as it is), Review in cart and Not today. Then a week card with spend, pace to Sunday and the comparison with this time last week, and an At a glance card (deliveries, running low, prices).
   - **Supplier:** a cut-off countdown. Next up is the oldest job first: accept new orders, or pack today's orders as one pick list added up across orders, with Mark all out for delivery. Then today against a usual weekday (order value and new orders by this time over the last four weeks), and At a glance (customer pulse, running low, coming up).
@@ -59,7 +59,7 @@ All notable changes are listed here. The format follows Keep a Changelog, and ve
 
 ## [0.4.0] - 2026-11-03
 
-### Changed (buyer redesign, owner feedback; see `docs/BUYER_REDESIGN.md`)
+### Changed (buyer redesign, owner feedback)
 - **Look and font:** Inter across the app, with a cleaner, simpler layout.
 - **Top bar:** on every page, with the theme toggle, the alerts bell, the cart icon and a user menu with Sign out (also on the sidebar logo).
 - **Ordering:** happens in the chat-style **Tradelink Assistant** (renamed from Ask) and in **Products**, which has illustrated pictures and add-to-cart steppers. The new **Cart** page is where you review and place orders. The separate Order page and the Alerts tab are gone.

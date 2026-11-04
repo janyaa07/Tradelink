@@ -8,7 +8,7 @@ import { systemPingJob } from "./ping";
  * Job kind to handler. Each handler is made with defineJob({ schema, run }): the runner checks the
  * payload with `schema`, then calls `run(ctx, payload)`, which returns { ok } or { ok: false, error }.
  *
- * The pattern every handler follows (docs/PLAN.md section 6, EC28):
+ * The pattern every handler follows (docs/AI_DESIGN.md section 6, EC28):
  * 1. Load the subject (PO, order, notification) fresh from the database. Never trust the payload
  *    beyond ids: it was written when the job was scheduled and may be stale.
  * 2. Re-check the subject's state. If it no longer needs this job (the PO was answered or cancelled,

@@ -1,6 +1,6 @@
 # Data model
 
-Status: Phase 1 draft for review. Postgres on Supabase. All tables live in `public` with RLS enabled. Write functions live in the `api` schema, and helpers in `app` (ADR 0004). Money is `numeric(12,2)`, quantities are `integer`, and times are `timestamptz` (ADR 0019). Every table has `id uuid primary key default gen_random_uuid()` and `created_at timestamptz not null default now()` unless shown otherwise.
+Postgres on Supabase. All tables live in `public` with RLS enabled. Write functions live in the `api` schema, and helpers in `app` (ADR 0004). Money is `numeric(12,2)`, quantities are `integer`, and times are `timestamptz` (ADR 0019). Every table has `id uuid primary key default gen_random_uuid()` and `created_at timestamptz not null default now()` unless shown otherwise.
 
 ## 1. Entity relationship diagram
 

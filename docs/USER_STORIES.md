@@ -1,6 +1,6 @@
 # User stories
 
-Status: Phase 1 draft for review.
+The stories the product was built from, by role.
 
 - **IDs:** `SH` shared, `AUTH` sign-in and access, `BUY` buyer, `SUP` supplier, `ADM` admin, `AI` AI quality, `OPS` platform qualities.
 - **Priority:** Must (needed for release), Should (planned for release, can slip one phase), Could (only if time allows).

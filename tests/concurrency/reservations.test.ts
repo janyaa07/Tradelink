@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 
 /**
  * OPS-02: parallel checkouts must never oversell. Runs against a real Supabase project,
- * so it is opt-in: RUN_DB_TESTS=1 with NEXT_PUBLIC_SUPABASE_URL and the publishable key set.
+ * so it is opt-in: RUN_DB_TESTS=1 with NEXT_PUBLIC_SUPABASE_URL, the publishable key and E2E_PASSWORD set.
  * It creates one uniquely named product, which the caller can hide afterwards.
  */
-const enabled = process.env.RUN_DB_TESTS === "1";
+const enabled = process.env.RUN_DB_TESTS === "1" && Boolean(process.env.E2E_PASSWORD);
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
-const PASSWORD = "Tradelink-demo-2026";
+const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const OPENING_STOCK = 10;
 const ATTEMPTS_PER_BUYER = 12;
 

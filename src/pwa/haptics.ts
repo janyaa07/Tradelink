@@ -1,5 +1,5 @@
 /**
- * A short vibration on Confirm and similar taps (docs/PLAN.md, section 4.7). Android browsers support
+ * A short vibration on Confirm and similar taps (docs/AI_DESIGN.md, section 4.7). Android browsers support
  * `navigator.vibrate`; iPhone has no web haptics, so this does nothing there until the Capacitor shell.
  */
 export function tapFeedback(pattern: number | number[] = 12): boolean {

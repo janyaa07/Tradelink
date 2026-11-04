@@ -1,5 +1,5 @@
 /**
- * When a push goes out (docs/PLAN.md section 6). Pure: the caller loads the counts and settings.
+ * When a push goes out (docs/AI_DESIGN.md section 6). Pure: the caller loads the counts and settings.
  * The in-app notification is always written; this only decides the push.
  *
  * - urgent (cut-off at risk, delivery problem, bank detail change): always now, if there is a device.

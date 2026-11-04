@@ -3,7 +3,7 @@
 Status: Accepted (M0 of Tradelink AI, 3 November 2026). Replaces the earlier proposal, which cached pages and queued no writes.
 
 ## Context
-Tradelink AI ships as an installable PWA now and a Capacitor shell later (docs/PLAN.md, section 2.1). Owners tap cards and send chat messages from kitchens with poor signal (section 4.7). A cached copy of a Next.js page or RSC payload can outlive a deploy and break the app in ways that are hard to see.
+Tradelink AI ships as an installable PWA now and a Capacitor shell later (docs/AI_DESIGN.md, section 2.1). Owners tap cards and send chat messages from kitchens with poor signal (section 4.7). A cached copy of a Next.js page or RSC payload can outlive a deploy and break the app in ways that are hard to see.
 
 ## Decision
 - **Manifest.** `app/manifest.ts` serves `/manifest.webmanifest` for "Tradelink AI" (start URL `/r`, standalone, brand greens from the design tokens). `node scripts/build-icons.mjs` (`npm run icons`) draws the PNG icons in `public/icons` (192, 512, maskable 192 and 512, Apple touch 180) from the shapes in `public/icon.svg`, using only built-in modules.

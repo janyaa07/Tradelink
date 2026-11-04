@@ -44,7 +44,7 @@ export type AfterAct = { kind: "rerender" } | { kind: "set_state"; state: CardSt
 export type FieldChange = { lineId: string; qty: number };
 
 /**
- * One card type in the registry (docs/PLAN.md, section 4.2). Methods (not function properties) keep
+ * One card type in the registry (docs/AI_DESIGN.md, section 4.2). Methods (not function properties) keep
  * the registry assignable to CardDefinition<unknown>.
  */
 export interface CardDefinition<D> {

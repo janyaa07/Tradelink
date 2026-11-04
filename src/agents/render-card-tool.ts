@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 
 /**
  * What the model may pass to render_card: a card type, a reference to the subject, and wording.
- * Prices, totals, items, dates and states are never taken from the model (docs/PLAN.md, section 2.3);
+ * Prices, totals, items, dates and states are never taken from the model (docs/AI_DESIGN.md, section 2.3);
  * the server loads them from the database.
  */
 export const RenderCardToolInputSchema = z

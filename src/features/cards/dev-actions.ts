@@ -51,7 +51,7 @@ async function finish(make: () => Promise<string>): Promise<DemoResult> {
 
 /**
  * As the signed-in owner: a draft order with two pinned lines and one line he picks, submitted, then
- * an order summary card in the shop chat (docs/PLAN.md, M0 round-trip).
+ * an order summary card in the shop chat (docs/AI_DESIGN.md, M0 round-trip).
  */
 export async function createDemoOrderCardAction(): Promise<DemoResult> {
   const owner = await asOwner();

@@ -1,5 +1,6 @@
 -- Tradelink AI demo data (M0). Fictional shop, people and prices; products use real brand names only as
--- catalogue examples. Demo password for every account: Tradelink-demo-2026. Phone sign-in arrives in M1.
+-- catalogue examples. Phone sign-in arrives in M1.
+-- Demo accounts get the password you put in place of __DEMO_PASSWORD__ below; never commit a real one.
 -- Safe to run once on an empty Tradelink AI schema.
 
 with people (id, email, full_name, phone) as (
@@ -16,7 +17,7 @@ with people (id, email, full_name, phone) as (
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
     confirmation_token, recovery_token, email_change, email_change_token_new)
   select '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.email,
-    extensions.crypt('Tradelink-demo-2026', extensions.gen_salt('bf')), now(),
+    extensions.crypt('__DEMO_PASSWORD__', extensions.gen_salt('bf')), now(),
     '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('full_name', p.full_name), now(), now(),
     '', '', '', ''
   from people p

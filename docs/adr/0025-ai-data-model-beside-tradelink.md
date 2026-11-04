@@ -1,6 +1,6 @@
 # ADR 0025: The Tradelink AI data model is built beside the Tradelink tables
 
-Status: Accepted (3 November 2026). Owner decision: replace the demo schema with the Tradelink AI model (`docs/PLAN.md`, section 9.1).
+Status: Accepted (3 November 2026). Owner decision: replace the demo schema with the Tradelink AI model (`docs/AI_DESIGN.md`, section 9.1).
 
 ## Context
 Tradelink AI replaces Tradelink's shapes:

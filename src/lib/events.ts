@@ -36,7 +36,7 @@ export type EventOptions = {
 };
 
 /**
- * Appends one row to the event log (docs/PLAN.md section 3), the metrics source for the scorecard.
+ * Appends one row to the event log (docs/AI_DESIGN.md section 3), the metrics source for the scorecard.
  * It never throws, so a failed event never breaks the action that logged it.
  */
 export async function logEvent(name: string, options: EventOptions = {}): Promise<ActionResult> {

@@ -1,6 +1,6 @@
 # Phase 0: Discovery
 
-Status: draft for review, 3 November 2026.
+Written on 3 November 2026, before the build, to set the scope and the main decisions.
 Scope: an inventory of every screen, action, state and rule in the approved prototype, what is simulated, gaps found, assumptions and open questions. No application code has been written.
 
 ## 1. Sources and how they were checked

@@ -1,7 +1,7 @@
 -- Tradelink mock data (optional). Runs AFTER supabase/seed.sql, on a database that already has the demo seed.
 -- It adds more fictional businesses so every flow can be tried by signing in as different accounts.
 -- Every person and business here is fictional; emails use the reserved .example domain.
--- All new accounts share the seed password Tradelink-demo-2026.
+-- Demo accounts get the password you put in place of __DEMO_PASSWORD__ below; never commit a real one.
 --
 -- Run it once, in one psql session, stopping at the first error:
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/mock-data.sql
@@ -89,7 +89,7 @@ new_users as (
     confirmation_token, recovery_token, email_change, email_change_token_new)
   select
     '00000000-0000-0000-0000-000000000000', p.id, 'authenticated', 'authenticated', p.email,
-    extensions.crypt('Tradelink-demo-2026', extensions.gen_salt('bf')), p.created_at,
+    extensions.crypt('__DEMO_PASSWORD__', extensions.gen_salt('bf')), p.created_at,
     '{"provider":"email","providers":["email"]}'::jsonb, jsonb_build_object('full_name', p.full_name), p.created_at, p.created_at,
     '', '', '', ''
   from people p

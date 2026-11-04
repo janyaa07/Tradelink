@@ -10,3 +10,13 @@ next-env.d.ts
 .vercel/
 .DS_Store
 npm-debug.log*
+
+# Test output
+test-results/
+playwright-report/
+
+# Local tools and notes, kept on the developer's machine only
+CLAUDE.md
+AGENTS.md
+.claude/
+supabase/migrations/pending_*.sql
