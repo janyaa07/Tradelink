@@ -5,7 +5,8 @@ describe("notification links", () => {
   it("opens the order page for buyers and the orders list for other roles", () => {
     expect(routeFor("buyer", "/orders/5f0c")).toBe("/buyer/orders/5f0c");
     expect(routeFor("supplier", "/orders/5f0c")).toBe("/supplier/orders/5f0c");
-    expect(routeFor("buyer", "/issues/9a")).toBe("/buyer/orders");
+    expect(routeFor("buyer", "/issues/9a")).toBe("/buyer/issues/9a");
+    expect(routeFor("admin", "/issues/9a")).toBe("/admin/orders");
   });
 
   it("keeps admin-only pages for admins and sends others home", () => {
@@ -31,5 +32,9 @@ describe("what each notification asks for", () => {
     expect(actionFor("supplier", { kind: "Date change", title: "Seaside Kopitiam declined: ORD-1085" }).label).toBe("View order");
     expect(actionFor("supplier", { kind: "New order", title: "ORD-1088 from Mei's Noodle House" }).label).toBe("Review order");
     expect(actionFor("buyer", { kind: "Order accepted", title: "ORD-1088 accepted" }).label).toBe("Open");
+    expect(actionFor("buyer", { kind: "Problem answered", title: "ISS-308: credit promised" })).toEqual({
+      label: "Confirm credit",
+      hash: "#problems",
+    });
   });
 });

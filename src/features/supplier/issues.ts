@@ -51,7 +51,7 @@ export type OrderIssueView = IssueView & { status: IssueStatus };
 /** Where a problem stands, as the supplier sees it. */
 export const ISSUE_STATUS_PILLS: Record<IssueStatus, { label: string; tone: PillTone }> = {
   open: { label: "To answer", tone: "bad" },
-  credit_promised: { label: "Credit promised", tone: "info" },
+  credit_promised: { label: "Waiting for buyer to confirm", tone: "warn" },
   replacement_promised: { label: "Replacement promised", tone: "info" },
   supplier_replied: { label: "Answered", tone: "info" },
   disputed: { label: "Disputed", tone: "plain" },

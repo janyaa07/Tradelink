@@ -78,7 +78,7 @@ export function issueAnswer(issue: Pick<IssueFacts, "status" | "amount" | "suppl
 
 export const ISSUE_STATUS_PILLS: Record<IssueStatus, { label: string; tone: PillTone }> = {
   open: { label: "Waiting", tone: "warn" },
-  credit_promised: { label: "Credit promised", tone: "good" },
+  credit_promised: { label: "Confirm credit", tone: "warn" },
   replacement_promised: { label: "Replacement promised", tone: "info" },
   supplier_replied: { label: "Supplier replied", tone: "info" },
   disputed: { label: "Under review", tone: "bad" },
@@ -89,4 +89,9 @@ export const ISSUE_STATUS_PILLS: Record<IssueStatus, { label: string; tone: Pill
 /** The slim banner above the list: "2 problems waiting for the supplier". */
 export function waitingBanner(open: number): string {
   return `${plural(open, "problem", "problems")} waiting for the supplier`;
+}
+
+/** "1 credit to confirm": promised credits wait for the buyer to say they arrived before the problem is done. */
+export function creditBanner(promised: number): string {
+  return `${plural(promised, "credit", "credits")} to confirm`;
 }

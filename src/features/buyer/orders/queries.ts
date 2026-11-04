@@ -21,6 +21,8 @@ export type IssueFilter = {
   search?: OrderSearch;
   /** Only problems the supplier has not answered. */
   openOnly?: boolean;
+  /** Only credits the supplier promised that the buyer has not confirmed yet. */
+  creditOnly?: boolean;
   limit?: number;
 };
 
@@ -58,6 +60,7 @@ function applyFilter<Q extends Filterable<Q>>(start: Q, filter: IssueFilter): Q 
   let query = start.eq("buyer_org_id", filter.orgId);
   if (filter.orderId) query = query.eq("order_id", filter.orderId);
   if (filter.openOnly) query = query.eq("status", "open");
+  if (filter.creditOnly) query = query.eq("status", "credit_promised");
   if (filter.search?.kind === "number") query = query.eq("parent.number", filter.search.number);
   if (filter.search?.kind === "supplier") query = query.ilike("supplier.name", `%${filter.search.text}%`);
   return query;

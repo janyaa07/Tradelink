@@ -18,7 +18,7 @@ import { OrderRow, ProblemRow, RowList } from "@/features/buyer/orders/OrderRows
 import { RestPill } from "@/features/buyer/orders/rest";
 import { countBuyerIssues, getBuyerIssues } from "@/features/buyer/orders/queries";
 import { getMinimums, orderBelowMinimum } from "@/features/buyer/orders/minimum";
-import { ISSUE_STATUS_PILLS, itemSummary, problemSummary, waitingBanner } from "@/features/buyer/orders/summary";
+import { creditBanner, ISSUE_STATUS_PILLS, itemSummary, problemSummary, waitingBanner } from "@/features/buyer/orders/summary";
 import { StatusPill } from "@/features/orders/OrderCard";
 import { countOrders, getOrders, type OrderSearch, type OrderView } from "@/features/orders/queries";
 import { BusinessLogo } from "@/ui/BusinessLogo";
@@ -83,9 +83,10 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
   const search = parseSearch(q) ?? undefined;
   const shown = shownFrom(params.show);
 
-  const [counts, waiting, orders, issues] = await Promise.all([
+  const [counts, waiting, credits, orders, issues] = await Promise.all([
     Promise.all(ORDER_LIST_FILTERS.map((chip) => countFor(chip, session.orgId, search))),
     countBuyerIssues({ orgId: session.orgId, openOnly: true }),
+    countBuyerIssues({ orgId: session.orgId, creditOnly: true }),
     filter === "problems" ? Promise.resolve([]) : getOrders({ buyerOrgId: session.orgId, search, ...orderQueryFor(filter), limit: shown + 1 }),
     filter === "problems" ? getBuyerIssues({ orgId: session.orgId, search, limit: shown + 1 }) : Promise.resolve([]),
   ]);
@@ -122,6 +123,11 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
         }
       />
 
+      {credits > 0 && filter !== "problems" ? (
+        <Notice tone="warn" title={creditBanner(credits)} href={ordersHref({ filter: "problems" })} action="Confirm">
+          A supplier promised a credit. Tell them once it has reached you, so the problem can close.
+        </Notice>
+      ) : null}
       {waiting > 0 && filter !== "problems" ? <Notice tone="warn" title={waitingBanner(waiting)} href={ordersHref({ filter: "problems" })} /> : null}
 
       <FilterTabs

@@ -436,7 +436,8 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
                         </p>
                         <p className="text-[.875rem]">{issueAnswer(issue)}</p>
                         {issue.status === "credit_promised" ? (
-                          <div>
+                          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-warn-soft/60 px-3 py-2">
+                            <p className="min-w-0 flex-1 text-[.84rem]">This problem closes once you confirm the credit has reached you.</p>
                             <CreditReceivedButton issueId={issue.id} />
                           </div>
                         ) : null}

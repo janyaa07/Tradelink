@@ -18,6 +18,7 @@ export function toneOf(kind: string): PillTone {
 export function routeFor(role: NotificationRole, link: string): string {
   const [, section, id] = link.split("/");
   if (section === "orders" && id && role !== "admin") return `/${role}/orders/${id}`;
+  if (section === "issues" && id && role !== "admin") return `/${role}/issues/${id}`;
   if (section === "orders" || section === "issues") return `/${role}/orders`;
   if (section === "inventory") return role === "supplier" ? "/supplier/inventory" : `/${role}`;
   if (section === "suppliers" && id) return role === "admin" ? `/admin/suppliers/${id}` : `/${role}`;
@@ -40,6 +41,8 @@ export function actionFor(role: NotificationRole, note: { kind: string; title: s
       return { label: "See changes", hash: "" };
     case "Problem reported":
       return { label: "Answer", hash: "#problems" };
+    case "Problem answered":
+      return note.title.endsWith("credit promised") ? { label: "Confirm credit", hash: "#problems" } : { label: "View order", hash: "#problems" };
     default:
       return { label: "Open", hash: "" };
   }
