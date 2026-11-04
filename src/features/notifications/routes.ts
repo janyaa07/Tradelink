@@ -13,11 +13,11 @@ export function toneOf(kind: string): PillTone {
 
 /**
  * Database notifications carry role-neutral links such as /orders/{id}; map them to the
- * signed-in role's routes. Buyers have an order page per order.
+ * signed-in role's routes. Buyers and suppliers have a page per order.
  */
 export function routeFor(role: NotificationRole, link: string): string {
   const [, section, id] = link.split("/");
-  if (section === "orders" && id && role === "buyer") return `/buyer/orders/${id}`;
+  if (section === "orders" && id && role !== "admin") return `/${role}/orders/${id}`;
   if (section === "orders" || section === "issues") return `/${role}/orders`;
   if (section === "inventory") return role === "supplier" ? "/supplier/inventory" : `/${role}`;
   if (section === "suppliers" && id) return role === "admin" ? `/admin/suppliers/${id}` : `/${role}`;

@@ -60,3 +60,54 @@ export async function getOrderRequests(orderId: string): Promise<OrderRequest[]>
       answeredAt: row.answered_at,
     }));
 }
+
+/** A date change the other side asked for that waits for the signed-in organisation's answer. */
+export type OpenDateRequest = {
+  id: string;
+  orderId: string;
+  orderNumber: number;
+  fromName: string;
+  rest: boolean;
+  proposedDate: string;
+  note: string | null;
+};
+
+const openSchema = z.object({
+  id: z.uuid(),
+  part: z.enum(["first", "rest"]).nullable(),
+  proposed_date: z.string(),
+  body: z.string().nullable(),
+  from: z.object({ name: z.string() }).nullable(),
+  parent: z.object({ id: z.uuid(), number: z.number() }).nullable(),
+});
+
+/** Every date change waiting for this organisation's answer, newest first. */
+export async function getOpenDateRequests(orgId: string): Promise<OpenDateRequest[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("order_requests")
+    .select("id, part, proposed_date, body, from:organisations!order_requests_from_org_id_fkey(name), parent:orders(id, number)")
+    .eq("kind", "date_change")
+    .eq("status", "open")
+    .neq("from_org_id", orgId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Could not load date changes: ${error.message}`);
+  return z
+    .array(openSchema)
+    .parse(data)
+    .flatMap((row) =>
+      row.parent
+        ? [
+            {
+              id: row.id,
+              orderId: row.parent.id,
+              orderNumber: row.parent.number,
+              fromName: row.from?.name ?? "The other business",
+              rest: row.part === "rest",
+              proposedDate: row.proposed_date,
+              note: row.body,
+            },
+          ]
+        : [],
+    );
+}

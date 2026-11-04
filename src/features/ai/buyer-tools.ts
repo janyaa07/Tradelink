@@ -29,6 +29,7 @@ import { formatDaysLeft } from "@/domain/reorder";
 import { weekdayName } from "@/domain/singapore-time";
 import { orderCard, productCard, tag } from "./cards";
 import { cardTool, readTool, writeTool, type AiContext, type AiTool, type ExecResult } from "./registry";
+import { orderContext } from "./order-context";
 import { orderRequestTools } from "./order-request-tools";
 import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
@@ -182,13 +183,14 @@ export const BUYER_TOOLS: AiTool[] = [
   }),
   readTool({
     name: "get_order",
-    description: "One order by number, with every line and its product_id.",
+    description:
+      "One order by number: every line with its product_id, and why it is flagged (problems reported and where each stands, what the supplier could not send, below minimum), the second delivery, and recent messages and date changes. Use it to explain any order.",
     input: z.object({ order_number: orderNumberInput }),
-    run: async (_ctx, { order_number }) => {
+    run: async (ctx, { order_number }) => {
       const order = await findOrder(order_number);
       if (!order) return { data: NOT_FOUND };
       const card = orderCard(order, "buyer");
-      return { data: { card: tag(card), ...orderFacts(order) }, cards: [card] };
+      return { data: { card: tag(card), ...orderFacts(order), ...(await orderContext(order, ctx.session.orgId)) }, cards: [card] };
     },
   }),
   readTool({

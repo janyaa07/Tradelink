@@ -4,7 +4,7 @@ import { routeFor, toneOf } from "./routes";
 describe("notification links", () => {
   it("opens the order page for buyers and the orders list for other roles", () => {
     expect(routeFor("buyer", "/orders/5f0c")).toBe("/buyer/orders/5f0c");
-    expect(routeFor("supplier", "/orders/5f0c")).toBe("/supplier/orders");
+    expect(routeFor("supplier", "/orders/5f0c")).toBe("/supplier/orders/5f0c");
     expect(routeFor("buyer", "/issues/9a")).toBe("/buyer/orders");
   });
 

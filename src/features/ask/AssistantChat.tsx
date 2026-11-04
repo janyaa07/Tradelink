@@ -172,10 +172,40 @@ const rowClass = "flex items-center justify-between gap-3 px-3.5 py-2.5 text-[.9
 
 const PLUS = "M12 5v14M5 12h14";
 const CLOSE = "M6 6l12 12M18 6L6 18";
+const PANEL = "M4 5h16v14H4zM9.5 5v14";
+const SIDEBAR_KEY = "tl-ai-sidebar";
+
+/** Whether the chat list is open, remembered on this device; kept in memory when storage is blocked. */
+const sidebarListeners = new Set<() => void>();
+let sidebarInMemory: boolean | null = null;
+
+function readSidebarOpen(): boolean {
+  if (sidebarInMemory !== null) return sidebarInMemory;
+  try {
+    return window.localStorage.getItem(SIDEBAR_KEY) !== "closed";
+  } catch {
+    return true;
+  }
+}
+
+function writeSidebarOpen(open: boolean): void {
+  sidebarInMemory = open;
+  try {
+    window.localStorage.setItem(SIDEBAR_KEY, open ? "open" : "closed");
+  } catch {
+    // Storage can be blocked; the choice then lasts until reload.
+  }
+  for (const listener of sidebarListeners) listener();
+}
+
+function subscribeSidebar(listener: () => void): () => void {
+  sidebarListeners.add(listener);
+  return () => sidebarListeners.delete(listener);
+}
 
 function AssistantAvatar() {
   return (
-    <span aria-hidden="true" className="ai-tint grid size-8 flex-none place-items-center rounded-full">
+    <span aria-hidden="true" data-avatar className="ai-tint grid size-8 flex-none place-items-center rounded-full">
       <span className="ai-spark size-4" />
     </span>
   );
@@ -822,7 +852,8 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
   /** One idempotency key per Place order button, reused if the buyer taps it again after a failure. */
   const placeKeys = useRef(new Map<string, string>());
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sidebarOpen = useSyncExternalStore(subscribeSidebar, readSidebarOpen, () => true);
   const sheetRef = useRef<HTMLDialogElement>(null);
   /** No switching chats while a reply or a cart action is on its way, so it lands in the right chat. */
   const locked = thinking || working;
@@ -865,8 +896,11 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
   }, [thinking]);
 
   useEffect(() => {
-    if (messages.length > 0 || thinking) endRef.current?.scrollIntoView({ block: inline ? "nearest" : "end" });
-  }, [messages.length, thinking, inline]);
+    const box = scrollRef.current;
+    if (box && (messages.length > 0 || thinking)) box.scrollTop = box.scrollHeight;
+  }, [messages.length, thinking]);
+
+  const toggleSidebar = () => writeSidebarOpen(!sidebarOpen);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -1173,7 +1207,7 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
     <form
       onSubmit={onSubmit}
       aria-busy={thinking || undefined}
-      className={cx("ai-ring flex flex-col gap-1.5 rounded-2xl", empty && !inline ? "px-4 pt-3 pb-2.5" : "px-3.5 pt-2 pb-2")}
+      className="flex items-end gap-2 rounded-2xl border border-line bg-surface py-2 pr-2 pl-4 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_8px_24px_-16px_rgb(11_79_55/0.35)] transition-[border-color,box-shadow] duration-150 focus-within:border-[var(--ai-2)] focus-within:shadow-[0_0_0_4px_var(--ai-glow-1)]"
     >
       <label htmlFor={inputId} className="sr-only">
         Message Tradelink AI
@@ -1189,23 +1223,19 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
         placeholder={inline?.placeholder ?? PLACEHOLDER}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={onKeyDown}
-        className="max-h-[200px] min-w-0 resize-none border-0 bg-transparent py-1 text-[.95rem] leading-6 text-ink outline-none placeholder:text-muted"
+        className="max-h-[200px] min-w-0 flex-1 resize-none self-center border-0 bg-transparent py-1.5 text-[.95rem] leading-6 text-ink outline-none placeholder:text-muted"
       />
-      <div className="flex items-center gap-2">
-        {inline ? null : <span className="hidden text-[.72rem] text-muted rail:inline">Tradelink AI checks with you before it changes anything</span>}
-        <span className="flex-1" />
-        {inline ? null : <span className="hidden text-[.72rem] text-muted rail:inline">Enter to send</span>}
-        <button
-          type="submit"
-          aria-label="Send message"
-          disabled={thinking || draft.trim() === ""}
-          className="ai-fill grid size-9 flex-none place-items-center rounded-[10px] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <SendIcon />
-        </button>
-      </div>
+      <button
+        type="submit"
+        aria-label="Send message"
+        disabled={thinking || draft.trim() === ""}
+        className="grid size-9 flex-none place-items-center rounded-full border-0 bg-accent text-on-accent transition-opacity disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <SendIcon />
+      </button>
     </form>
   );
+  const note = <p className="mt-2 text-center text-[.72rem] text-muted">Tradelink AI checks with you before it changes anything.</p>;
 
   const log = (
     <>
@@ -1258,11 +1288,15 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
         {empty ? (
           <p className="text-[.84rem] leading-relaxed">{inline.intro}</p>
         ) : (
-          <div className="-mx-1 max-h-[480px] overflow-y-auto px-1">
-            <div role="log" aria-live="polite" aria-label="Conversation with Tradelink AI" className="flex flex-col gap-5 text-[.875rem]">
+          <div ref={scrollRef} className="-mr-2 max-h-[480px] overflow-y-auto pr-2">
+            <div
+              role="log"
+              aria-live="polite"
+              aria-label="Conversation with Tradelink AI"
+              className="flex flex-col gap-4 text-[.875rem] [&_[data-avatar]]:hidden"
+            >
               {log}
             </div>
-            <div ref={endRef} aria-hidden="true" />
           </div>
         )}
         {composer}
@@ -1271,19 +1305,32 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
   }
 
   return (
-    <div data-fill className="grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden bg-surface min-[900px]:grid-cols-[264px_minmax(0,1fr)]">
-      <aside aria-label="Chats" className="hidden min-h-0 border-r border-line bg-bg p-3 min-[900px]:flex">
-        {historyPanel}
-      </aside>
+    <div
+      data-fill
+      className={cx("grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden bg-surface", sidebarOpen && "min-[900px]:grid-cols-[264px_minmax(0,1fr)]")}
+    >
+      {sidebarOpen ? (
+        <aside aria-label="Chats" className="hidden min-h-0 border-r border-line bg-bg p-3 min-[900px]:flex">
+          {historyPanel}
+        </aside>
+      ) : null}
       <HistorySheet sheetRef={sheetRef}>{historyPanel}</HistorySheet>
       <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-col">
-        <div className={cx("flex h-12 flex-none items-center gap-2 border-b border-line px-3.5 rail:px-5", empty && "min-[900px]:hidden")}>
+        <div className="flex h-12 flex-none items-center gap-2 px-3.5 rail:px-5">
           <Button size="small" onClick={() => sheetRef.current?.showModal()} className="min-[900px]:hidden" aria-label="Chats">
             <Icon name="history" size={16} />
           </Button>
-          {empty ? (
-            <p className="ai-text font-semibold">Tradelink AI</p>
-          ) : (
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-expanded={sidebarOpen}
+            aria-label={sidebarOpen ? "Hide chats" : "Show chats"}
+            title={sidebarOpen ? "Hide chats" : "Show chats"}
+            className="hidden size-8 place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-sunken hover:text-ink min-[900px]:grid"
+          >
+            <StrokeIcon d={PANEL} />
+          </button>
+          {empty ? null : (
             <h1 className="min-w-0 truncate text-[.92rem] font-semibold">
               {title}
               {current ? <span className="font-normal text-muted"> · {relativeDay(current.updatedAt, now)}</span> : null}
@@ -1298,15 +1345,18 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
           )}
         </div>
         {empty ? (
-          <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pt-8 pb-8 rail:px-8 rail:pt-12">
-            <div aria-hidden="true" className="ai-glow pointer-events-none absolute inset-x-0 top-0 h-80" />
-            <div className="relative flex w-full max-w-[768px] flex-col gap-5">
+          <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pb-10 rail:px-8">
+            <div aria-hidden="true" className="ai-glow pointer-events-none absolute inset-x-0 top-[10%] h-80" />
+            <div className="relative my-auto flex w-full max-w-[720px] flex-col gap-5 py-6">
               <div className="flex flex-col items-center gap-2.5 text-center">
                 <span aria-hidden="true" className="ai-spark size-9" />
                 <h1 className="ai-text text-[1.6rem] font-semibold tracking-[-0.025em] rail:text-[1.85rem]">{hello}</h1>
                 <p className="max-w-[520px] text-[.92rem] text-muted">{INTRO[role]}</p>
               </div>
-              {composer}
+              <div>
+                {composer}
+                {note}
+              </div>
               <div role="group" aria-label="Suggestions" className="grid grid-cols-1 gap-2.5 min-[560px]:grid-cols-2">
                 {SUGGESTIONS[role].map((suggestion) => (
                   <button
@@ -1329,19 +1379,21 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
           </div>
         ) : (
           <>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pt-6 rail:px-8">
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3.5 pt-6 rail:px-8">
               <div
                 role="log"
                 aria-live="polite"
                 aria-label="Conversation with Tradelink AI"
-                className="mx-auto flex w-full max-w-[768px] flex-col gap-6 pb-4"
+                className="mx-auto flex w-full max-w-[768px] flex-col gap-6 pb-6"
               >
                 {log}
               </div>
-              <div ref={endRef} aria-hidden="true" className="scroll-mb-6" />
             </div>
             <div className="flex-none px-3.5 pt-2 pb-3 rail:px-8 rail:pb-4">
-              <div className="mx-auto w-full max-w-[768px]">{composer}</div>
+              <div className="mx-auto w-full max-w-[768px]">
+                {composer}
+                {note}
+              </div>
             </div>
           </>
         )}

@@ -1,18 +1,26 @@
 import type { ReactNode } from "react";
 import { getCatalogue } from "@/data/catalogue";
 import { requireRole } from "@/data/session";
-import { countUnreadNotifications } from "@/features/notifications/queries";
+import { BellPanel } from "@/features/notifications/BellPanel";
+import { countUnreadNotifications, getNotifications } from "@/features/notifications/queries";
 import { RoleShell } from "@/features/shell/RoleShell";
-import { countNewOrders } from "@/features/supplier/queries";
+import { getOpenDateRequests } from "@/features/orders/requests";
+import { SupplierBellActions } from "@/features/supplier/SupplierBellActions";
+import { countNewOrders, getOpenIssues } from "@/features/supplier/queries";
 import { needsReorder } from "@/features/supplier/stock";
+
+const PANEL_NOTES = 8;
 
 export default async function SupplierLayout({ children }: { children: ReactNode }) {
   const session = await requireRole("supplier");
-  const [newOrders, catalogue, unread] = await Promise.all([
+  const [newOrders, catalogue, unread, notes] = await Promise.all([
     countNewOrders(session.orgId),
     getCatalogue({ supplierOrgId: session.orgId }),
     countUnreadNotifications(),
+    getNotifications(PANEL_NOTES),
   ]);
+  const [dateRequests, issues] = await Promise.all([getOpenDateRequests(session.orgId), getOpenIssues(session.orgId)]);
+  const actionCount = dateRequests.length + (newOrders > 0 ? 1 : 0) + (issues.length > 0 ? 1 : 0);
 
   return (
     <RoleShell
@@ -23,7 +31,15 @@ export default async function SupplierLayout({ children }: { children: ReactNode
         "/supplier/orders": newOrders,
         "/supplier/inventory": catalogue.filter(needsReorder).length,
       }}
-      bellCount={unread}
+      bellCount={unread + dateRequests.length}
+      bellPanel={
+        <BellPanel
+          role="supplier"
+          notes={notes}
+          unread={unread}
+          actions={actionCount > 0 ? <SupplierBellActions dateRequests={dateRequests} newOrders={newOrders} problems={issues.length} /> : undefined}
+        />
+      }
     >
       {children}
     </RoleShell>
