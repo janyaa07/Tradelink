@@ -25,6 +25,12 @@ export function AssignSelect({ itemKey, assignedUserId, operators }: Props) {
     setSaved(assignedUserId);
     setValue(assignedUserId ?? "");
   }
+  // A save that failed puts the choice back on what is saved, so the select never shows an unsaved name.
+  const [failedAt, setFailedAt] = useState(0);
+  if (state.status === "error" && state.at !== failedAt) {
+    setFailedAt(state.at);
+    setValue(assignedUserId ?? "");
+  }
 
   function save(user: string) {
     setValue(user);
