@@ -87,7 +87,7 @@ type Operators = { userId: string; fullName: string }[];
  * One Needs attention item (ADM-02) as a queue row: a priority marker, the type icon, title and
  * detail, the priority, Assigned to and the item's actions. On a phone the controls wrap under the text.
  */
-function AttentionRow({ item, operators }: { item: AttentionItem; operators: Operators }) {
+function AttentionRow({ item, operators, canAssign }: { item: AttentionItem; operators: Operators; canAssign: boolean }) {
   return (
     <li className="relative grid grid-cols-[34px_minmax(0,1fr)] gap-x-3 gap-y-2.5 py-3 pr-4 pl-5 rail:grid-cols-[34px_minmax(0,1fr)_auto_10.5rem_auto] rail:items-center rail:gap-x-3.5">
       <span aria-hidden="true" className={cx("absolute top-3 bottom-3 left-0 w-1 rounded-r-[3px]", MARKER_TONE[item.priority])} />
@@ -105,7 +105,11 @@ function AttentionRow({ item, operators }: { item: AttentionItem; operators: Ope
         <span className="self-center rail:justify-self-start">
           <PriorityPill priority={item.priority} />
         </span>
-        <AssignSelect itemKey={item.key} assignedUserId={item.assignedUserId} operators={operators} />
+        {canAssign ? (
+          <AssignSelect itemKey={item.key} assignedUserId={item.assignedUserId} operators={operators} />
+        ) : (
+          <span className="self-center text-[.8rem] text-muted">Assigned to you</span>
+        )}
         <div className="flex flex-wrap items-start gap-1.5 rail:justify-end">
           <ItemActions item={item} />
         </div>
@@ -114,12 +118,12 @@ function AttentionRow({ item, operators }: { item: AttentionItem; operators: Ope
   );
 }
 
-/** The attention queue in one card, most urgent first. */
-export function AttentionQueue({ items, operators }: { items: AttentionItem[]; operators: Operators }) {
+/** The attention queue in one card, most urgent first. Only the operations lead assigns items. */
+export function AttentionQueue({ items, operators, canAssign }: { items: AttentionItem[]; operators: Operators; canAssign: boolean }) {
   return (
     <ul aria-label="Queue" className="divide-y divide-line/70 overflow-hidden rounded-xl border border-line bg-surface">
       {items.map((item) => (
-        <AttentionRow key={item.key} item={item} operators={operators} />
+        <AttentionRow key={item.key} item={item} operators={operators} canAssign={canAssign} />
       ))}
     </ul>
   );

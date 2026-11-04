@@ -98,8 +98,8 @@ Stored in `order_requests` (read through the order's RLS). A delivery date only 
 | --- | --- |
 | `set_supplier_status(p_org, p_status text, p_key)` (I) | `active` to `suspended` cancels the supplier's pending orders, releasing stock and notifying buyers. `suspended` to `active` reactivates it. |
 | `resolve_dispute(p_issue, p_outcome text, p_key)` (I) | Outcome `credit` moves `disputed` to `credit_promised`; `close` moves it to `closed`. Sets `buyer_seen = false`. |
-| `assign_attention(p_item text, p_user uuid)` | Upserts `attention_states.assigned_user_id`; a null user clears it. |
-| `mark_attention_handled(p_item text)` | Sets `handled_at` and `handled_by`. |
+| `assign_attention(p_item text, p_user uuid)` | Operations lead only (`admin_profiles.is_lead`). Upserts `attention_states.assigned_user_id`; a null user clears it. |
+| `mark_attention_handled(p_item text)` | The lead, or the operator the item is assigned to. Sets `handled_at` and `handled_by`. |
 
 ## Functions for every role
 
@@ -118,4 +118,4 @@ Stored in `order_requests` (read through the order's RLS). A delivery date only 
 | --- | --- |
 | `v_catalogue` | Already exists. |
 | `v_order_totals` | Already exists. |
-| `v_attention` | Admins only (`where app.is_admin()`): `item_key, priority ('high' or 'medium'), type, title, detail, org_id, created_at, assigned_user_id`, built from the ten rules in DISCOVERY 6.6 that apply tonight (no invoices or service checks). Excludes keys handled after the cause was created. |
+| `v_attention` | Admins only (`where app.is_admin()`). The operations lead sees every item; other operators see only items assigned to them (`app.is_admin_lead()`). Columns: `item_key, priority ('high' or 'medium'), type, title, detail, org_id, created_at, assigned_user_id`, built from the ten rules in DISCOVERY 6.6 that apply tonight (no invoices or service checks). Excludes keys handled after the cause was created. |

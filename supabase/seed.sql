@@ -89,6 +89,9 @@ insert into public.admin_profiles (user_id, team, shift) values
   ('00000000-0000-4000-9000-0000000000a3', 'Order desk', 'Daily, 06:00 to 14:00'),
   ('00000000-0000-4000-9000-0000000000a4', 'Customer support', 'Daily, 14:00 to 22:00');
 
+-- Hannah leads operations: she sees and assigns the whole attention queue.
+update public.admin_profiles set is_lead = true where user_id = '00000000-0000-4000-9000-0000000000a1';
+
 insert into public.trading_connections (buyer_org_id, supplier_org_id, status, created_at) values
   ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000c1', 'active', '2025-03-03 09:00+08'),
   ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000c2', 'active', '2025-03-03 09:00+08'),

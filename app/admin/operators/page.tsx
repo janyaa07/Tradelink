@@ -5,7 +5,7 @@ import { NameCell, PhoneList, PhoneRow } from "@/features/admin/components/Rows"
 import { listHref, param, type SearchParams } from "@/features/admin/params";
 import { presenceOf, PRESENCE_TONE } from "@/features/admin/presence";
 import { getAttentionItems } from "@/features/admin/queries/attention";
-import { getOperators } from "@/features/admin/queries/people";
+import { getOperators, isOperationsLead } from "@/features/admin/queries/people";
 import { BusinessLogo } from "@/ui/BusinessLogo";
 import { Cell, DataTable, Row } from "@/ui/DataTable";
 import { EmptyState } from "@/ui/EmptyState";
@@ -30,9 +30,11 @@ function parsePresence(value: string | undefined): PresenceFilter {
 }
 
 export default async function OperatorsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireRole("admin");
+  const session = await requireRole("admin");
   const filter = parsePresence(param(await searchParams, "presence"));
-  const [operators, items] = await Promise.all([getOperators(), getAttentionItems()]);
+  const [operators, items, lead] = await Promise.all([getOperators(), getAttentionItems(), isOperationsLead(session.userId)]);
+  // Other operators only see their own items, so the per-operator counts are the lead's.
+  const columns = lead ? COLUMNS : COLUMNS.filter((column) => column.label !== "Assigned items");
   const assigned = assignedCounts(items);
   const now = new Date();
   const rows = operators.map((operator) => ({ operator, presence: presenceOf(operator.lastSeenAt, now) }));
@@ -56,7 +58,7 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
       ) : (
         <DataTable
           label="Operators"
-          columns={COLUMNS}
+          columns={columns}
           phone={
             <PhoneList label="Operators">
               {shown.map(({ operator, presence }) => (
@@ -66,7 +68,8 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
                   title={operator.fullName}
                   sub={
                     <>
-                      {operator.team} · {assigned.get(operator.userId) ?? 0} assigned
+                      {operator.team}
+                      {lead ? ` · ${assigned.get(operator.userId) ?? 0} assigned` : null}
                       <br />
                       {operator.shift}
                     </>
@@ -84,9 +87,11 @@ export default async function OperatorsPage({ searchParams }: { searchParams: Pr
               </Cell>
               <Cell>{operator.team}</Cell>
               <Cell muted>{operator.shift}</Cell>
-              <Cell num align="right">
-                {assigned.get(operator.userId) ?? 0}
-              </Cell>
+              {lead ? (
+                <Cell num align="right">
+                  {assigned.get(operator.userId) ?? 0}
+                </Cell>
+              ) : null}
               <Cell>
                 <Pill tone={PRESENCE_TONE[presence]}>{presence}</Pill>
               </Cell>

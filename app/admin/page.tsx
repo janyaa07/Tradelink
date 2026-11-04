@@ -9,7 +9,7 @@ import { getAttentionItems } from "@/features/admin/queries/attention";
 import { getRecentAudit } from "@/features/admin/queries/audit";
 import { getOrderStatRows } from "@/features/admin/queries/orders";
 import { getOrganisations } from "@/features/admin/queries/organisations";
-import { getOperators } from "@/features/admin/queries/people";
+import { getOperators, isOperationsLead } from "@/features/admin/queries/people";
 import { getLowStock } from "@/features/admin/queries/stock";
 import { GlanceTabs } from "@/features/home/GlanceTabs";
 import { GlanceRow, HomeGreeting } from "@/features/home/HomeParts";
@@ -28,23 +28,29 @@ const HOME_STEPS = 4;
 /** Admin Home, laid out like the buyer's and supplier's: one next item from the attention queue, the figures, then the rest at a glance (ADM-01). */
 export default async function AdminHomePage() {
   const session = await requireRole("admin");
-  const [items, orderRows, suppliers, activity, lowStock, operators] = await Promise.all([
+  const [items, orderRows, suppliers, activity, lowStock, operators, lead] = await Promise.all([
     getAttentionItems(),
     getOrderStatRows(),
     getOrganisations("supplier"),
     getRecentAudit(5),
     getLowStock(5),
     getOperators(),
+    isOperationsLead(session.userId),
   ]);
   const now = new Date();
   const orders = summariseOrders(orderRows);
   const activeSuppliers = suppliers.filter((supplier) => supplier.status === "active").length;
   const online = operators.filter((operator) => presenceOf(operator.lastSeenAt, now) === "Online");
   const high = items.filter((item) => item.priority === "high").length;
-  const line =
-    items.length === 0
+  // The lead sees the whole queue; other operators see only what is assigned to them (v_attention).
+  const urgent = high > 0 ? `, ${high} of them high priority` : "";
+  const line = lead
+    ? items.length === 0
       ? "Nothing needs attention right now. Everything on the platform is on track."
-      : `${items.length} ${items.length === 1 ? "item needs" : "items need"} attention${high > 0 ? `, ${high} of them high priority` : ""}.`;
+      : `${items.length} ${items.length === 1 ? "item needs" : "items need"} attention${urgent}.`
+    : items.length === 0
+      ? "Nothing is assigned to you right now."
+      : `${items.length} ${items.length === 1 ? "item is" : "items are"} assigned to you${urgent}.`;
 
   // Most urgent first, and within a priority the newest, so Home shows what just came in.
   const preview = [...items]
@@ -83,7 +89,13 @@ export default async function AdminHomePage() {
           more={items.length > steps.length ? { href: "/admin/attention", label: `See all ${items.length} in Attention` } : undefined}
         />
       ) : (
-        <AllClear text="Nothing needs attention. Disputes, security alerts and invitations show here when they come in." />
+        <AllClear
+          text={
+            lead
+              ? "Nothing needs attention. Disputes, security alerts and invitations show here when they come in."
+              : "Nothing is assigned to you. Items the operations lead gives you show here."
+          }
+        />
       )}
 
       <Tiles

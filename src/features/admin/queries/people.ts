@@ -90,6 +90,20 @@ export async function getOperators(): Promise<Operator[]> {
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
+/**
+ * Whether this operator leads operations. The lead sees and assigns the whole attention queue;
+ * other operators see only the items assigned to them, which `v_attention` enforces.
+ */
+export async function isOperationsLead(userId: string): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const row = await selectMaybe(
+    z.object({ is_lead: z.boolean() }),
+    "the operator's role",
+    supabase.from("admin_profiles").select("is_lead").eq("user_id", userId).maybeSingle(),
+  );
+  return row?.is_lead ?? false;
+}
+
 export async function getOperatorName(userId: string): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
   const row = await selectMaybe(

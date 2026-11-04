@@ -11,7 +11,7 @@ import {
 import { AttentionQueue } from "@/features/admin/components/AttentionQueue";
 import { param, type SearchParams } from "@/features/admin/params";
 import { getAttentionItems } from "@/features/admin/queries/attention";
-import { getOperators } from "@/features/admin/queries/people";
+import { getOperators, isOperationsLead } from "@/features/admin/queries/people";
 import { EmptyState } from "@/ui/EmptyState";
 import { FilterTabs, PageHeader } from "@/ui/PageHeader";
 
@@ -28,10 +28,14 @@ function attentionHref(filter: AttentionFilter): string {
   return filter === "all" ? "/admin/attention" : `/admin/attention?filter=${filter}`;
 }
 
+/** Everything for the operations lead; for other operators, what the lead assigned them (the view filters it). */
 export default async function AttentionPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  await requireRole("admin");
-  const filter = parseAttentionFilter(param(await searchParams, "filter"));
-  const [items, operators] = await Promise.all([getAttentionItems(), getOperators()]);
+  const session = await requireRole("admin");
+  const asked = parseAttentionFilter(param(await searchParams, "filter"));
+  const [items, operators, lead] = await Promise.all([getAttentionItems(), getOperators(), isOperationsLead(session.userId)]);
+  // Everything an operator sees is assigned to them, so "Unassigned" is only for the lead.
+  const filters: readonly AttentionFilter[] = lead ? ATTENTION_FILTERS : ATTENTION_FILTERS.filter((tab) => tab !== "unassigned");
+  const filter = filters.includes(asked) ? asked : "all";
   const tally = tallyAttention(items);
   const shown = filterAttention(items, filter);
   const choices = operators.map((operator) => ({ userId: operator.userId, fullName: operator.fullName }));
@@ -41,11 +45,15 @@ export default async function AttentionPage({ searchParams }: { searchParams: Pr
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Needs attention"
-        description="The platform's work queue, most urgent first. Assign an item to take it, and mark it handled when it is done."
+        description={
+          lead
+            ? "The platform's work queue, most urgent first. Assign each item to an operator, and mark it handled when it is done."
+            : "The items assigned to you, most urgent first. Mark each one handled when it is done."
+        }
         actions={
           <FilterTabs
             label="Filter items"
-            tabs={ATTENTION_FILTERS.map((tab) => ({
+            tabs={filters.map((tab) => ({
               href: attentionHref(tab),
               label: FILTER_LABELS[tab],
               count: counts[tab],
@@ -54,7 +62,11 @@ export default async function AttentionPage({ searchParams }: { searchParams: Pr
           />
         }
       />
-      {shown.length === 0 ? <EmptyState>{EMPTY[filter]}</EmptyState> : <AttentionQueue items={shown} operators={choices} />}
+      {shown.length === 0 ? (
+        <EmptyState>{lead || filter !== "all" ? EMPTY[filter] : "Nothing is assigned to you right now."}</EmptyState>
+      ) : (
+        <AttentionQueue items={shown} operators={choices} canAssign={lead} />
+      )}
     </div>
   );
 }
