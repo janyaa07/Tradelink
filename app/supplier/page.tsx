@@ -45,7 +45,7 @@ function changeText(today: number, usual: number | null, money: boolean): { text
   return percent >= 0 ? { text: `+${percent}% on a usual day`, tone: "text-good" } : { text: `${percent}% on a usual day`, tone: "text-warn" };
 }
 
-/** Supplier Home: beat the cut-off, pack, restock, with Tradelink AI's next step first (SUP-01). */
+/** Supplier Home: beat the cut-off, pack, receive stock, with Tradelink AI's next step first (SUP-01). */
 export default async function SupplierHomePage() {
   const session = await requireRole("supplier");
   const now = new Date();

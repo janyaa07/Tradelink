@@ -1212,11 +1212,8 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
   );
 
   return (
-    <div
-      data-fill
-      className="grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden bg-surface rail:rounded-lg rail:border rail:border-line rail:shadow-card min-[900px]:grid-cols-[248px_minmax(0,1fr)]"
-    >
-      <aside aria-label="Chats" className="hidden min-h-0 border-r border-line p-3 min-[900px]:flex">
+    <div data-fill className="grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden bg-surface min-[900px]:grid-cols-[264px_minmax(0,1fr)]">
+      <aside aria-label="Chats" className="hidden min-h-0 border-r border-line bg-bg p-3 min-[900px]:flex">
         {historyPanel}
       </aside>
       <HistorySheet sheetRef={sheetRef}>{historyPanel}</HistorySheet>
@@ -1242,9 +1239,9 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
           )}
         </div>
         {empty ? (
-          <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pt-10 pb-8 rail:px-8 rail:pt-16">
+          <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 pt-8 pb-8 rail:px-8 rail:pt-12">
             <div aria-hidden="true" className="ai-glow pointer-events-none absolute inset-x-0 top-0 h-80" />
-            <div className="relative flex w-full max-w-[720px] flex-col gap-5">
+            <div className="relative flex w-full max-w-[768px] flex-col gap-5">
               <div className="flex flex-col items-center gap-2.5 text-center">
                 <span aria-hidden="true" className="ai-spark size-9" />
                 <h1 className="ai-text text-[1.6rem] font-semibold tracking-[-0.025em] rail:text-[1.85rem]">{hello}</h1>
@@ -1289,7 +1286,7 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
                 role="log"
                 aria-live="polite"
                 aria-label="Conversation with Tradelink AI"
-                className="mx-auto flex w-full max-w-[720px] flex-col gap-6 pb-4"
+                className="mx-auto flex w-full max-w-[768px] flex-col gap-6 pb-4"
               >
                 {messages.map((message, index) => {
                   const last = index === messages.length - 1;
@@ -1320,7 +1317,7 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
               <div ref={endRef} aria-hidden="true" className="scroll-mb-6" />
             </div>
             <div className="flex-none px-3.5 pt-2 pb-3 rail:px-8 rail:pb-4">
-              <div className="mx-auto w-full max-w-[720px]">{composer}</div>
+              <div className="mx-auto w-full max-w-[768px]">{composer}</div>
             </div>
           </>
         )}

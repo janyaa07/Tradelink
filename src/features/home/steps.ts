@@ -90,7 +90,7 @@ export async function loadBuyerSteps(orgId: string, now: Date) {
 
 export const orderDeliveryDate = (order: OrderView) => order.confirmedDeliveryDate ?? order.requestedDeliveryDate ?? "";
 
-/** The supplier's steps: accept, pack, answer problems, restock, then buyers going quiet. */
+/** The supplier's steps: accept, pack, answer problems, receive stock that ran out, then buyers going quiet. */
 export async function loadSupplierSteps(orgId: string, now: Date) {
   const [openOrders, recentOrders, catalogue, issues, profile] = await Promise.all([
     getOrders({ supplierOrgId: orgId, statuses: OPEN_STATUSES, limit: 200 }),
@@ -167,10 +167,10 @@ export async function loadSupplierSteps(orgId: string, now: Date) {
         ]
       : []),
     ...outOfStock.map((item) => ({
-      key: `restock-${item.id}`,
+      key: `out-${item.id}`,
       kind: "other" as const,
-      title: `Restock ${item.name}`,
-      subject: `${item.name} to restock`,
+      title: `Receive stock for ${item.name}`,
+      subject: `stock for ${item.name}`,
       detail: `${item.available} free, ${item.reserved} reserved`,
       href: inventoryHref({ q: item.name }),
       tone: "bad" as const,

@@ -19,11 +19,23 @@ describe("home working-out", () => {
 
   it("adds up the same product across orders, largest first", () => {
     const list = pickList([
-      { buyer: "Golden Crust", lines: [{ productId: "a", name: "Coconut milk", unit: "can", qty: 12 }, { productId: "b", name: "Ginger", unit: "bag", qty: 2 }] },
+      {
+        buyer: "Golden Crust",
+        lines: [
+          { productId: "a", name: "Coconut milk", unit: "can", qty: 12 },
+          { productId: "b", name: "Ginger", unit: "bag", qty: 2 },
+        ],
+      },
       { buyer: "Mei's", lines: [{ productId: "a", name: "Coconut milk", unit: "can", qty: 1 }] },
     ]);
-    expect(list.map((line) => [line.name, line.qty])).toEqual([["Coconut milk", 13], ["Ginger", 2]]);
-    expect(list[0]?.buyers).toEqual([{ name: "Golden Crust", qty: 12 }, { name: "Mei's", qty: 1 }]);
+    expect(list.map((line) => [line.name, line.qty])).toEqual([
+      ["Coconut milk", 13],
+      ["Ginger", 2],
+    ]);
+    expect(list[0]?.buyers).toEqual([
+      { name: "Golden Crust", qty: 12 },
+      { name: "Mei's", qty: 1 },
+    ]);
   });
 
   it("spots a buyer who has gone quiet and one who is ordering more", () => {
@@ -72,7 +84,7 @@ describe("home working-out", () => {
     expect(briefingLine(["tomorrow's order"], new Date("2026-11-04T12:00:00Z"))).toBe(
       "One thing needs you tonight: tomorrow's order. Everything else is on track.",
     );
-    expect(briefingLine(["today's 3 orders to pack", "dried chillies to restock"], wednesday)).toBe(
+    expect(briefingLine(["today's 3 orders to pack", "stock for dried chillies"], wednesday)).toBe(
       "Two things need you this afternoon, starting with today's 3 orders to pack.",
     );
   });

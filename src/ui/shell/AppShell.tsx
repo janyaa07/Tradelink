@@ -77,11 +77,11 @@ export function AppShell({ role, userName, orgName, navItems, activeHref, pathna
         tabIndex={-1}
         className={cx(
           styles.main,
-          // A page marked data-fill (Tradelink AI) fills the space and scrolls inside itself.
-          "relative px-4 pt-5 pb-8 outline-none has-[[data-fill]]:p-0 rail:px-8 rail:pt-8 rail:pb-12 rail:has-[[data-fill]]:px-8 rail:has-[[data-fill]]:py-6",
+          // A page marked data-fill (Tradelink AI) takes the whole window and scrolls inside itself.
+          "relative px-4 pt-5 pb-8 outline-none rail:px-8 rail:pt-8 rail:pb-12 has-[[data-fill]]:p-0",
         )}
       >
-        <div className="mx-auto flex max-w-[1080px] flex-col gap-5 has-[[data-fill]]:h-full">{children}</div>
+        <div className="mx-auto flex max-w-[1080px] flex-col gap-5 has-[[data-fill]]:h-full has-[[data-fill]]:max-w-none">{children}</div>
       </main>
     </div>
   );
