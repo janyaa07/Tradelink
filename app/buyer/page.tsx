@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireRole } from "@/data/session";
 import { plural } from "@/domain/catalogue";
 import { briefingLine, weekPace } from "@/domain/home";
@@ -144,7 +145,11 @@ export default async function BuyerHomePage() {
           <AllClear text="Nothing needs you right now. Your usual items are covered and every delivery is checked." />
         )}
         <div className="flex min-w-0 flex-col gap-5">
-          <section aria-label="This week" className="rounded-lg border border-line bg-surface p-4 shadow-card rail:px-5">
+          <Link
+            href="/buyer/insights"
+            aria-label="This week's spend. Open Insights"
+            className="block rounded-lg border border-line bg-surface p-4 text-ink no-underline shadow-card transition-[border-color,box-shadow] duration-150 hover:border-accent/40 hover:shadow-float rail:px-5"
+          >
             <div className="flex items-center justify-between gap-2">
               <h2>This week</h2>
               {lastWeekCents > 0 ? (
@@ -169,7 +174,7 @@ export default async function BuyerHomePage() {
               <span aria-hidden="true" className="h-3 w-0.5 bg-ink" />
               {paceCents > budgetCents ? `On pace to go ${wholeDollars(paceCents - budgetCents)} over` : `On pace for ${wholeDollars(paceCents)}`}
             </p>
-          </section>
+          </Link>
 
           <GlanceTabs
             tabs={[
