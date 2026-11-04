@@ -50,7 +50,8 @@ export async function getAuditPage(query: AuditQuery): Promise<{ entries: AuditE
     .order("at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, from + AUDIT_PAGE_SIZE - 1);
-  if (query.orgId) request = request.or(`actor_org_id.eq.${query.orgId},related_org_ids.cs.{${query.orgId}}`);
+  // The Organisation filter matches the Organisation column: the business whose person made the change.
+  if (query.orgId) request = request.eq("actor_org_id", query.orgId);
   if (query.outcome !== "all") request = request.eq("outcome", query.outcome);
   const { data, error, count } = await request;
   // A page past the end is not an error for the reader: show it as empty.

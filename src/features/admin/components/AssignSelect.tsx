@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { startTransition, useId, useState } from "react";
 import { FormError } from "@/ui/FormError";
 import { assignAttentionAction } from "../actions";
 import { useAdminAction } from "./useAdminAction";
@@ -13,12 +13,12 @@ type Props = {
 
 /** "Assigned to" for one attention item. The choice saves as soon as it changes (ADM-04). */
 export function AssignSelect({ itemKey, assignedUserId, operators }: Props) {
-  const [state, formAction, pending] = useAdminAction(assignAttentionAction);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [state, runAction, pending] = useAdminAction(assignAttentionAction);
   const selectId = useId();
   const errorId = useId();
-  // Controlled, so React's form reset after the action cannot flip the choice back. It follows
-  // the saved value when that changes on the server, for example another operator's choice.
+  // The action runs outside a form, because React resets a form after its action and a reset
+  // puts a select back on its first option ("Unassigned"). The choice follows the saved value
+  // when that changes on the server, for example another operator's choice.
   const [value, setValue] = useState(assignedUserId ?? "");
   const [saved, setSaved] = useState(assignedUserId);
   if (saved !== assignedUserId) {
@@ -26,24 +26,27 @@ export function AssignSelect({ itemKey, assignedUserId, operators }: Props) {
     setValue(assignedUserId ?? "");
   }
 
+  function save(user: string) {
+    setValue(user);
+    const formData = new FormData();
+    formData.set("item", itemKey);
+    formData.set("user", user);
+    startTransition(() => runAction(formData));
+  }
+
   const error = state.status === "error" ? state.message : null;
   return (
-    <form ref={formRef} action={formAction} className="flex w-full min-w-[160px] flex-col gap-0.5 text-[.72rem] text-muted min-[420px]:w-auto">
-      <input type="hidden" name="item" value={itemKey} />
+    <div className="flex w-full min-w-[160px] flex-col gap-0.5 text-[.72rem] text-muted min-[420px]:w-auto">
       <label htmlFor={selectId} className="sr-only">
         Assigned to
       </label>
       <select
         id={selectId}
-        name="user"
         value={value}
         disabled={pending}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        onChange={(event) => {
-          setValue(event.target.value);
-          formRef.current?.requestSubmit();
-        }}
+        onChange={(event) => save(event.target.value)}
         className="min-h-8 w-full rounded-lg border border-line bg-surface px-2 py-[5px] text-[.84rem] text-ink disabled:opacity-50"
       >
         <option value="">Unassigned</option>
@@ -54,6 +57,6 @@ export function AssignSelect({ itemKey, assignedUserId, operators }: Props) {
         ))}
       </select>
       <FormError id={errorId}>{error}</FormError>
-    </form>
+    </div>
   );
 }
