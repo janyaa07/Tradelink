@@ -26,7 +26,6 @@ import { Pill, type PillTone } from "@/ui/Pill";
 import { ProductImage } from "@/ui/ProductImage";
 import { executeAiAction } from "@/features/ai/execute";
 import { AiCardView } from "@/features/ai/ui/AiCards";
-import type { StepTone } from "@/features/home/HomeParts";
 import { parseReply, plainReply } from "@/features/ai/ui/reply-blocks";
 import { addToCartAction, placeCartAction } from "./actions";
 import styles from "./assistant.module.css";
@@ -100,13 +99,6 @@ const INTRO: Record<AiRole, string> = {
 
 /** Card tags such as [[ORD-1061]], left out when an answer is copied. */
 const CARD_TAG = /\[\[[^\]]*\]\]\n?/g;
-
-const FACT_DOTS: Record<StepTone, string> = {
-  bad: "bg-bad",
-  warn: "bg-[#C98A1A]",
-  info: "bg-info",
-  good: "bg-good",
-};
 
 type StreamEvent =
   | { type: "text"; delta: string }
@@ -798,11 +790,9 @@ type AssistantChatProps = {
   role?: AiRole;
   /** A question asked from Home (?q=&t=), sent as soon as the chat opens. */
   initialQuestion?: { text: string; stamp: string };
-  /** What needs the person right now, shown on a new chat (the same list as Home's Next up). */
-  facts: { tone: StepTone; text: string }[];
 };
 
-export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, facts }: AssistantChatProps) {
+export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }: AssistantChatProps) {
   const router = useRouter();
   const inputId = useId();
   const [now] = useState(() => new Date());
@@ -1266,17 +1256,6 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, 
                   </button>
                 ))}
               </div>
-              {facts.length > 0 ? (
-                <section aria-label="What Tradelink AI can see" className="ai-tint flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-4 py-3">
-                  <span className="ai-text text-[.75rem] font-semibold">What I can see right now</span>
-                  {facts.map((fact) => (
-                    <span key={fact.text} className="flex items-center gap-2 text-[.8rem] text-ink/80">
-                      <span aria-hidden="true" className={cx("size-[7px] flex-none rounded-full", FACT_DOTS[fact.tone])} />
-                      {fact.text}
-                    </span>
-                  ))}
-                </section>
-              ) : null}
             </div>
           </div>
         ) : (

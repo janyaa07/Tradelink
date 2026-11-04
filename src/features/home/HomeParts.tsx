@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cx } from "@/ui/cx";
-import { Icon } from "@/ui/Icon";
 
 /**
  * The home page's building blocks (one focus at a time): a greeting with the briefing line, the
@@ -67,7 +66,16 @@ export function AskBar({ action, placeholder, suggestions, stamp }: AskBarProps)
           className="min-w-0 flex-1 border-0 bg-transparent text-[.9rem] text-ink outline-none placeholder:text-muted"
         />
         <button type="submit" aria-label="Ask Tradelink AI" className="ai-fill grid size-9 flex-none place-items-center rounded-lg">
-          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M12 19V5M5 12l7-7 7 7" />
           </svg>
         </button>
@@ -91,21 +99,20 @@ export type StepTone = "bad" | "warn" | "info" | "good";
 
 const DOTS: Record<StepTone, string> = { bad: "bg-bad", warn: "bg-[#C98A1A]", info: "bg-info", good: "bg-good" };
 
-/** One of the quieter steps under the Next up card. */
-export function StepRow({ title, detail, href, tone }: { title: string; detail: string; href: string; tone: StepTone }) {
-  return (
-    <Link href={href} className="flex items-center gap-2.5 border-t border-line px-1 py-2.5 text-ink no-underline hover:bg-sunken/60">
-      <span aria-hidden="true" className={cx("size-2 flex-none rounded-full", DOTS[tone])} />
-      <span className="min-w-0 flex-1 truncate text-[.85rem]">
-        <b className="font-semibold">{title}</b> <span className="text-muted">· {detail}</span>
-      </span>
-      <Icon name="arrow" size={16} className="text-muted" />
-    </Link>
-  );
-}
-
 /** A row inside an At a glance tab. */
-export function GlanceRow({ lead, title, detail, end, href }: { lead?: ReactNode; title: ReactNode; detail?: ReactNode; end?: ReactNode; href?: string }) {
+export function GlanceRow({
+  lead,
+  title,
+  detail,
+  end,
+  href,
+}: {
+  lead?: ReactNode;
+  title: ReactNode;
+  detail?: ReactNode;
+  end?: ReactNode;
+  href?: string;
+}) {
   const body = (
     <>
       {lead}
@@ -137,16 +144,24 @@ export function LevelBar({ percent, tone }: { percent: number; tone: StepTone | 
 }
 
 /** A value against a usual mark: the bar is today, the thin line is a usual day. */
-export function CompareBar({ percent, usualPercent, tone, label }: { percent: number; usualPercent: number | null; tone: StepTone | "accent"; label: string }) {
+export function CompareBar({
+  percent,
+  usualPercent,
+  tone,
+  label,
+}: {
+  percent: number;
+  usualPercent: number | null;
+  tone: StepTone | "accent";
+  label: string;
+}) {
   return (
     <span role="img" aria-label={label} className="relative block h-3 rounded-full bg-sunken">
       <span
         className={cx("absolute inset-y-0 left-0 rounded-full", tone === "accent" ? "bg-accent" : DOTS[tone])}
         style={{ width: `${Math.max(2, Math.min(100, percent))}%` }}
       />
-      {usualPercent !== null ? (
-        <span className="absolute -inset-y-1 w-0.5 bg-ink" style={{ left: `${Math.min(99, usualPercent)}%` }} />
-      ) : null}
+      {usualPercent !== null ? <span className="absolute -inset-y-1 w-0.5 bg-ink" style={{ left: `${Math.min(99, usualPercent)}%` }} /> : null}
     </span>
   );
 }

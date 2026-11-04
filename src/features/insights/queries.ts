@@ -30,11 +30,7 @@ function fail(what: string, message: string): never {
 type PageResult = { data: unknown; error: { message: string } | null };
 
 /** Reads every matching row, a page at a time, so totals are never cut short by the row limit. */
-async function readAll<T>(
-  what: string,
-  schema: z.ZodType<T>,
-  page: (from: number, to: number) => PromiseLike<PageResult>,
-): Promise<T[]> {
+async function readAll<T>(what: string, schema: z.ZodType<T>, page: (from: number, to: number) => PromiseLike<PageResult>): Promise<T[]> {
   const rows: T[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await page(from, from + PAGE_SIZE - 1);
@@ -108,12 +104,7 @@ const issueSchema = z.object({ supplier_org_id: z.uuid(), status: z.string(), am
 async function getIssues(orgId: string) {
   const supabase = await createSupabaseServerClient();
   return readAll("problems", issueSchema, (from, to) =>
-    supabase
-      .from("issues")
-      .select("supplier_org_id, status, amount")
-      .eq("buyer_org_id", orgId)
-      .order("id")
-      .range(from, to),
+    supabase.from("issues").select("supplier_org_id, status, amount").eq("buyer_org_id", orgId).order("id").range(from, to),
   );
 }
 
@@ -132,7 +123,7 @@ const priceMoveSchema = z.object({ old_price: money, new_price: money });
 type PriceChanges = { total: number; up: number; down: number; latest: PriceChangeRow[] };
 
 /** Price changes on the buyer's usual items: the latest, newest first, with the full count and how many went up or down (BUY-41). */
-async function getPriceChanges(productIds: string[]): Promise<PriceChanges> {
+export async function getPriceChanges(productIds: string[]): Promise<PriceChanges> {
   if (productIds.length === 0) return { total: 0, up: 0, down: 0, latest: [] };
   const supabase = await createSupabaseServerClient();
   const [{ data, error }, moves] = await Promise.all([
@@ -241,8 +232,7 @@ export async function getInsights(orgId: string, now: Date): Promise<Insights> {
   const byName = [...suppliers].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)).map((supplier) => supplier.id);
   const bySupplier = supplierSlices(spendBySupplier(window.orders), byName).map(({ supplierId, cents, percent, slot }) => ({
     id: supplierId,
-    name:
-      supplierId === null ? "Other suppliers" : (names.get(supplierId) ?? window.supplierNames.get(supplierId) ?? "A former supplier"),
+    name: supplierId === null ? "Other suppliers" : (names.get(supplierId) ?? window.supplierNames.get(supplierId) ?? "A former supplier"),
     cents,
     percent,
     slot,

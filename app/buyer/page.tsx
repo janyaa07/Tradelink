@@ -7,8 +7,9 @@ import { daysLeft, formatDaysLeft } from "@/domain/reorder";
 import { getBuyerCatalogue, getBuyerSettings, getLastWeekSpendCents, getOnOrder, getUsualItems, getWeekSpendCents } from "@/features/buyer/queries";
 import type { ReorderPlanView } from "@/features/buyer/reorder-plan";
 import { GlanceTabs } from "@/features/home/GlanceTabs";
-import { AskBar, CompareBar, GlanceRow, HomeGreeting, LevelBar, StepRow } from "@/features/home/HomeParts";
-import { AllClear, NextUp } from "@/features/home/NextUp";
+import { getPriceChanges } from "@/features/insights/queries";
+import { AskBar, CompareBar, GlanceRow, HomeGreeting, LevelBar } from "@/features/home/HomeParts";
+import { AllClear, NextUp, type NextStep } from "@/features/home/NextUp";
 import { PlanStepActions } from "@/features/home/StepActions";
 import { loadBuyerSteps } from "@/features/home/steps";
 import { formatDate, formatLongDate, greeting, orderNumber } from "@/ui/format";
@@ -16,6 +17,11 @@ import { LinkButton } from "@/ui/LinkButton";
 import { Pill } from "@/ui/Pill";
 
 export const metadata: Metadata = { title: "Home · Tradelink" };
+
+/** "S$3,000" for round amounts, "S$2,039" for the rest: the card reads at a glance. */
+function wholeDollars(cents: number): string {
+  return formatMoney(Math.round(cents / 100) * 100).replace(/\.00$/, "");
+}
 
 function planWhy(plan: ReorderPlanView): string {
   const reasons = plan.rows.slice(0, 2).map((row) => {
@@ -32,7 +38,7 @@ function planWhy(plan: ReorderPlanView): string {
 export default async function BuyerHomePage() {
   const session = await requireRole("buyer");
   const now = new Date();
-  const [{ steps, todos, plan, deliveries }, spentCents, lastWeekCents, settings, usuals, catalogue, onOrder] = await Promise.all([
+  const [{ steps, plan, deliveries }, spentCents, lastWeekCents, settings, usuals, catalogue, onOrder] = await Promise.all([
     loadBuyerSteps(session.orgId, now),
     getWeekSpendCents(session.orgId),
     getLastWeekSpendCents(session.orgId),
@@ -42,13 +48,12 @@ export default async function BuyerHomePage() {
     getOnOrder(session.orgId),
   ]);
   const firstName = session.fullName.split(" ")[0] ?? session.fullName;
+  const prices = await getPriceChanges(usuals.map((usual) => usual.productId));
 
   const suppliers = new Set(plan.rows.map((row) => row.item.supplierOrgId)).size;
-  const [first, ...rest] = steps;
 
   const budgetCents = toCents(settings.weeklyBudget);
   const paceCents = weekPace(spentCents, now);
-  const spareCents = budgetCents - paceCents;
   const change = spentCents - lastWeekCents;
 
   const byId = new Map(catalogue.map((item) => [item.id, item]));
@@ -61,10 +66,10 @@ export default async function BuyerHomePage() {
     }))
     .sort((a, b) => a.days - b.days)
     .slice(0, 5);
-  const priceTodos = todos.filter((todo) => todo.action.kind === "price");
+  const lowRunway = runway.filter((entry) => entry.days < 4);
 
   return (
-    <div className="flex w-full flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
       <HomeGreeting
         eyebrow={`${formatLongDate(now)} · ${session.orgName}`}
         title={`${greeting(now)}, ${firstName}`}
@@ -81,77 +86,78 @@ export default async function BuyerHomePage() {
         />
       </HomeGreeting>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 min-[1080px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        {first ? (
+      <div className="flex flex-col gap-5">
+        {steps.length > 0 ? (
           <NextUp
-            position={`1 of ${steps.length}`}
-            title={first.title}
-            detail={
-              first.kind === "plan" ? (
-                <>
-                  {plural(plan.rows.length, "item")}, <b className="font-semibold text-ink tabular-nums">{formatMoney(plan.totalCents)}</b>.{" "}
-                  {plan.cutoffLines[0] ?? ""}
-                </>
-              ) : first.kind === "delivery" ? (
-                <>
-                  {first.order.supplier.name} delivered {orderNumber(first.order.number)}. Check it so anything short or damaged is credited.
-                </>
-              ) : (
-                first.detail
-              )
-            }
-            actions={
-              first.kind === "plan" ? (
-                <PlanStepActions orders={suppliers} />
-              ) : (
-                <LinkButton href={first.href} variant="primary">
-                  {first.kind === "delivery" ? "Check delivery" : "Open"}
-                </LinkButton>
-              )
-            }
-            why={
-              first.kind === "plan"
-                ? planWhy(plan)
-                : first.kind === "delivery"
-                  ? "A problem is credited only when it is reported against the delivery, and checking takes under a minute."
-                  : undefined
-            }
-            rest={rest.slice(0, 3).map((step) => (
-              <StepRow key={step.key} title={step.title} detail={step.detail} href={step.href} tone={step.tone} />
-            ))}
-          >
-            {first.kind === "plan" ? (
-              <ul className="flex flex-wrap gap-2">
-                {plan.rows.map((row) => (
-                  <li key={row.productId} className="flex items-center gap-2 rounded-[10px] bg-sunken py-1.5 pr-3 pl-1.5 text-[.875rem]">
-                    <span className="grid h-7 min-w-7 place-items-center rounded-lg bg-surface px-1 text-[.8rem] font-semibold tabular-nums">
-                      {row.qty}
-                    </span>
-                    <b className="font-semibold">{row.item.name}</b>
-                    <span className="text-muted">{row.item.supplierName}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </NextUp>
+            steps={steps.map((step): NextStep => {
+              const base = { key: step.key, title: step.title, summary: step.detail, tone: step.tone };
+              if (step.kind === "plan") {
+                return {
+                  ...base,
+                  detail: (
+                    <>
+                      {plural(plan.rows.length, "item")}, <b className="font-semibold text-ink tabular-nums">{formatMoney(plan.totalCents)}</b>.{" "}
+                      {plan.cutoffLines[0] ?? ""}
+                    </>
+                  ),
+                  extra: (
+                    <ul className="flex flex-wrap gap-2">
+                      {plan.rows.map((row) => (
+                        <li key={row.productId} className="flex items-center gap-2 rounded-[10px] bg-sunken py-1.5 pr-3 pl-1.5 text-[.875rem]">
+                          <span className="grid h-7 min-w-7 place-items-center rounded-lg bg-surface px-1 text-[.8rem] font-semibold tabular-nums">
+                            {row.qty}
+                          </span>
+                          <b className="font-semibold">{row.item.name}</b>
+                          <span className="text-muted">{row.item.supplierName}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ),
+                  actions: <PlanStepActions orders={suppliers} />,
+                  why: planWhy(plan),
+                };
+              }
+              if (step.kind === "delivery") {
+                return {
+                  ...base,
+                  detail: `${step.order.supplier.name} delivered ${orderNumber(step.order.number)}. Check it so anything short or damaged is credited.`,
+                  actions: (
+                    <LinkButton href={step.href} variant="primary">
+                      Check delivery
+                    </LinkButton>
+                  ),
+                  why: "A problem is credited only when it is reported against the delivery, and checking takes under a minute.",
+                };
+              }
+              return {
+                ...base,
+                detail: step.detail,
+                actions: (
+                  <LinkButton href={step.href} variant="primary">
+                    Open
+                  </LinkButton>
+                ),
+              };
+            })}
+          />
         ) : (
           <AllClear text="Nothing needs you right now. Your usual items are covered and every delivery is checked." />
         )}
         <div className="flex min-w-0 flex-col gap-5">
           <section aria-label="This week" className="rounded-lg border border-line bg-surface p-4 shadow-card rail:px-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <h2>This week</h2>
               {lastWeekCents > 0 ? (
-                <span className={`text-[.78rem] font-medium ${change <= 0 ? "text-good" : "text-warn"}`}>
-                  {formatMoney(Math.abs(change))} {change <= 0 ? "less" : "more"} than this time last week
-                </span>
+                <Pill tone={change <= 0 ? "good" : "warn"}>
+                  {change <= 0 ? "↓" : "↑"} {wholeDollars(Math.abs(change))} vs last week
+                </Pill>
               ) : null}
             </div>
-            <p className="mt-2 flex flex-wrap items-baseline gap-2.5">
+            <p className="mt-1.5 flex items-baseline gap-2">
               <span className="text-[1.5rem] font-semibold tracking-[-0.02em] tabular-nums">{formatMoney(spentCents)}</span>
-              <span className="text-[.85rem] text-muted">spent of {formatMoney(budgetCents)}</span>
+              <span className="text-[.85rem] text-muted">of {wholeDollars(budgetCents)}</span>
             </p>
-            <div className="mt-3.5">
+            <div className="mt-3">
               <CompareBar
                 percent={(spentCents / Math.max(1, budgetCents)) * 100}
                 usualPercent={(paceCents / Math.max(1, budgetCents)) * 100}
@@ -159,13 +165,9 @@ export default async function BuyerHomePage() {
                 label={`Spent ${formatMoney(spentCents)}, on pace for ${formatMoney(paceCents)}, budget ${formatMoney(budgetCents)}`}
               />
             </div>
-            <p className="mt-2.5 text-[.84rem] text-muted">
-              On pace for <b className="font-semibold text-ink tabular-nums">{formatMoney(paceCents)}</b> by Sunday ·{" "}
-              {spareCents >= 0 ? (
-                `${formatMoney(spareCents)} to spare`
-              ) : (
-                <span className="font-semibold text-warn">{formatMoney(-spareCents)} over budget</span>
-              )}
+            <p className={`mt-2 flex items-center gap-1.5 text-[.78rem] ${paceCents > budgetCents ? "font-semibold text-warn" : "text-muted"}`}>
+              <span aria-hidden="true" className="h-3 w-0.5 bg-ink" />
+              {paceCents > budgetCents ? `On pace to go ${wholeDollars(paceCents - budgetCents)} over` : `On pace for ${wholeDollars(paceCents)}`}
             </p>
           </section>
 
@@ -197,12 +199,14 @@ export default async function BuyerHomePage() {
               {
                 id: "low",
                 label: "Running low",
-                count: runway.filter((entry) => entry.days < 4).length,
+                count: lowRunway.length,
                 content:
-                  runway.length === 0 ? (
-                    <p className="py-3 text-muted">Add usual items to see how long your stock lasts.</p>
+                  lowRunway.length === 0 ? (
+                    <p className="py-3 text-muted">
+                      {runway.length === 0 ? "Add usual items to see how long your stock lasts." : "Nothing runs out in the next 4 days."}
+                    </p>
                   ) : (
-                    runway.map(({ usual, item, days }) => (
+                    lowRunway.map(({ usual, item, days }) => (
                       <GlanceRow
                         key={usual.productId}
                         title={item?.name ?? ""}
@@ -219,12 +223,23 @@ export default async function BuyerHomePage() {
               {
                 id: "prices",
                 label: "Prices",
-                count: priceTodos.length,
+                count: prices.latest.length,
                 content:
-                  priceTodos.length === 0 ? (
+                  prices.latest.length === 0 ? (
                     <p className="py-3 text-muted">No price changes on your usual items.</p>
                   ) : (
-                    priceTodos.map((todo) => <GlanceRow key={todo.key} href="/buyer/notifications" title={todo.title} detail={todo.detail} />)
+                    prices.latest.map((row) => {
+                      const percent = Math.round(((toCents(row.newPrice) - toCents(row.oldPrice)) / Math.max(1, toCents(row.oldPrice))) * 1000) / 10;
+                      return (
+                        <GlanceRow
+                          key={row.id}
+                          href="/buyer/insights"
+                          title={row.productName}
+                          detail={`${formatMoney(row.oldPrice)} → ${formatMoney(row.newPrice)}`}
+                          end={<Pill tone={percent > 0 ? "warn" : "good"}>{`${percent > 0 ? "+" : ""}${percent}%`}</Pill>}
+                        />
+                      );
+                    })
                   ),
               },
             ]}

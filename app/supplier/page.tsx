@@ -4,8 +4,8 @@ import { plural } from "@/domain/catalogue";
 import { briefingLine, type Pulse } from "@/domain/home";
 import { formatMoney } from "@/domain/money";
 import { GlanceTabs } from "@/features/home/GlanceTabs";
-import { AskBar, CompareBar, CutoffRing, GlanceRow, HomeGreeting, LevelBar, StepRow } from "@/features/home/HomeParts";
-import { AllClear, NextUp } from "@/features/home/NextUp";
+import { AskBar, CompareBar, CutoffRing, GlanceRow, HomeGreeting, LevelBar } from "@/features/home/HomeParts";
+import { AllClear, NextUp, type NextStep } from "@/features/home/NextUp";
 import { SendOutStepActions } from "@/features/home/StepActions";
 import { loadSupplierSteps, orderDeliveryDate } from "@/features/home/steps";
 import { inventoryHref } from "@/features/supplier/stock";
@@ -51,7 +51,6 @@ export default async function SupplierHomePage() {
   const now = new Date();
   const firstName = session.fullName.split(" ")[0] ?? session.fullName;
   const { steps, comingUp, lowStock, pulse, day, picks, packCents, cutoff, minutesLeft } = await loadSupplierSteps(session.orgId, now);
-  const [first, ...rest] = steps;
 
   const valueScale = Math.max(day.todayCents, day.usualCents ?? 0, 1) * 1.25;
   const countScale = Math.max(day.todayCount, day.usualCount ?? 0, 1) * 1.25;
@@ -59,7 +58,7 @@ export default async function SupplierHomePage() {
   const countChange = changeText(day.todayCount, day.usualCount, false);
 
   return (
-    <div className="flex w-full flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
       <HomeGreeting
         eyebrow={`${formatLongDate(now)} · ${session.orgName}`}
         title={`${greeting(now)}, ${firstName}`}
@@ -83,77 +82,81 @@ export default async function SupplierHomePage() {
         />
       </HomeGreeting>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 min-[1080px]:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        {first ? (
+      <div className="flex flex-col gap-5">
+        {steps.length > 0 ? (
           <NextUp
-            position={`1 of ${steps.length}`}
-            title={first.title}
-            detail={
-              first.kind === "pack" ? (
-                <>
-                  {first.detail}, <b className="font-semibold text-ink tabular-nums">{formatMoney(packCents)}</b>.
-                </>
-              ) : first.kind === "accept" ? (
-                <>
-                  From {first.detail}. Orders accepted before {cutoff} can go on the next run.
-                </>
-              ) : (
-                first.detail
-              )
-            }
-            actions={
-              first.kind === "pack" ? (
-                <SendOutStepActions orderIds={first.orders.map((order) => order.id)} />
-              ) : (
-                <LinkButton href={first.href} variant="primary">
-                  {first.kind === "accept" ? "Review new orders" : "Open"}
-                </LinkButton>
-              )
-            }
-            why={
-              first.kind === "pack"
-                ? "These orders are due today. I added up the same products across them, so you pick each shelf once."
-                : first.kind === "accept"
-                  ? `Buyers plan their stock around your answer, and your cut-off is ${cutoff}. Each order shows its lines and the stock you have.`
-                  : undefined
-            }
-            rest={rest.slice(0, 3).map((step) => (
-              <StepRow key={step.key} title={step.title} detail={step.detail} href={step.href} tone={step.tone} />
-            ))}
-          >
-            {first.kind === "pack" ? (
-              <ul>
-                {picks.map((line) => (
-                  <li
-                    key={line.productId}
-                    className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-3 border-t border-line py-2.5 rail:grid-cols-[52px_minmax(0,1fr)_auto]"
-                  >
-                    <span className="grid h-9 place-items-center rounded-[10px] bg-sunken text-[.95rem] font-semibold tabular-nums">{line.qty}</span>
-                    <span className="min-w-0 text-[.92rem]">
-                      <b className="font-semibold">{line.name}</b> <span className="text-muted">{line.unit}s</span>
-                    </span>
-                    <span className="col-start-2 text-[.8rem] text-muted rail:col-start-auto">
-                      {line.buyers.map((buyer) => `${buyer.name} ${buyer.qty}`).join(" · ")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : first.kind === "accept" ? (
-              <ul>
-                {first.orders.slice(0, 4).map((order) => (
-                  <li key={order.id}>
-                    <GlanceRow
-                      href={`/supplier/orders#order-${order.number}`}
-                      lead={<BusinessLogo name={order.buyer.name} size={30} />}
-                      title={order.buyer.name}
-                      detail={`${orderNumber(order.number)} · ${plural(order.lines.length, "line")}`}
-                      end={<span className="text-[.84rem] font-semibold tabular-nums">{formatMoney(order.totalCents)}</span>}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </NextUp>
+            steps={steps.map((step): NextStep => {
+              const base = { key: step.key, title: step.title, summary: step.detail, tone: step.tone };
+              if (step.kind === "pack") {
+                return {
+                  ...base,
+                  detail: (
+                    <>
+                      {step.detail}, <b className="font-semibold text-ink tabular-nums">{formatMoney(packCents)}</b>.
+                    </>
+                  ),
+                  extra: (
+                    <ul>
+                      {picks.map((line) => (
+                        <li
+                          key={line.productId}
+                          className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-3 border-t border-line py-2.5 rail:grid-cols-[52px_minmax(0,1fr)_auto]"
+                        >
+                          <span className="grid h-9 place-items-center rounded-[10px] bg-sunken text-[.95rem] font-semibold tabular-nums">
+                            {line.qty}
+                          </span>
+                          <span className="min-w-0 text-[.92rem]">
+                            <b className="font-semibold">{line.name}</b> <span className="text-muted">{line.unit}s</span>
+                          </span>
+                          <span className="col-start-2 text-[.8rem] text-muted rail:col-start-auto">
+                            {line.buyers.map((buyer) => `${buyer.name} ${buyer.qty}`).join(" · ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ),
+                  actions: <SendOutStepActions orderIds={step.orders.map((order) => order.id)} />,
+                  why: "These orders are due today. I added up the same products across them, so you pick each shelf once.",
+                };
+              }
+              if (step.kind === "accept") {
+                return {
+                  ...base,
+                  detail: `From ${step.detail}. Orders accepted before ${cutoff} can go on the next run.`,
+                  extra: (
+                    <ul>
+                      {step.orders.slice(0, 4).map((order) => (
+                        <li key={order.id}>
+                          <GlanceRow
+                            href={`/supplier/orders#order-${order.number}`}
+                            lead={<BusinessLogo name={order.buyer.name} size={30} />}
+                            title={order.buyer.name}
+                            detail={`${orderNumber(order.number)} · ${plural(order.lines.length, "line")}`}
+                            end={<span className="text-[.84rem] font-semibold tabular-nums">{formatMoney(order.totalCents)}</span>}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ),
+                  actions: (
+                    <LinkButton href={step.href} variant="primary">
+                      Review new orders
+                    </LinkButton>
+                  ),
+                  why: `Buyers plan their stock around your answer, and your cut-off is ${cutoff}. Each order shows its lines and the stock you have.`,
+                };
+              }
+              return {
+                ...base,
+                detail: step.detail,
+                actions: (
+                  <LinkButton href={step.href} variant="primary">
+                    Open
+                  </LinkButton>
+                ),
+              };
+            })}
+          />
         ) : (
           <AllClear text="All caught up. No new orders, nothing to pack and no problems waiting." />
         )}

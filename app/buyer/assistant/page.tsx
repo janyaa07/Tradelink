@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/data/session";
 import { AssistantChat } from "@/features/ask/AssistantChat";
-import { loadBuyerSteps } from "@/features/home/steps";
 import { greeting } from "@/ui/format";
 
 export const metadata: Metadata = { title: "Tradelink AI" };
@@ -18,7 +17,5 @@ export default async function BuyerAssistantPage({ searchParams }: Props) {
   const session = await requireRole("buyer");
   const firstName = session.fullName.trim().split(/\s+/)[0] || "there";
   const now = new Date();
-  const { steps } = await loadBuyerSteps(session.orgId, now);
-  const facts = steps.slice(0, 4).map((step) => ({ tone: step.tone, text: step.title }));
-  return <AssistantChat hello={`${greeting(now)}, ${firstName}`} userId={session.userId} role="buyer" initialQuestion={question} facts={facts} />;
+  return <AssistantChat hello={`${greeting(now)}, ${firstName}`} userId={session.userId} role="buyer" initialQuestion={question} />;
 }
