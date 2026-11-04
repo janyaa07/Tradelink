@@ -12,6 +12,7 @@ import { weekdayName } from "@/domain/singapore-time";
 import { formatDate, orderNumber } from "@/ui/format";
 import { orderCard, stockCard, tag } from "./cards";
 import { cardTool, readTool, writeTool, type AiTool, type ExecResult } from "./registry";
+import { orderRequestTools } from "./order-request-tools";
 import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
 const SUPPLIER_FILTERS = {
@@ -35,7 +36,11 @@ function freshStock(card: AiCard): AiCard {
 }
 
 const ADJUST_REASONS = ["damaged", "expired", "count_correction"] as const;
-const REASON_WORDS: Record<(typeof ADJUST_REASONS)[number], string> = { damaged: "damaged", expired: "expired", count_correction: "count correction" };
+const REASON_WORDS: Record<(typeof ADJUST_REASONS)[number], string> = {
+  damaged: "damaged",
+  expired: "expired",
+  count_correction: "count correction",
+};
 const dayList = (days: number[]) => days.map((day) => weekdayName(day).slice(0, 3)).join(", ");
 
 async function ownProduct(productId: string) {
@@ -51,10 +56,39 @@ function orderStep(name: string, rpc: string, description: string, title: string
     propose: async (_ctx, { order_number }) => {
       const order = await findOrder(order_number);
       if (!order) return NOT_FOUND;
-      if (!allowed.includes(order.status)) return { error: `${orderNumber(order.number)} is ${order.status.replace(/_/g, " ")}, so this is not possible.` };
+      if (!allowed.includes(order.status))
+        return { error: `${orderNumber(order.number)} is ${order.status.replace(/_/g, " ")}, so this is not possible.` };
       return {
         title: `${title} ${orderNumber(order.number)}`,
         details: [`${order.buyer.name} · ${formatMoney(order.totalCents)}`, ...order.lines.map((line) => `${line.qty} × ${line.name}`)],
+        confirmLabel: label,
+        args: { order_number, order_id: order.id },
+      };
+    },
+    exec: async (_ctx, args, key) => {
+      const result = await callRpc(rpc, { p_order: String((args as { order_id?: string }).order_id), p_key: key });
+      return result.ok ? { ok: true, data: done } : result;
+    },
+  });
+}
+
+/** The rest of a part-accepted order: one database function each, while the rest is in one of these states. */
+function restStep(name: string, rpc: string, description: string, title: string, label: string, done: string, allowed: string[]): AiTool {
+  return writeTool({
+    name,
+    description,
+    input: z.object({ order_number: orderNumberInput }),
+    propose: async (_ctx, { order_number }) => {
+      const order = await findOrder(order_number);
+      if (!order) return NOT_FOUND;
+      const ref = orderNumber(order.number);
+      if (!order.later || !allowed.includes(order.later.status)) return { error: `${ref} has no rest that can do this.` };
+      return {
+        title: `${title} ${ref}`,
+        details: [
+          `${order.buyer.name} · ${formatDate(order.later.date)} · ${formatMoney(order.laterCents)}`,
+          ...order.lines.filter((line) => line.laterQty > 0).map((line) => `${line.laterQty} × ${line.name}`),
+        ],
         confirmLabel: label,
         args: { order_number, order_id: order.id },
       };
@@ -73,7 +107,10 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       "Orders from the supplier's buyers, newest first. filter: new (waiting for accept or reject), accepted, out_for_delivery, delivered or all. delivery_on narrows to one delivery day: 'today', 'tomorrow' or YYYY-MM-DD. Use it whenever the person names a day.",
     input: z.object({
       filter: z.enum(["new", "accepted", "out_for_delivery", "delivered", "all"]),
-      delivery_on: z.string().regex(/^(today|tomorrow|\d{4}-\d{2}-\d{2})$/).optional(),
+      delivery_on: z
+        .string()
+        .regex(/^(today|tomorrow|\d{4}-\d{2}-\d{2})$/)
+        .optional(),
       limit: z.number().int().min(1).max(20).default(8),
     }),
     run: async (ctx, { filter, delivery_on, limit }) => {
@@ -214,7 +251,10 @@ export const SUPPLIER_TOOLS: AiTool[] = [
     description:
       "Change the supplier's terms: order cut-off time (HH:MM, Singapore), delivery days (1 is Monday to 7 Sunday), lead time in days and minimum order in Singapore dollars. Pass only what changes.",
     input: z.object({
-      cutoff: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+      cutoff: z
+        .string()
+        .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional(),
       delivery_days: z.array(z.number().int().min(1).max(7)).min(1).max(7).optional(),
       lead_days: z.number().int().min(0).max(14).optional(),
       minimum: z.number().min(0).max(99999).optional(),
@@ -228,7 +268,12 @@ export const SUPPLIER_TOOLS: AiTool[] = [
         input.minimum !== undefined ? `Minimum order ${formatMoney(now.minimum)} to ${formatMoney(Math.round(input.minimum * 100))}` : null,
       ].filter((line): line is string => line !== null);
       if (details.length === 0) return { error: "Say which term to change." };
-      return { title: "Change your terms", details: [...details, "Buyers see the new terms straight away."], confirmLabel: "Save terms", args: input };
+      return {
+        title: "Change your terms",
+        details: [...details, "Buyers see the new terms straight away."],
+        confirmLabel: "Save terms",
+        args: input,
+      };
     },
     exec: async (ctx, input) => {
       const now = await getBusinessProfile(ctx.session.orgId);
@@ -263,40 +308,58 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       };
     },
     exec: async (_ctx, args, key) => {
-      const result = await callRpc("accept_order", { p_order: String((args as { order_id?: string }).order_id), p_date: args.delivery_date, p_key: key });
+      const result = await callRpc("accept_order", {
+        p_order: String((args as { order_id?: string }).order_id),
+        p_date: args.delivery_date,
+        p_key: key,
+      });
       return result.ok ? { ok: true, data: `Accepted for ${formatDate(args.delivery_date)}. The buyer has been told.` } : result;
     },
   }),
   writeTool({
     name: "accept_part",
     description:
-      "Accept a new order but send less of some lines, for example when stock is short. lines lists only the products to change, with send_qty (0 drops the line). Use product_id from get_order.",
+      "Accept a new order but send less of some lines now, for example when stock is short. lines lists only the products to change, with send_qty. " +
+      "Without rest_date, what is not sent is dropped (0 drops the line). With rest_date (YYYY-MM-DD, after delivery_date) the rest stays on the order and goes as a second delivery that day. Use product_id from get_order.",
     input: z.object({
       order_number: orderNumberInput,
       delivery_date: z.iso.date(),
-      lines: z.array(z.object({ product_id: z.uuid(), send_qty: z.number().int().min(0).max(9999) })).min(1).max(60),
+      lines: z
+        .array(z.object({ product_id: z.uuid(), send_qty: z.number().int().min(0).max(9999) }))
+        .min(1)
+        .max(60),
+      rest_date: z.iso.date().optional(),
     }),
-    propose: async (_ctx, { order_number, delivery_date, lines }) => {
+    propose: async (_ctx, { order_number, delivery_date, lines, rest_date }) => {
       const order = await findOrder(order_number);
       if (!order) return NOT_FOUND;
       if (order.status !== "pending") return { error: `${orderNumber(order.number)} is already ${order.status.replace(/_/g, " ")}.` };
       const changes = new Map(lines.map((line) => [line.product_id, line.send_qty]));
       const unknown = lines.find((line) => !order.lines.some((entry) => entry.productId === line.product_id));
       if (unknown) return { error: "One of those products is not on that order. Call get_order first." };
-      if (order.lines.every((line) => (changes.get(line.productId) ?? line.qty) === 0)) return { error: "That sends nothing. Reject the order instead." };
+      if (order.lines.every((line) => (changes.get(line.productId) ?? line.qty) === 0)) {
+        return {
+          error: rest_date ? `Nothing goes now. Accept it for ${formatDate(rest_date)} instead.` : "That sends nothing. Reject the order instead.",
+        };
+      }
+      if (rest_date && rest_date <= delivery_date) return { error: "The rest has to come after the first delivery." };
       const over = order.lines.find((line) => (changes.get(line.productId) ?? 0) > line.qty);
       if (over) return { error: `You can send at most ${over.qty} of ${over.name}.` };
       return {
-        title: `Accept part of ${orderNumber(order.number)} for ${formatDate(delivery_date)}`,
+        title: rest_date
+          ? `Accept ${orderNumber(order.number)}: part ${formatDate(delivery_date)}, the rest ${formatDate(rest_date)}`
+          : `Accept part of ${orderNumber(order.number)} for ${formatDate(delivery_date)}`,
         details: [
           order.buyer.name,
           ...order.lines.map((line) => {
             const send = changes.get(line.productId) ?? line.qty;
-            return send === line.qty ? `${line.qty} × ${line.name}` : send === 0 ? `Not sending ${line.name} (asked ${line.qty})` : `${send} of ${line.qty} × ${line.name}`;
+            if (send === line.qty) return `${line.qty} × ${line.name}`;
+            if (rest_date) return `${send} × ${line.name} now, ${line.qty - send} on ${formatDate(rest_date)}`;
+            return send === 0 ? `Not sending ${line.name} (asked ${line.qty})` : `${send} of ${line.qty} × ${line.name}`;
           }),
         ],
         confirmLabel: "Accept these",
-        args: { order_number, delivery_date, lines, order_id: order.id },
+        args: { order_number, delivery_date, lines, rest_date, order_id: order.id },
       };
     },
     exec: async (_ctx, args, key): Promise<ExecResult> => {
@@ -307,6 +370,7 @@ export const SUPPLIER_TOOLS: AiTool[] = [
         p_order: order.id,
         p_lines: order.lines.map((line) => ({ productId: line.productId, sendQty: changes.get(line.productId) ?? line.qty })),
         p_date: args.delivery_date,
+        p_later_date: args.rest_date ?? null,
         p_key: key,
       });
       if (!result.ok) return result;
@@ -314,14 +378,27 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       const fresh = (await getOrders({ statuses: ["accepted"], limit: 60 })).find((entry) => entry.id === order.id);
       return {
         ok: true,
-        data: `Accepted for ${formatDate(args.delivery_date)} with your changes. The buyer has been told.`,
+        data: args.rest_date
+          ? `Accepted. Part goes ${formatDate(args.delivery_date)}, the rest ${formatDate(args.rest_date)}. The buyer has been told.`
+          : `Accepted for ${formatDate(args.delivery_date)} with your changes. The buyer has been told.`,
         ...(fresh ? { card: orderCard(fresh, "supplier") } : {}),
       };
     },
   }),
   orderStep("reject_order", "reject_order", "Reject a new order.", "Reject", "Reject order", "Order rejected and the buyer told.", ["pending"]),
-  orderStep("mark_out_for_delivery", "mark_out_for_delivery", "Mark an accepted order as out for delivery.", "Send out", "Out for delivery", "Marked out for delivery.", ["accepted"]),
-  orderStep("mark_delivered", "mark_delivered", "Mark an order as delivered.", "Mark delivered", "Mark delivered", "Marked delivered.", ["accepted", "out_for_delivery"]),
+  orderStep(
+    "mark_out_for_delivery",
+    "mark_out_for_delivery",
+    "Mark an accepted order as out for delivery.",
+    "Send out",
+    "Out for delivery",
+    "Marked out for delivery.",
+    ["accepted"],
+  ),
+  orderStep("mark_delivered", "mark_delivered", "Mark an order as delivered.", "Mark delivered", "Mark delivered", "Marked delivered.", [
+    "accepted",
+    "out_for_delivery",
+  ]),
   writeTool({
     name: "answer_problem",
     description: "Answer a buyer's problem: credit, replace, on_the_way or dispute. Use issue_id from get_problems.",
@@ -331,7 +408,9 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       if (!issue) return { error: "That problem is not open." };
       return {
         title: `${ANSWER_WORDS[answer]} · ${orderNumber(issue.orderNumber)}`,
-        details: [`${issue.buyerName}: ${issue.qty} × ${issue.productName ?? "item"} (${issue.type.replace(/_/g, " ")}), ${formatMoney(issue.amount)}`],
+        details: [
+          `${issue.buyerName}: ${issue.qty} × ${issue.productName ?? "item"} (${issue.type.replace(/_/g, " ")}), ${formatMoney(issue.amount)}`,
+        ],
         confirmLabel: "Send answer",
         args: { issue_id, answer },
       };
@@ -365,7 +444,11 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       });
       if (!result.ok) return { ok: false, error: result.reason === "DUPLICATE" ? `${input.name} is already in your inventory.` : result.error };
       const item = await ownProduct(result.data.productId);
-      return { ok: true, data: `${input.name} added. Buyers can now order it.`, ...(item ? { card: freshStock(stockCard(item, ctx.cardKey("S"))) } : {}) };
+      return {
+        ok: true,
+        data: `${input.name} added. Buyers can now order it.`,
+        ...(item ? { card: freshStock(stockCard(item, ctx.cardKey("S"))) } : {}),
+      };
     },
   }),
   writeTool({
@@ -427,7 +510,12 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       "Take stock off or put it back with a reason: damaged, expired or count_correction. change is negative to remove. Use product_id from get_inventory.",
     input: z.object({
       product_id: z.uuid(),
-      change: z.number().int().min(-9999).max(9999).refine((value) => value !== 0),
+      change: z
+        .number()
+        .int()
+        .min(-9999)
+        .max(9999)
+        .refine((value) => value !== 0),
       reason: z.enum(ADJUST_REASONS),
       note: z.string().max(500).default(""),
     }),
@@ -475,4 +563,23 @@ export const SUPPLIER_TOOLS: AiTool[] = [
       return result.ok ? { ok: true, data: "Price changed." } : result;
     },
   }),
+  restStep(
+    "mark_rest_out_for_delivery",
+    "mark_rest_out_for_delivery",
+    "Send the rest of a part-accepted order (its second delivery) out for delivery.",
+    "Send out the rest of",
+    "Rest out for delivery",
+    "The rest is out for delivery. The buyer has been told.",
+    ["waiting"],
+  ),
+  restStep(
+    "deliver_rest",
+    "deliver_rest",
+    "Mark the rest of a part-accepted order (its second delivery) delivered. It leaves stock now, so the stock has to be in.",
+    "Deliver the rest of",
+    "Rest delivered",
+    "The rest is delivered and the buyer asked to check it.",
+    ["waiting", "out_for_delivery"],
+  ),
+  ...orderRequestTools("supplier"),
 ];

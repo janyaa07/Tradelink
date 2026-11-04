@@ -31,7 +31,16 @@ export function orderFacts(order: OrderView) {
     delivery: order.confirmedDeliveryDate ?? order.requestedDeliveryDate,
     placed: order.createdAt.slice(0, 10),
     total: formatMoney(order.totalCents),
-    lines: order.lines.map((line) => ({ product_id: line.productId, item: line.name, qty: line.qty, unit: line.unit })),
+    ...(order.later
+      ? { rest: { delivery: order.later.date, status: order.later.status.replace(/_/g, " "), value: formatMoney(order.laterCents) } }
+      : {}),
+    lines: order.lines.map((line) => ({
+      product_id: line.productId,
+      item: line.name,
+      qty: line.qty,
+      ...(line.laterQty > 0 ? { later_qty: line.laterQty } : {}),
+      unit: line.unit,
+    })),
   };
 }
 

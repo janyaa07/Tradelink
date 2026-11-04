@@ -40,6 +40,7 @@ const STATUS: Record<string, [string, string]> = {
   get_inventory: ["Checking stock", "Checked stock"],
   get_problems: ["Checking problems", "Checked problems"],
   get_business_profile: ["Checking your terms", "Checked your terms"],
+  get_order_messages: ["Reading messages", "Read messages"],
   new_product_form: ["Filling in the form", "Filled in the form"],
   new_supplier_form: ["Filling in the form", "Filled in the form"],
 };
@@ -59,6 +60,8 @@ const RULES = [
   "Plain sentences in the person's language. No headings, tables, bold, emoji or exclamation marks. A short list only for facts no card shows, at most 4 lines.",
   "Doing what was asked: when the person says to order or buy something now, find the product, then call order_now for just that so they get its confirm card; never use the cart and do not show product cards for it. When several products match, pick the one in their cart, usual items or past orders (otherwise the best-selling or cheapest), name it in a few words and offer the other as a follow-up such as [[ask:Basmati rice instead]]; ask only when the products are too different to guess. To add a product or a supplier, use new_product_form or new_supplier_form; the form card does the adding, so never say you cannot.",
   "End with up to 2 likely next questions the person could tap, each on its own line as [[ask:short question]], for example [[ask:What is low in stock?]]. They must lead somewhere new: never repeat what a card or confirm card above already lets them do (adding, ordering, accepting, confirming, changing quantities), and never offer the same thing for a different item. Leave them out when nothing is clearly useful.",
+  "Buyers and suppliers can talk through you about an order: message_buyer or message_supplier sends a short note (such as asking to send as much as possible today), request_date_change asks to move a delivery and the other side must agree, answer_date_change answers their request. Never say you cannot contact the other side.",
+  "A part-accepted order can come in two deliveries: lines show qty now and later_qty for the rest, and rest gives its date and status.",
   "For anything outside ordering, stock, deliveries, suppliers and spend on Tradelink, say in one line what you can help with.",
 ].join("\n");
 

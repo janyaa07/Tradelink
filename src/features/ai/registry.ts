@@ -72,7 +72,8 @@ export function toClaudeTool(tool: AiTool) {
   delete schema.$schema;
   return {
     name: tool.name,
-    description: tool.kind === "write" ? `${tool.description} Shows the person a confirm card; nothing changes until they tap Confirm.` : tool.description,
+    description:
+      tool.kind === "write" ? `${tool.description} Shows the person a confirm card; nothing changes until they tap Confirm.` : tool.description,
     input_schema: { type: "object" as const, ...schema },
   };
 }

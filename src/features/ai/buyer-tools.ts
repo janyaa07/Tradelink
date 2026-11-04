@@ -29,6 +29,7 @@ import { formatDaysLeft } from "@/domain/reorder";
 import { weekdayName } from "@/domain/singapore-time";
 import { orderCard, productCard, tag } from "./cards";
 import { cardTool, readTool, writeTool, type AiContext, type AiTool, type ExecResult } from "./registry";
+import { orderRequestTools } from "./order-request-tools";
 import { deliveryDay, findOrder, NOT_FOUND, orderFacts, orderNumberInput } from "./shared";
 
 const productId = z.uuid().describe("product_id from find_products, get_cart or get_order");
@@ -81,7 +82,12 @@ async function cartCard(userId: string, fresh = false): Promise<Extract<AiCard, 
   };
 }
 
-const itemsInput = z.object({ items: z.array(z.object({ product_id: productId, qty })).min(1).max(30) });
+const itemsInput = z.object({
+  items: z
+    .array(z.object({ product_id: productId, qty }))
+    .min(1)
+    .max(30),
+});
 
 /** Checks requested items against what the buyer can see and what is free to order. */
 function checkItems(items: z.infer<typeof itemsInput>["items"], byId: Map<string, CatalogueItem>): string | null {
@@ -123,7 +129,8 @@ function freshCard(card: AiCard): AiCard {
 export const BUYER_TOOLS: AiTool[] = [
   readTool({
     name: "find_products",
-    description: "Search the catalogue of the buyer's suppliers by name, brand or supplier. Returns price, unit, supplier, stock available and a card tag for each.",
+    description:
+      "Search the catalogue of the buyer's suppliers by name, brand or supplier. Returns price, unit, supplier, stock available and a card tag for each.",
     input: z.object({ query: z.string().min(1).max(80).describe("Words to search, such as 'eggs' or 'cooking oil'") }),
     run: async (ctx, { query }) => {
       const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -158,7 +165,10 @@ export const BUYER_TOOLS: AiTool[] = [
       "The buyer's orders, newest first. filter: active (not yet delivered), to_check (arrived or arriving, not yet checked), delivered, problems, cancelled or all. delivery_on narrows to one delivery day: 'today', 'tomorrow' or YYYY-MM-DD. Use it whenever the person names a day.",
     input: z.object({
       filter: z.enum(["active", "to_check", "delivered", "problems", "cancelled", "all"]),
-      delivery_on: z.string().regex(/^(today|tomorrow|\d{4}-\d{2}-\d{2})$/).optional(),
+      delivery_on: z
+        .string()
+        .regex(/^(today|tomorrow|\d{4}-\d{2}-\d{2})$/)
+        .optional(),
       limit: z.number().int().min(1).max(20).default(8),
     }),
     run: async (ctx, { filter, delivery_on, limit }) => {
@@ -183,7 +193,8 @@ export const BUYER_TOOLS: AiTool[] = [
   }),
   readTool({
     name: "get_cart",
-    description: "What is in the buyer's cart now, with prices, stock free to order, the cart version and a cart card tag. The card lets them change quantities and place the cart.",
+    description:
+      "What is in the buyer's cart now, with prices, stock free to order, the cart version and a cart card tag. The card lets them change quantities and place the cart.",
     input: z.object({}),
     run: async (ctx) => {
       const card = await cartCard(ctx.session.userId);
@@ -214,14 +225,21 @@ export const BUYER_TOOLS: AiTool[] = [
       const budget = toCents(settings.weeklyBudget);
       const card: AiCard = { kind: "ai_spend", key: "SPEND", spend: { spentCents: spent, budgetCents: budget } };
       return {
-        data: { card: tag(card), spent_this_week: formatMoney(spent), weekly_budget: formatMoney(budget), left: formatMoney(Math.max(0, budget - spent)), settings },
+        data: {
+          card: tag(card),
+          spent_this_week: formatMoney(spent),
+          weekly_budget: formatMoney(budget),
+          left: formatMoney(Math.max(0, budget - spent)),
+          settings,
+        },
         cards: [card],
       };
     },
   }),
   readTool({
     name: "get_alerts",
-    description: "Things that need the buyer: price changes on usual items, part deliveries, and supplier replies or promised credits on problems. Each has a card tag with its own buttons.",
+    description:
+      "Things that need the buyer: price changes on usual items, part deliveries, and supplier replies or promised credits on problems. Each has a card tag with its own buttons.",
     input: z.object({}),
     run: async (ctx) => {
       const todos = await getTodos(ctx.session.orgId);
@@ -320,11 +338,13 @@ export const BUYER_TOOLS: AiTool[] = [
 
   writeTool({
     name: "add_to_cart",
-    description: "Add products to the buyer's cart to order later. Use product_id values from find_products. When they say to order or buy now, use order_now instead.",
+    description:
+      "Add products to the buyer's cart to order later. Use product_id values from find_products. When they say to order or buy now, use order_now instead.",
     input: itemsInput,
     propose: async (_ctx, { items }) => {
       const byId = await catalogueById();
-      if (!items.every((entry) => byId.has(entry.product_id))) return { error: "One of those products is not in the catalogue. Search again with find_products." };
+      if (!items.every((entry) => byId.has(entry.product_id)))
+        return { error: "One of those products is not in the catalogue. Search again with find_products." };
       return {
         title: `Add ${items.length} ${items.length === 1 ? "item" : "items"} to your cart`,
         details: items.map((entry) => {
@@ -340,7 +360,10 @@ export const BUYER_TOOLS: AiTool[] = [
       if (!result.ok) return result;
       const first = items[0];
       const item = first && items.length === 1 ? (await catalogueById()).get(first.product_id) : undefined;
-      return { ok: true, data: item && first ? `Added ${plural(first.qty, item.unit)} of ${item.name} to your cart.` : `Added ${items.length} items to your cart.` };
+      return {
+        ok: true,
+        data: item && first ? `Added ${plural(first.qty, item.unit)} of ${item.name} to your cart.` : `Added ${items.length} items to your cart.`,
+      };
     },
   }),
   writeTool({
@@ -401,7 +424,8 @@ export const BUYER_TOOLS: AiTool[] = [
         p_draft_version: null,
         p_key: key,
       });
-      if (!result.ok) return result.reason === "STOCK_SHORT" ? { ok: false, error: "Some of that just sold out. Ask again to see what is left." } : result;
+      if (!result.ok)
+        return result.reason === "STOCK_SHORT" ? { ok: false, error: "Some of that just sold out. Ask again to see what is left." } : result;
       const placed = result.data.orders.map((order) => `${orderNumber(order.number)} to ${order.supplierName}`).join(", ");
       return { ok: true, data: `Placed ${placed}. Your cart is unchanged.` };
     },
@@ -479,14 +503,19 @@ export const BUYER_TOOLS: AiTool[] = [
   }),
   readTool({
     name: "new_supplier_form",
-    description: "Show a form card to add a supplier who is not on Tradelink yet, filled in from the request. The person checks it and taps Add supplier.",
+    description:
+      "Show a form card to add a supplier who is not on Tradelink yet, filled in from the request. The person checks it and taps Add supplier.",
     input: z.object({
       name: z.string().trim().min(2).max(120),
       contact: z.string().trim().max(120).optional(),
       phone: z.string().trim().max(20).optional(),
     }),
     run: async (ctx, input) => {
-      const card: AiCard = { kind: "ai_new_supplier", key: ctx.cardKey("NS"), form: { name: input.name, contact: input.contact ?? null, phone: input.phone ?? null } };
+      const card: AiCard = {
+        kind: "ai_new_supplier",
+        key: ctx.cardKey("NS"),
+        form: { name: input.name, contact: input.contact ?? null, phone: input.phone ?? null },
+      };
       return { data: { card: tag(card), note: "Nothing is added until they tap Add supplier on the card." }, cards: [card] };
     },
   }),
@@ -513,7 +542,10 @@ export const BUYER_TOOLS: AiTool[] = [
         p_key: key,
       });
       if (!result.ok) {
-        return { ok: false, error: result.reason === "DUPLICATE" ? `${input.name} is already in that supplier's catalogue. Search for it instead.` : result.error };
+        return {
+          ok: false,
+          error: result.reason === "DUPLICATE" ? `${input.name} is already in that supplier's catalogue. Search for it instead.` : result.error,
+        };
       }
       const item = (await getCatalogue()).find((entry) => entry.id === result.data.productId);
       const who = item?.supplierName ?? input.new_supplier ?? "The supplier";
@@ -530,7 +562,11 @@ export const BUYER_TOOLS: AiTool[] = [
     input: z.object({
       name: z.string().trim().min(2).max(120),
       contact: z.string().trim().max(120).optional(),
-      phone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/).optional(),
+      phone: z
+        .string()
+        .trim()
+        .regex(/^\+?[0-9 ]{8,16}$/)
+        .optional(),
     }),
     exec: async (_ctx, input, key): Promise<ExecResult> => {
       const result = await callRpc<{ supplierId: string; name: string }>("buyer_add_supplier", {
@@ -684,14 +720,36 @@ export const BUYER_TOOLS: AiTool[] = [
       return result.ok ? { ok: true, data: "Removed from your usual items." } : result;
     },
   }),
+  ...orderRequestTools("buyer"),
 ];
 
 /** Cancel, All here and Not here yet: the same shape, one database function each. */
 function orderWriteTools(): AiTool[] {
   const specs = [
-    { name: "cancel_order", rpc: "cancel_order", description: "Cancel a pending order the supplier has not accepted yet.", title: "Cancel", label: "Cancel order", done: "Order cancelled and stock released." },
-    { name: "confirm_delivery", rpc: "confirm_all_here", description: "Confirm everything on a delivered or arriving order arrived.", title: "Confirm all here for", label: "All here", done: "Delivery confirmed." },
-    { name: "report_not_here", rpc: "report_not_here", description: "Tell the supplier an order that is out for delivery has not arrived.", title: "Report not here yet for", label: "Not here yet", done: "The supplier has been told it has not arrived." },
+    {
+      name: "cancel_order",
+      rpc: "cancel_order",
+      description: "Cancel a pending order the supplier has not accepted yet.",
+      title: "Cancel",
+      label: "Cancel order",
+      done: "Order cancelled and stock released.",
+    },
+    {
+      name: "confirm_delivery",
+      rpc: "confirm_all_here",
+      description: "Confirm everything on a delivered or arriving order arrived.",
+      title: "Confirm all here for",
+      label: "All here",
+      done: "Delivery confirmed.",
+    },
+    {
+      name: "report_not_here",
+      rpc: "report_not_here",
+      description: "Tell the supplier an order that is out for delivery has not arrived.",
+      title: "Report not here yet for",
+      label: "Not here yet",
+      done: "The supplier has been told it has not arrived.",
+    },
   ];
   return specs.map((spec) =>
     writeTool({
@@ -703,7 +761,10 @@ function orderWriteTools(): AiTool[] {
         if (!order) return NOT_FOUND;
         return {
           title: `${spec.title} ${orderNumber(order.number)}`,
-          details: [`${order.supplier.name} · ${order.status.replace(/_/g, " ")} · ${formatMoney(order.totalCents)}`, ...order.lines.map((line) => `${line.qty} × ${line.name}`)],
+          details: [
+            `${order.supplier.name} · ${order.status.replace(/_/g, " ")} · ${formatMoney(order.totalCents)}`,
+            ...order.lines.map((line) => `${line.qty} × ${line.name}`),
+          ],
           confirmLabel: spec.label,
           args: { order_number, order_id: order.id },
         };

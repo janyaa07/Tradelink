@@ -32,6 +32,17 @@ describe("Tradelink AI tools", () => {
     expect(orderNumberInput.safeParse("my order").success).toBe(false);
   });
 
+  it("lets each side message the other and agree delivery date changes", () => {
+    const buyer = new Set(BUYER_TOOLS.map((tool) => tool.name));
+    const supplier = new Set(SUPPLIER_TOOLS.map((tool) => tool.name));
+    for (const name of ["get_order_messages", "request_date_change", "answer_date_change", "cancel_rest"]) {
+      expect(buyer.has(name) && supplier.has(name), name).toBe(true);
+    }
+    expect(buyer.has("message_supplier") && !buyer.has("message_buyer")).toBe(true);
+    expect(supplier.has("message_buyer") && !supplier.has("message_supplier")).toBe(true);
+    expect(supplier.has("deliver_rest") && !buyer.has("deliver_rest")).toBe(true);
+  });
+
   it("only lets suppliers change stock and prices, and only buyers place orders", () => {
     const buyer = new Set(BUYER_TOOLS.map((tool) => tool.name));
     const supplier = new Set(SUPPLIER_TOOLS.map((tool) => tool.name));
