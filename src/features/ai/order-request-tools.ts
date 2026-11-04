@@ -57,7 +57,7 @@ export function orderRequestTools(role: AiContext["role"]): AiTool[] {
       name: `message_${other}`,
       description:
         `Send the ${other} a short message about one order, such as asking them to send as much as they can today, or answering their question. ` +
-        `Write it in plain words as the person would, up to 500 characters. If the person does not name an order, use their latest open order with that ${other} from list_orders; if there is none, say so.`,
+        `Write it in plain words as the person would, up to 500 characters, using only what they asked: never add reasons, urgency or details they did not give. If the person does not name an order, use their latest open order with that ${other} from list_orders; if there is none, say so.`,
       input: z.object({ order_number: orderNumberInput, message: z.string().trim().min(1).max(500) }),
       propose: async (ctx, { order_number, message }) => {
         const order = await findOrder(order_number);

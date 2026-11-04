@@ -32,11 +32,7 @@ export type ReadLineStatus = "Matched" | "Check this" | "Not found";
 export type LineRow = { label: string; status: ReadLineStatus | null; note: string | null; price: string | null };
 
 /** Typed cards the app renders. The model never supplies markup (ADR 0009). */
-export type AskCard =
-  | { kind: "order"; order: OrderCardData }
-  | { kind: "price"; price: PriceCardData }
-  | { kind: "lines"; rows: LineRow[] }
-  | AiCard;
+export type AskCard = { kind: "order"; order: OrderCardData } | { kind: "price"; price: PriceCardData } | { kind: "lines"; rows: LineRow[] } | AiCard;
 
 /**
  * Tradelink AI cards. The server builds them from the database; the answer shows one by writing its
@@ -115,7 +111,7 @@ export type AiProblem = {
 
 export type AiAlert = {
   id: string;
-  kind: "price" | "partial" | "reply" | "credit";
+  kind: "price" | "partial" | "reply" | "credit" | "date";
   title: string;
   detail: string;
   tone: "good" | "warn" | "bad";

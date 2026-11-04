@@ -42,6 +42,7 @@ const TODO_SUBJECTS: Record<Todo["action"]["kind"], string> = {
   partial: "a part delivery",
   reply: "a reply about a problem",
   credit: "a credit to confirm",
+  date: "a new delivery date to answer",
 };
 
 /** The buyer's steps: tomorrow's order, deliveries to check and alerts. Deliveries come first in the morning. */

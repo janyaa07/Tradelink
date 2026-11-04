@@ -6,6 +6,7 @@ import type { TodoAction } from "@/domain/todos";
 import type { ActionResult } from "@/lib/errors";
 import { Button } from "@/ui/Button";
 import { useToast } from "@/ui/Toast";
+import { answerDeliveryDateAction } from "@/features/orders/request-actions";
 import { ackPriceChangeAction, markCreditReceivedAction, markIssueSeenAction, orderRemainderAction, skipPartialAction } from "./home-actions";
 
 /** The buttons on one alert that needs action (BUY-02 to BUY-04). */
@@ -65,6 +66,26 @@ export function TodoActions({ action }: { action: TodoAction }) {
           </Button>
           <Button size="small" disabled={busy} onClick={() => run(() => skipPartialAction(action.id), "Skipped.")}>
             Skip
+          </Button>
+        </>
+      );
+    case "date":
+      return (
+        <>
+          <Button
+            variant="primary"
+            size="small"
+            disabled={busy}
+            onClick={() => run(() => answerDeliveryDateAction({ requestId: action.id, accept: true, key: creditKey }), "New date agreed.")}
+          >
+            Accept new date
+          </Button>
+          <Button
+            size="small"
+            disabled={busy}
+            onClick={() => run(() => answerDeliveryDateAction({ requestId: action.id, accept: false, key: creditKey }), "Date change declined.")}
+          >
+            Decline
           </Button>
         </>
       );

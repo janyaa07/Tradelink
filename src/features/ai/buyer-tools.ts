@@ -239,7 +239,7 @@ export const BUYER_TOOLS: AiTool[] = [
   readTool({
     name: "get_alerts",
     description:
-      "Things that need the buyer: price changes on usual items, part deliveries, and supplier replies or promised credits on problems. Each has a card tag with its own buttons.",
+      "Things that need the buyer: price changes on usual items, part deliveries, supplier replies or promised credits on problems, and delivery date changes a supplier asked for (answer with answer_date_change and the request_id). Each has a card tag with its own buttons.",
     input: z.object({}),
     run: async (ctx) => {
       const todos = await getTodos(ctx.session.orgId);
@@ -256,6 +256,7 @@ export const BUYER_TOOLS: AiTool[] = [
           kind: todo.action.kind,
           ...(todo.action.kind === "price" ? { price_change_id: todo.action.id } : {}),
           ...(todo.action.kind === "credit" || todo.action.kind === "reply" ? { issue_id: todo.action.id } : {}),
+          ...(todo.action.kind === "date" ? { request_id: todo.action.id } : {}),
         })),
         cards,
       };

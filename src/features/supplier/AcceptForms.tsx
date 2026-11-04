@@ -152,12 +152,26 @@ export function PartAcceptForm({ order, idemKey, minDate, defaultDate, onClose }
         <legend className="mb-1 text-[.82rem] text-muted">What you cannot send now</legend>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <label className="flex min-h-10 cursor-pointer items-center gap-2">
-            <input type="radio" name={restName} className="size-4 accent-accent" checked={rest === "dropped"} onChange={() => setRest("dropped")} />
+            <input
+              type="radio"
+              name={restName}
+              value="dropped"
+              className="size-4 accent-accent"
+              checked={rest === "dropped"}
+              onChange={() => setRest("dropped")}
+            />
             Not coming
           </label>
           <span className="flex flex-wrap items-center gap-2">
             <label className="flex min-h-10 cursor-pointer items-center gap-2">
-              <input type="radio" name={restName} className="size-4 accent-accent" checked={rest === "later"} onChange={() => setRest("later")} />
+              <input
+                type="radio"
+                name={restName}
+                value="later"
+                className="size-4 accent-accent"
+                checked={rest === "later"}
+                onChange={() => setRest("later")}
+              />
               Send the rest on
             </label>
             <input

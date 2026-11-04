@@ -2,8 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/data/supabase/server";
-import { buildTodos, type PartialInput, type PriceChangeInput, type ReplyInput, type Todo } from "@/domain/todos";
-import { orderNumber } from "@/ui/format";
+import { buildTodos, type DateRequestInput, type PartialInput, type PriceChangeInput, type ReplyInput, type Todo } from "@/domain/todos";
+import { formatDate, orderNumber } from "@/ui/format";
 import { getBuyerSettings, getUsualItems } from "./queries";
 
 const money = z.union([z.string(), z.number()]).transform((value) => Number(value).toFixed(2));
@@ -35,7 +35,12 @@ async function getPriceChanges(orgId: string, productIds: string[]): Promise<Pri
   ]);
   if (changes.error) fail("price changes", changes.error.message);
   if (acks.error) fail("price changes", acks.error.message);
-  const acked = new Set(z.array(z.object({ price_change_id: z.uuid() })).parse(acks.data).map((row) => row.price_change_id));
+  const acked = new Set(
+    z
+      .array(z.object({ price_change_id: z.uuid() }))
+      .parse(acks.data)
+      .map((row) => row.price_change_id),
+  );
   return z
     .array(priceChangeSchema)
     .parse(changes.data)
@@ -112,13 +117,71 @@ async function getReplies(orgId: string): Promise<ReplyInput[]> {
     }));
 }
 
+const dateRequestSchema = z.object({
+  id: z.uuid(),
+  part: z.enum(["first", "rest"]).nullable(),
+  proposed_date: z.string(),
+  body: z.string().nullable(),
+  parent: z
+    .object({
+      id: z.uuid(),
+      number: z.number(),
+      requested_delivery_date: z.string().nullable(),
+      confirmed_delivery_date: z.string().nullable(),
+      later_delivery_date: z.string().nullable(),
+      supplier: named,
+    })
+    .nullable(),
+});
+
+/** Delivery date changes a supplier asked for that wait for the buyer's answer. */
+async function getDateRequests(orgId: string): Promise<DateRequestInput[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("order_requests")
+    .select(
+      "id, part, proposed_date, body, parent:orders(id, number, requested_delivery_date, confirmed_delivery_date, later_delivery_date, supplier:organisations!orders_supplier_org_id_fkey(name))",
+    )
+    .eq("kind", "date_change")
+    .eq("status", "open")
+    .neq("from_org_id", orgId)
+    .order("created_at", { ascending: false });
+  if (error) fail("date changes", error.message);
+  return z
+    .array(dateRequestSchema)
+    .parse(data)
+    .flatMap((row) => {
+      if (!row.parent) return [];
+      const rest = row.part === "rest";
+      const from = rest ? row.parent.later_delivery_date : (row.parent.confirmed_delivery_date ?? row.parent.requested_delivery_date);
+      return [
+        {
+          id: row.id,
+          orderId: row.parent.id,
+          orderRef: orderNumber(row.parent.number),
+          supplierName: row.parent.supplier?.name ?? "Your supplier",
+          rest,
+          from: from ? formatDate(from) : null,
+          to: formatDate(row.proposed_date),
+          note: row.body,
+        },
+      ];
+    });
+}
+
 /** The buyer's To do list, most urgent first. Cached per request. */
 export const getTodos = cache(async (orgId: string): Promise<Todo[]> => {
   const [settings, usuals] = await Promise.all([getBuyerSettings(orgId), getUsualItems(orgId)]);
-  const [priceChanges, partials, replies] = await Promise.all([
-    settings.priceAlerts ? getPriceChanges(orgId, usuals.map((usual) => usual.productId)) : Promise.resolve([]),
+  const [priceChanges, partials, replies, dateRequests] = await Promise.all([
+    settings.priceAlerts
+      ? getPriceChanges(
+          orgId,
+          usuals.map((usual) => usual.productId),
+        )
+      : Promise.resolve([]),
     getPartials(),
     getReplies(orgId),
+    getDateRequests(orgId),
   ]);
-  return buildTodos({ priceChanges, partials, replies }, settings.priceAlerts);
+  return buildTodos({ priceChanges, partials, replies, dateRequests }, settings.priceAlerts);
 });

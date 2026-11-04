@@ -4,7 +4,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { CATEGORIES, CATEGORY_LABELS, UNITS } from "@/domain/catalogue";
-import type { AiAlert, AiCard, AiCart, AiCartLine, AiNewProduct, AiNewSupplier, AiOrder, AiProblem, AiProduct, AiStock, AiSupplier } from "@/domain/ask/types";
+import type {
+  AiAlert,
+  AiCard,
+  AiCart,
+  AiCartLine,
+  AiNewProduct,
+  AiNewSupplier,
+  AiOrder,
+  AiProblem,
+  AiProduct,
+  AiStock,
+  AiSupplier,
+} from "@/domain/ask/types";
 import { formatMoney } from "@/domain/money";
 import { executeAiAction } from "@/features/ai/execute";
 import { Stepper } from "@/features/ordering/Stepper";
@@ -69,11 +81,23 @@ function MiniStepper({
   const round = "grid size-7 place-items-center rounded-full text-muted hover:text-ink disabled:opacity-50";
   return (
     <span className="inline-flex flex-none items-center rounded-full border border-line bg-surface">
-      <button type="button" aria-label={value === 1 && min === 0 ? `Remove ${label}` : `One less ${label}`} disabled={busy || value <= min} onClick={() => onChange(value - 1)} className={round}>
+      <button
+        type="button"
+        aria-label={value === 1 && min === 0 ? `Remove ${label}` : `One less ${label}`}
+        disabled={busy || value <= min}
+        onClick={() => onChange(value - 1)}
+        className={round}
+      >
         {value === 1 && min === 0 ? "×" : "−"}
       </button>
       <span className="min-w-6 text-center text-[.85rem] font-semibold tabular-nums">{value}</span>
-      <button type="button" aria-label={`One more ${label}`} disabled={busy || (max !== null && value >= max)} onClick={() => onChange(value + 1)} className={round}>
+      <button
+        type="button"
+        aria-label={`One more ${label}`}
+        disabled={busy || (max !== null && value >= max)}
+        onClick={() => onChange(value + 1)}
+        className={round}
+      >
         +
       </button>
     </span>
@@ -156,7 +180,9 @@ function Frame({
         </p>
       ) : null}
       {children ? <div className="px-3.5 pb-3">{children}</div> : null}
-      {actions && !result?.ok ? <div className="flex flex-wrap items-center gap-2 border-t border-line bg-sunken/40 px-3.5 py-2.5">{actions}</div> : null}
+      {actions && !result?.ok ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-line bg-sunken/40 px-3.5 py-2.5">{actions}</div>
+      ) : null}
       {result ? (
         <p
           role="status"
@@ -183,7 +209,11 @@ function Lines({ lines }: { lines: AiOrder["lines"] }) {
           <span className="min-w-0 truncate">{line.name}</span>
         </li>
       ))}
-      {more > 0 ? <li className="pl-11 text-[.8rem] text-muted">+{more} more {more === 1 ? "item" : "items"}</li> : null}
+      {more > 0 ? (
+        <li className="pl-11 text-[.8rem] text-muted">
+          +{more} more {more === 1 ? "item" : "items"}
+        </li>
+      ) : null}
     </ul>
   );
 }
@@ -268,7 +298,11 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
             {busy ? "Accepting..." : `Accept with changes for ${formatDate(date)}`}
           </Button>
         ) : (
-          <Button variant="primary" disabled={busy} onClick={() => act("accept_order", { status: "accepted", deliveryDate: date }, { delivery_date: date })}>
+          <Button
+            variant="primary"
+            disabled={busy}
+            onClick={() => act("accept_order", { status: "accepted", deliveryDate: date }, { delivery_date: date })}
+          >
             {busy ? "Accepting..." : `Accept for ${formatDate(date)}`}
           </Button>
         )}
@@ -298,7 +332,14 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
       </Button>
     );
   } else if (!supplier && order.status === "pending") {
-    actions = <TwoStepButton label="Cancel order" confirmLabel="Tap again to cancel" busy={busy} onConfirm={() => act("cancel_order", { status: "cancelled" })} />;
+    actions = (
+      <TwoStepButton
+        label="Cancel order"
+        confirmLabel="Tap again to cancel"
+        busy={busy}
+        onConfirm={() => act("cancel_order", { status: "cancelled" })}
+      />
+    );
   } else if (!supplier && order.status === "out_for_delivery") {
     actions = (
       <>
@@ -341,7 +382,14 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
             const send = sendQty[id] ?? line.qty;
             return (
               <li key={id} className="flex items-center gap-2">
-                <MiniStepper value={send} min={0} max={line.qty} label={line.name} busy={busy} onChange={(value) => setSendQty({ ...sendQty, [id]: value })} />
+                <MiniStepper
+                  value={send}
+                  min={0}
+                  max={line.qty}
+                  label={line.name}
+                  busy={busy}
+                  onChange={(value) => setSendQty({ ...sendQty, [id]: value })}
+                />
                 <span className="min-w-0 flex-1 truncate">{line.name}</span>
                 <span className={cx("flex-none text-[.8rem] tabular-nums", send === line.qty ? "text-muted" : "text-warn")}>
                   {send === 0 ? "Not sending" : `of ${line.qty}`}
@@ -370,7 +418,9 @@ function OrderCardView({ card, order, onChange }: { card: Extract<AiCard, { kind
 function ProductCardView({ card, product, onChange }: { card: Extract<AiCard, { kind: "ai_product" }>; product: AiProduct; onChange: Change }) {
   const [qty, setQty] = useState(product.suggestedQty && product.suggestedQty > 0 ? product.suggestedQty : 1);
   const added = useRef(0);
-  const { busy, result, run } = useCardRun(() => onChange({ ...card, product: { ...product, inCart: product.inCart + added.current, added: false } }));
+  const { busy, result, run } = useCardRun(() =>
+    onChange({ ...card, product: { ...product, inCart: product.inCart + added.current, added: false } }),
+  );
   const soldOut = product.available !== null && product.available <= 0;
   const stock = product.available === null ? "Stock to be confirmed" : soldOut ? "Out of stock" : `${product.available} available`;
   return (
@@ -453,7 +503,11 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
     } else if (mode === "adjust") {
       run("adjust_stock", { product_id: stock.id, change: direction * number, reason });
     } else if (mode === "receive") {
-      change.current = { onHand: stock.onHand + number, available: stock.available + number, health: stock.available + number > stock.reorderLevel ? "healthy" : stock.health };
+      change.current = {
+        onHand: stock.onHand + number,
+        available: stock.available + number,
+        health: stock.available + number > stock.reorderLevel ? "healthy" : stock.health,
+      };
       run("receive_stock", { product_id: stock.id, qty: number });
     } else {
       change.current = { priceCents: Math.round(number * 100) };
@@ -543,7 +597,15 @@ function StockCardView({ card, stock, onChange }: { card: Extract<AiCard, { kind
               />
             </label>
             <Button type="submit" variant="primary" disabled={busy || !valid}>
-              {busy ? "Saving..." : mode === "receive" ? "Add stock" : mode === "price" ? "Save price" : mode === "confirm" ? "Confirm stock" : "Adjust stock"}
+              {busy
+                ? "Saving..."
+                : mode === "receive"
+                  ? "Add stock"
+                  : mode === "price"
+                    ? "Save price"
+                    : mode === "confirm"
+                      ? "Confirm stock"
+                      : "Adjust stock"}
             </Button>
             <Button onClick={() => setMode("none")} disabled={busy}>
               Back
@@ -603,7 +665,7 @@ function ProblemCardView({ problem }: { problem: AiProblem }) {
   );
 }
 
-const ALERT_ICONS: Record<AiAlert["kind"], IconName> = { price: "trend", partial: "truck", reply: "chat", credit: "receipt" };
+const ALERT_ICONS: Record<AiAlert["kind"], IconName> = { price: "trend", partial: "truck", reply: "chat", credit: "receipt", date: "truck" };
 
 function AlertCardView({ alert }: { alert: AiAlert }) {
   const { busy, result, run } = useCardRun(() => undefined);
@@ -676,18 +738,22 @@ function CartCardView({ card, cart, onChange }: { card: Extract<AiCard, { kind: 
         </span>
       }
       title="Your cart"
-      sub={empty ? "Empty" : `${cart.lines.length} ${cart.lines.length === 1 ? "item" : "items"} · ${cart.suppliers} ${cart.suppliers === 1 ? "supplier" : "suppliers"}`}
+      sub={
+        empty
+          ? "Empty"
+          : `${cart.lines.length} ${cart.lines.length === 1 ? "item" : "items"} · ${cart.suppliers} ${cart.suppliers === 1 ? "supplier" : "suppliers"}`
+      }
       pill={empty ? null : <b className="text-[1.05rem] tabular-nums">{formatMoney(cart.totalCents)}</b>}
       actions={
         empty ? null : (
           <>
             <Button variant="primary" disabled={busy || blocked > 0} onClick={() => place.run("place_order", { cart_version: cart.version })}>
-              {place.busy ? "Placing..." : `${cart.suppliers > 1 ? `Place ${cart.suppliers} orders` : "Place order"} · ${formatMoney(cart.totalCents)}`}
+              {place.busy
+                ? "Placing..."
+                : `${cart.suppliers > 1 ? `Place ${cart.suppliers} orders` : "Place order"} · ${formatMoney(cart.totalCents)}`}
             </Button>
             {blocked > 0 ? (
-              <span className="text-[.8rem] text-warn">
-                Fix {blocked === 1 ? "the item" : `${blocked} items`} marked below first
-              </span>
+              <span className="text-[.8rem] text-warn">Fix {blocked === 1 ? "the item" : `${blocked} items`} marked below first</span>
             ) : null}
             {edit.result && !edit.result.ok ? <span className="text-[.8rem] text-bad">{edit.result.text}</span> : null}
           </>
@@ -795,7 +861,8 @@ function SpendCardView({ spend }: { spend: { spentCents: number; budgetCents: nu
 }
 
 function SupplierCardView({ supplier }: { supplier: AiSupplier }) {
-  const tone: PillTone = supplier.onTimePercent === null ? "plain" : supplier.onTimePercent >= 90 ? "good" : supplier.onTimePercent >= 70 ? "warn" : "bad";
+  const tone: PillTone =
+    supplier.onTimePercent === null ? "plain" : supplier.onTimePercent >= 90 ? "good" : supplier.onTimePercent >= 70 ? "warn" : "bad";
   return (
     <Frame
       lead={<BusinessLogo name={supplier.name} size={36} />}
@@ -814,7 +881,9 @@ function SupplierCardView({ supplier }: { supplier: AiSupplier }) {
     >
       {supplier.invited ? null : (
         <p className="text-[.8rem] text-muted">
-          {supplier.deliveries === 0 ? "No deliveries yet" : `Based on ${supplier.deliveries} ${supplier.deliveries === 1 ? "delivery" : "deliveries"}`}
+          {supplier.deliveries === 0
+            ? "No deliveries yet"
+            : `Based on ${supplier.deliveries} ${supplier.deliveries === 1 ? "delivery" : "deliveries"}`}
         </p>
       )}
     </Frame>
@@ -879,7 +948,13 @@ function NewProductCardView({ card, form, onChange }: { card: Extract<AiCard, { 
         </span>
       }
       title="New product"
-      sub={supplierView ? "Added to your inventory" : supplier === NEW_SUPPLIER && newSupplier.trim() ? `Adds ${newSupplier.trim()} as a new supplier too` : "The supplier confirms the price and stock"}
+      sub={
+        supplierView
+          ? "Added to your inventory"
+          : supplier === NEW_SUPPLIER && newSupplier.trim()
+            ? `Adds ${newSupplier.trim()} as a new supplier too`
+            : "The supplier confirms the price and stock"
+      }
       actions={
         <>
           <Button variant="primary" disabled={busy || missing.length > 0} onClick={submit}>
@@ -911,7 +986,13 @@ function NewProductCardView({ card, form, onChange }: { card: Extract<AiCard, { 
           </select>
         </FormField>
         <FormField label={supplierView ? "Price (S$)" : "Estimated price (S$)"}>
-          <input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" placeholder="0.00" className={cx(inputClass, "tabular-nums")} />
+          <input
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+            inputMode="decimal"
+            placeholder="0.00"
+            className={cx(inputClass, "tabular-nums")}
+          />
         </FormField>
         {supplierView ? (
           <>
@@ -926,10 +1007,20 @@ function NewProductCardView({ card, form, onChange }: { card: Extract<AiCard, { 
               </select>
             </FormField>
             <FormField label="Opening stock">
-              <input value={opening} onChange={(event) => setOpening(event.target.value)} inputMode="numeric" className={cx(inputClass, "tabular-nums")} />
+              <input
+                value={opening}
+                onChange={(event) => setOpening(event.target.value)}
+                inputMode="numeric"
+                className={cx(inputClass, "tabular-nums")}
+              />
             </FormField>
             <FormField label="Reorder at">
-              <input value={reorder} onChange={(event) => setReorder(event.target.value)} inputMode="numeric" className={cx(inputClass, "tabular-nums")} />
+              <input
+                value={reorder}
+                onChange={(event) => setReorder(event.target.value)}
+                inputMode="numeric"
+                className={cx(inputClass, "tabular-nums")}
+              />
             </FormField>
           </>
         ) : (
@@ -958,7 +1049,15 @@ function NewProductCardView({ card, form, onChange }: { card: Extract<AiCard, { 
   );
 }
 
-function NewSupplierCardView({ card, form, onChange }: { card: Extract<AiCard, { kind: "ai_new_supplier" }>; form: AiNewSupplier; onChange: Change }) {
+function NewSupplierCardView({
+  card,
+  form,
+  onChange,
+}: {
+  card: Extract<AiCard, { kind: "ai_new_supplier" }>;
+  form: AiNewSupplier;
+  onChange: Change;
+}) {
   const [name, setName] = useState(form.name);
   const [contact, setContact] = useState(form.contact ?? "");
   const [phone, setPhone] = useState(form.phone ?? "");

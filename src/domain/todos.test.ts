@@ -15,6 +15,35 @@ const dispute = { id: "i1", orderRef: "ORD-1040", supplierName: "Harbour Dry Goo
 const credit = { ...dispute, id: "i2", status: "credit_promised" };
 
 describe("to do", () => {
+  it("asks the buyer to answer a supplier's new delivery date", () => {
+    const [todo] = buildTodos(
+      {
+        priceChanges: [],
+        partials: [],
+        replies: [],
+        dateRequests: [
+          {
+            id: "r1",
+            orderId: "o1",
+            orderRef: "ORD-1085",
+            supplierName: "Island Spice Traders",
+            rest: true,
+            from: "Thu 12 Nov",
+            to: "Sat 14 Nov",
+            note: "Stock arrives Friday",
+          },
+        ],
+      },
+      true,
+    );
+    expect(todo).toMatchObject({
+      title: "Island Spice Traders asks to move the rest of ORD-1085",
+      detail: 'From Thu 12 Nov to Sat 14 Nov. "Stock arrives Friday"',
+      action: { kind: "date", id: "r1" },
+      orderId: "o1",
+    });
+  });
+
   it("describes price changes with one decimal", () => {
     expect(percentChange("11.90", "12.40")).toBe("4.2");
     const [up, down] = buildTodos({ priceChanges: [priceUp], partials: [], replies: [] }, true).concat(

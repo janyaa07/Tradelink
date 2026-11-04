@@ -24,12 +24,27 @@ export type ReplyInput = {
   amount: string;
 };
 
+/** A delivery date change the supplier asked for; dates come already written out, such as "Sat 14 Nov". */
+export type DateRequestInput = {
+  id: string;
+  orderId: string;
+  orderRef: string;
+  supplierName: string;
+  /** True when it is about the second delivery of a part-accepted order. */
+  rest: boolean;
+  from: string | null;
+  to: string;
+  note: string | null;
+};
+
 export type TodoAction =
   | { kind: "price"; id: string }
   | { kind: "partial"; id: string; remainder: number }
   | { kind: "reply"; id: string }
   /** A promised credit: the buyer marks it received once it arrives. */
-  | { kind: "credit"; id: string };
+  | { kind: "credit"; id: string }
+  /** The supplier asks to move a delivery; the buyer accepts or declines. */
+  | { kind: "date"; id: string };
 
 export type Todo = {
   key: string;
@@ -45,7 +60,7 @@ export type Todo = {
 export function percentChange(oldPrice: string, newPrice: string): string {
   const before = toCents(oldPrice);
   if (before === 0) return "0.0";
-  return (Math.abs(toCents(newPrice) - before) / before * 100).toFixed(1);
+  return ((Math.abs(toCents(newPrice) - before) / before) * 100).toFixed(1);
 }
 
 function priceTodo(change: PriceChangeInput): Todo {
@@ -101,16 +116,28 @@ function replyTodo(reply: ReplyInput): Todo | null {
   };
 }
 
+function dateTodo(request: DateRequestInput): Todo {
+  return {
+    key: `date-${request.id}`,
+    tone: "warn",
+    title: `${request.supplierName} asks to move ${request.rest ? "the rest of " : ""}${request.orderRef}`,
+    detail: `${request.from ? `From ${request.from} to ${request.to}` : `To ${request.to}`}.${request.note ? ` "${request.note}"` : ""}`,
+    action: { kind: "date", id: request.id },
+    orderId: request.orderId,
+  };
+}
+
 const TONE_ORDER: Record<TodoTone, number> = { bad: 0, warn: 1, good: 2 };
 
-type TodoInputs = { priceChanges: PriceChangeInput[]; partials: PartialInput[]; replies: ReplyInput[] };
+type TodoInputs = { priceChanges: PriceChangeInput[]; partials: PartialInput[]; replies: ReplyInput[]; dateRequests?: DateRequestInput[] };
 
-/** Price changes (only when price alerts are on), part deliveries and replies; most urgent first. */
+/** Price changes (only when price alerts are on), part deliveries, replies and date requests; most urgent first. */
 export function buildTodos(inputs: TodoInputs, priceAlerts: boolean): Todo[] {
   const items = [
     ...(priceAlerts ? inputs.priceChanges.map(priceTodo) : []),
     ...inputs.partials.map(partialTodo),
     ...inputs.replies.map(replyTodo).filter((todo): todo is Todo => todo !== null),
+    ...(inputs.dateRequests ?? []).map(dateTodo),
   ];
   return items.sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone]);
 }
