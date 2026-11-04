@@ -6,7 +6,7 @@ import { plural } from "@/domain/catalogue";
 import { formatMoney, lineTotal } from "@/domain/money";
 import { requireRole } from "@/data/session";
 import { needsCheck } from "@/features/buyer/orders/filters";
-import { OrderAskBox } from "@/features/buyer/orders/OrderAskBox";
+import { AssistantChat } from "@/features/ask/AssistantChat";
 import { CreditReceivedButton, OrderActions } from "@/features/buyer/orders/OrderActions";
 import { OrderProgress } from "@/features/buyer/orders/OrderProgress";
 import { getMinimums, orderBelowMinimum } from "@/features/buyer/orders/minimum";
@@ -339,7 +339,16 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <OrderAskBox orderRef={ref} supplierName={order.supplier.name} />
+            <AssistantChat
+              hello=""
+              userId={session.userId}
+              role="buyer"
+              inline={{
+                context: ref,
+                intro: `Ask about this order, such as what to count first or how ${order.supplier.name} has delivered lately.`,
+                placeholder: "Ask about this order",
+              }}
+            />
             <DetailsCard order={order} belowCents={belowCents} minimumCents={minimums.get(order.supplier.id) ?? 0} />
           </div>
         </div>

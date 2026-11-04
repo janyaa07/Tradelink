@@ -790,9 +790,14 @@ type AssistantChatProps = {
   role?: AiRole;
   /** A question asked from Home (?q=&t=), sent as soon as the chat opens. */
   initialQuestion?: { text: string; stamp: string };
+  /**
+   * A small chat inside another page, such as an order: no history column or start screen, and the
+   * conversation stays on that page. context ("ORD-1064") goes in front of each question to the model.
+   */
+  inline?: { context: string; intro: string; placeholder: string };
 };
 
-export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }: AssistantChatProps) {
+export function AssistantChat({ hello, userId, role = "buyer", initialQuestion, inline }: AssistantChatProps) {
   const router = useRouter();
   const inputId = useId();
   const [now] = useState(() => new Date());
@@ -823,8 +828,9 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
   const locked = thinking || working;
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    // A chat inside another page waits to be used instead of taking the focus.
+    if (!inline) inputRef.current?.focus();
+  }, [inline]);
 
   // A question from Home is sent once. A reload of the same ask (same stamp) reopens its chat
   // instead of asking again; the address is left alone, since changing it would reset the page.
@@ -859,8 +865,8 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
   }, [thinking]);
 
   useEffect(() => {
-    if (messages.length > 0 || thinking) endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, thinking]);
+    if (messages.length > 0 || thinking) endRef.current?.scrollIntoView({ block: inline ? "nearest" : "end" });
+  }, [messages.length, thinking, inline]);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -983,7 +989,7 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: question, history }),
+        body: JSON.stringify({ message: inline ? `About ${inline.context}: ${question}` : question, history }),
       });
       if (!response.body) throw new Error("no body");
       const reader = response.body.getReader();
@@ -1167,7 +1173,7 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
     <form
       onSubmit={onSubmit}
       aria-busy={thinking || undefined}
-      className={cx("ai-ring flex flex-col gap-1.5 rounded-2xl", empty ? "px-4 pt-3 pb-2.5" : "px-3.5 pt-2 pb-2")}
+      className={cx("ai-ring flex flex-col gap-1.5 rounded-2xl", empty && !inline ? "px-4 pt-3 pb-2.5" : "px-3.5 pt-2 pb-2")}
     >
       <label htmlFor={inputId} className="sr-only">
         Message Tradelink AI
@@ -1175,20 +1181,20 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
       <textarea
         id={inputId}
         ref={inputRef}
-        rows={empty ? 2 : 1}
+        rows={empty && !inline ? 2 : 1}
         value={draft}
         maxLength={MAX_CHARS}
         autoComplete="off"
         enterKeyHint="send"
-        placeholder={PLACEHOLDER}
+        placeholder={inline?.placeholder ?? PLACEHOLDER}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={onKeyDown}
         className="max-h-[200px] min-w-0 resize-none border-0 bg-transparent py-1 text-[.95rem] leading-6 text-ink outline-none placeholder:text-muted"
       />
       <div className="flex items-center gap-2">
-        <span className="hidden text-[.72rem] text-muted rail:inline">Tradelink AI checks with you before it changes anything</span>
+        {inline ? null : <span className="hidden text-[.72rem] text-muted rail:inline">Tradelink AI checks with you before it changes anything</span>}
         <span className="flex-1" />
-        <span className="hidden text-[.72rem] text-muted rail:inline">Enter to send</span>
+        {inline ? null : <span className="hidden text-[.72rem] text-muted rail:inline">Enter to send</span>}
         <button
           type="submit"
           aria-label="Send message"
@@ -1200,6 +1206,69 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
       </div>
     </form>
   );
+
+  const log = (
+    <>
+      {messages.map((message, index) => {
+        const last = index === messages.length - 1;
+        const question = messages[index - 1];
+        return message.ai ? (
+          <AiReply
+            key={message.id}
+            message={message}
+            handlers={handlersFor(message.id)}
+            streaming={thinking && last}
+            onAsk={!thinking && last ? (ask) => void send(ask) : null}
+            onCard={(card) => updateCard(message.id, card)}
+            onRetry={!thinking && last && question && !question.ai ? () => void send(question.reply.text) : null}
+            waiting={
+              thinking && last && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
+                <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
+                  {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}
+                  ...
+                </p>
+              ) : null
+            }
+          />
+        ) : (
+          <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
+        );
+      })}
+    </>
+  );
+
+  if (inline) {
+    return (
+      <section aria-label="Tradelink AI" className="ai-ring flex flex-col gap-3 rounded-xl px-4 py-3.5">
+        <div className="flex items-center gap-1.5 text-[.8rem] font-semibold">
+          <span aria-hidden="true" className="ai-spark size-3.5" />
+          <span className="ai-text">Tradelink AI</span>
+          <span className="flex-1" />
+          {empty ? null : (
+            <button
+              type="button"
+              onClick={startNewChat}
+              disabled={locked}
+              className="border-0 bg-transparent p-0 text-[.75rem] font-semibold text-muted hover:text-ink disabled:opacity-50"
+            >
+              New chat
+            </button>
+          )}
+        </div>
+        {empty ? (
+          <p className="text-[.84rem] leading-relaxed">{inline.intro}</p>
+        ) : (
+          <div className="-mx-1 max-h-[480px] overflow-y-auto px-1">
+            <div role="log" aria-live="polite" aria-label="Conversation with Tradelink AI" className="flex flex-col gap-5 text-[.875rem]">
+              {log}
+            </div>
+            <div ref={endRef} aria-hidden="true" />
+          </div>
+        )}
+        {composer}
+      </section>
+    );
+  }
 
   return (
     <div data-fill className="grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden bg-surface min-[900px]:grid-cols-[264px_minmax(0,1fr)]">
@@ -1267,31 +1336,7 @@ export function AssistantChat({ hello, userId, role = "buyer", initialQuestion }
                 aria-label="Conversation with Tradelink AI"
                 className="mx-auto flex w-full max-w-[768px] flex-col gap-6 pb-4"
               >
-                {messages.map((message, index) => {
-                  const last = index === messages.length - 1;
-                  const question = messages[index - 1];
-                  return message.ai ? (
-                    <AiReply
-                      key={message.id}
-                      message={message}
-                      handlers={handlersFor(message.id)}
-                      streaming={thinking && last}
-                      onAsk={!thinking && last ? (ask) => void send(ask) : null}
-                      onCard={(card) => updateCard(message.id, card)}
-                      onRetry={!thinking && last && question && !question.ai ? () => void send(question.reply.text) : null}
-                      waiting={
-                        thinking && last && Date.now() - lastTextAt.current > QUIET_AFTER_TEXT_MS ? (
-                          <p key={`${status ?? ""}${waitStep}`} aria-live="polite" className={cx(styles.thinking, styles.waitLine, "font-medium")}>
-                            {status && waitStep === 0 ? status : WAITING[role][waitStep % WAITING[role].length]}
-                            ...
-                          </p>
-                        ) : null
-                      }
-                    />
-                  ) : (
-                    <MessageView key={message.id} message={message} handlers={handlersFor(message.id)} />
-                  );
-                })}
+                {log}
               </div>
               <div ref={endRef} aria-hidden="true" className="scroll-mb-6" />
             </div>
