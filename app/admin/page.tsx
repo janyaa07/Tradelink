@@ -22,6 +22,9 @@ import { Tiles } from "@/ui/Tiles";
 
 export const metadata: Metadata = { title: "Home" };
 
+/** Home previews the queue; the rest waits on the Attention page. */
+const HOME_STEPS = 4;
+
 /** Admin Home, laid out like the buyer's and supplier's: one next item from the attention queue, the figures, then the rest at a glance (ADM-01). */
 export default async function AdminHomePage() {
   const session = await requireRole("admin");
@@ -43,7 +46,11 @@ export default async function AdminHomePage() {
       ? "Nothing needs attention right now. Everything on the platform is on track."
       : `${items.length} ${items.length === 1 ? "item needs" : "items need"} attention${high > 0 ? `, ${high} of them high priority` : ""}.`;
 
-  const steps: NextStep[] = items.map((item) => ({
+  // Most urgent first, and within a priority the newest, so Home shows what just came in.
+  const preview = [...items]
+    .sort((a, b) => Number(b.priority === "high") - Number(a.priority === "high") || Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, HOME_STEPS);
+  const steps: NextStep[] = preview.map((item) => ({
     key: item.key,
     title: item.title,
     summary: item.type,
@@ -71,7 +78,10 @@ export default async function AdminHomePage() {
       <HomeGreeting eyebrow={`${formatLongDate(now)} · ${session.orgName}`} title={`${greeting(now)}, ${firstName(session.fullName)}`} line={line} />
 
       {steps.length > 0 ? (
-        <NextUp steps={steps} />
+        <NextUp
+          steps={steps}
+          more={items.length > steps.length ? { href: "/admin/attention", label: `See all ${items.length} in Attention` } : undefined}
+        />
       ) : (
         <AllClear text="Nothing needs attention. Disputes, security alerts and invitations show here when they come in." />
       )}

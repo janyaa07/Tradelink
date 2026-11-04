@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState, type ReactNode } from "react";
 import { cx } from "@/ui/cx";
 import { Icon } from "@/ui/Icon";
@@ -78,8 +79,11 @@ function Current({ step }: { step: NextStep }) {
   );
 }
 
+/** A last row that leads to the full list, when the deck shows only the first few. */
+export type MoreLink = { href: string; label: string };
+
 /** What needs the person, most important first. One shows big; the arrows or a tap on a row bring another forward. */
-export function NextUp({ steps }: { steps: NextStep[] }) {
+export function NextUp({ steps, more }: { steps: NextStep[]; more?: MoreLink }) {
   const [index, setIndex] = useState(0);
   const current = steps[Math.min(index, steps.length - 1)];
   if (!current) return null;
@@ -122,6 +126,17 @@ export function NextUp({ steps }: { steps: NextStep[] }) {
               </button>
             </li>
           ))}
+          {more ? (
+            <li>
+              <Link
+                href={more.href}
+                className="flex w-full items-center gap-2.5 border-t border-line px-1 py-2.5 text-[.85rem] font-semibold text-accent no-underline hover:bg-sunken/60"
+              >
+                <span className="min-w-0 flex-1">{more.label}</span>
+                <Icon name="arrow" size={16} />
+              </Link>
+            </li>
+          ) : null}
         </ul>
       ) : (
         <div className="h-2.5" />
