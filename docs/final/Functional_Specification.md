@@ -31,7 +31,7 @@
 15. [Key product decisions](#15-key-product-decisions)
 16. [Requirements traceability](#16-requirements-traceability)
 17. [Known limitations and possible defects](#17-known-limitations-and-possible-defects)
-18. [Glossary and document history](#18-glossary-and-document-history)
+18. [Glossary](#18-glossary)
 
 ## 1. Purpose, audience and scope
 
@@ -380,7 +380,7 @@ Each built story maps to the requirements in section 6 and the tests named there
 
 Older documents in `docs/` differ from the code in places; the [Technical Specification](Technical_Specification.md) lists them.
 
-## 18. Glossary and document history
+## 18. Glossary
 
 | Term | Meaning |
 | --- | --- |
@@ -392,8 +392,3 @@ Older documents in `docs/` differ from the code in places; the [Technical Specif
 | Confirm card | A card that runs a proposed change only when tapped |
 | RLS | Row Level Security: database rules on which rows a person can read |
 | Idempotency key | A key that stops a retried action from running twice |
-
-| Version | Date | Author | Change |
-| --- | --- | --- | --- |
-| 1.0 | 4 November 2026 | Janya Mali (with Claude) | First as-built specification |
-| 1.1 | 4 November 2026 | Janya Mali (with Claude) | Condensed to the essentials |

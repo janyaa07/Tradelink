@@ -1,6 +1,6 @@
 # Documentation
 
-## Final documents (version 1.0, 4 November 2026)
+## Final documents (version 1.1, 4 November 2026)
 
 | Document | Audience | Files |
 | --- | --- | --- |
@@ -8,7 +8,7 @@
 | Functional Specification | Product, design, QA and business reviewers | [Markdown](final/Functional_Specification.md), [PDF](final/Functional_Specification.pdf) |
 | Technical Specification | Engineers maintaining the code | [Markdown](final/Technical_Specification.md), [PDF](final/Technical_Specification.pdf) |
 
-These describe the product as built and take priority where older documents below disagree; the Technical Specification's Appendix A lists the differences. `npm run docs:screenshots` recaptures the screenshots (with the app running) and `npm run docs:pdf` rebuilds the PDFs and diagrams.
+These describe the product as built and take priority where older documents below disagree. `npm run docs:screenshots` recaptures the screenshots (with the app running) and `npm run docs:pdf` rebuilds the PDFs and diagrams.
 
 ## Working documents
 

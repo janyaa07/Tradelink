@@ -93,6 +93,7 @@ const CSS = `
   img[src*="logos/"] { width: 26mm; height: auto; }
   p:has(> img) { break-inside: avoid; text-align: center; }
   em { color: #4b5852; }
+  small { font-size: 8.5pt; color: #5b6762; }
   blockquote { margin: 8pt 0; padding: 4pt 10pt; border-left: 3pt solid #0b4f37; background: #f3f7f5; }
   hr { border: none; border-top: 1px solid #d6ddd9; margin: 16pt 0; }
 `;

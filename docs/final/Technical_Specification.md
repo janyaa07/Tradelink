@@ -25,11 +25,8 @@
 9. [Delivery and operations](#9-delivery-and-operations)
 10. [Running cost](#10-running-cost)
 11. [Decision log](#11-decision-log)
-12. [Known technical debt and possible defects](#12-known-technical-debt-and-possible-defects)
-- [Appendix A. Differences from older documents](#appendix-a-differences-from-older-documents)
-- [Document history](#document-history)
 
-**Purpose, audience and scope.** This document explains how Tradelink is built, what technology it uses and why, and what was left out and why. It is written for engineers who maintain the code. It covers the Next.js app (`app/`, `src/`), the Supabase database (`supabase/migrations/`), the Claude integration, tests, deployment and running cost. Requirements are in the [Functional Specification](Functional_Specification.md). Every statement comes from the code, migrations, tests or an ADR; where a reason was not recorded it is marked **Inferred rationale**.
+**Purpose.** How Tradelink is built, what it uses and why, and what was left out and why. For engineers maintaining the code. Requirements are in the [Functional Specification](Functional_Specification.md). Where a reason was not recorded, it is marked **Inferred rationale**.
 
 ---
 
@@ -54,9 +51,9 @@ flowchart LR
   app -->|"Tradelink AI (server only)"| claude
 ```
 
-- **The browser never talks to Supabase or Claude directly.** Every read and write runs on the server, as the signed-in user.
-- **One responsive app** serves phone and laptop (layout switches at 760 px) and can be installed as a PWA.
-- **Repository layout:** `app/<role>/` routes, `src/features/` actions and queries, `src/domain/` pure rules, `src/data/` Supabase clients and `callRpc`, `src/integrations/claude/` the AI client, `src/ui/` design-system components.
+- The browser never talks to Supabase or Claude directly; every read and write runs on the server as the signed-in user.
+- One responsive app serves phone and laptop (layout switches at 760 px) and installs as a PWA.
+- Layout: `app/<role>/` routes, `src/features/` actions and queries, `src/domain/` pure rules, `src/data/` Supabase clients, `src/integrations/claude/` AI client, `src/ui/` components.
 
 ## 2. Technology choices
 
@@ -77,11 +74,7 @@ Versions are from [`package.json`](../../package.json).
 | Vercel | Hobby plan | Git-connected deploys: `develop` previews, `main` production |
 | `web-push` | 3.6.7 | Installed for push notifications; not switched on (section 3) |
 
-**Design rules that follow from these choices:**
-- Reads use the user's Supabase session, so RLS decides what is visible.
-- Writes go only through database functions called with `callRpc`; critical writes take an idempotency key (`p_key`).
-- Money is integer cents in TypeScript and `numeric(12,2)` in Postgres; times use Asia/Singapore ([ADR 0019](../adr/0019-money-time-and-quantities.md)).
-- The AI never writes on its own: every change it proposes needs a person's tap.
+**Rules that follow:** reads use the user's session, so RLS decides visibility; writes go only through database functions (`callRpc`), with an idempotency key on critical ones; money is integer cents in TypeScript and `numeric(12,2)` in Postgres, times in Asia/Singapore ([ADR 0019](../adr/0019-money-time-and-quantities.md)); the AI never writes without a person's tap.
 
 ## 3. Considered but not used
 
@@ -144,13 +137,11 @@ flowchart TB
   fns --> rls
 ```
 
-- **Server and client.** Server modules import `server-only`, so a client import fails the build. Client components never hold keys; they call server actions or `/api/ai/chat`.
-- **Rendering.** Pages are async server components that call `requireRole` and read through RLS. Mutations are server actions ending in `revalidatePath`. There is no client data library.
-- **Dependencies.** `app/` → `src/features/` → `src/data/`, `src/domain/`, `src/ui/`. `src/domain/` imports nothing, so its rules are unit tested without a database.
-
-**Errors.** Database functions raise `TLnnn:REASON:detail`. [`callRpc`](../../src/data/rpc.ts) maps the reason to fixed copy with `parseDbError` ([`src/lib/errors.ts`](../../src/lib/errors.ts)) and logs blocked attempts with `log_denied`, so the UI shows one consistent sentence and never a raw database message.
-
-**Logging.** [`src/lib/logger.ts`](../../src/lib/logger.ts) writes one JSON line per event to Vercel logs and redacts fields whose names match `password|token|secret|key|authorization|cookie|text|email`.
+- **Server and client.** Server modules import `server-only`, so a client import fails the build; client components hold no keys.
+- **Rendering.** Pages are server components that call `requireRole` and read through RLS; changes are server actions ending in `revalidatePath`.
+- **Dependencies.** `app/` → `src/features/` → `src/data/`, `src/domain/`, `src/ui/`; `src/domain/` imports nothing, so its rules are tested without a database.
+- **Errors.** Database functions raise `TLnnn:REASON:detail`; [`callRpc`](../../src/data/rpc.ts) maps the reason to fixed copy ([`src/lib/errors.ts`](../../src/lib/errors.ts)) and logs blocked attempts.
+- **Logging.** [`src/lib/logger.ts`](../../src/lib/logger.ts) writes JSON lines to Vercel logs and redacts sensitive field names.
 
 ## 5. Key flows
 
@@ -175,7 +166,7 @@ sequenceDiagram
   P-->>U: allow, or redirect and log_denied for another role's path
 ```
 
-A user belongs to one organisation, and the organisation's `kind` is the role; the same fact drives RLS. The proxy only redirects as a convenience; the database enforces every permission. Self sign-up runs the trigger `app.handle_new_user`, which creates an active organisation and connects it to every active counterpart.
+The organisation's `kind` is the role and also drives RLS. The proxy only redirects; the database enforces every permission. Self sign-up runs `app.handle_new_user`, which creates the organisation and connects it to every active counterpart.
 
 ### 5.2 Tradelink AI with confirm cards
 
@@ -226,15 +217,14 @@ sequenceDiagram
   E-->>UI: ok and text, or error
 ```
 
-- **Why this design.** The model only reads and proposes. A change runs only after a person taps, is validated again on the server, and goes through the same database functions as the app's own buttons, so RLS and role checks apply unchanged. The proposal id doubles as the idempotency key, so a double tap is harmless.
-- **Limits.** Message 1 to 2,000 characters; 20 history turns; 60 messages per hour per user; at most 6 tool rounds and 900 output tokens per round; effort `low`. Prompt caching covers the rules, the tool list and the conversation.
+- **Why.** The model only reads and proposes. A change runs after a person taps, is validated again on the server and uses the same database functions as the app's buttons; the proposal id is the idempotency key.
+- **Limits.** 2,000 characters per message, 20 history turns, 60 messages per hour, 6 tool rounds; prompt caching on rules, tools and conversation.
 - **Tools.** Buyers: 11 read, 17 confirm, 2 card-only. Suppliers: 7 read, 17 confirm, 1 card-only ([`buyer-tools.ts`](../../src/features/ai/buyer-tools.ts), [`supplier-tools.ts`](../../src/features/ai/supplier-tools.ts)).
-- **Prompt injection.** Tool results are treated as data, tools run as the user under RLS, IDs are resolved on the server, and writes need a tap ([ADR 0010](../adr/0010-untrusted-content-and-prompt-injection.md)).
-- **Failure.** No key gives HTTP 503 "Tradelink AI is not set up yet."; an exception gives "Tradelink AI is not available right now."; there is no rules fallback on this path.
+- **Safety.** Tool results are data, tools run as the user under RLS, and writes need a tap ([ADR 0010](../adr/0010-untrusted-content-and-prompt-injection.md)). Without a key the route returns 503.
 
 ### 5.3 Placing orders and reserving stock
 
-`place_orders` merges duplicate lines, checks visibility, locks inventory, checks availability, creates one order per supplier, reserves stock, and writes order events, the audit log and a "New order" notification, all in one transaction. A null draft version means a direct order ("Order now" or "Place tomorrow's order"), which leaves the cart alone.
+`place_orders` locks inventory, checks availability, creates one order per supplier, reserves stock and writes events, audit and notifications in one transaction.
 
 ```mermaid
 sequenceDiagram
@@ -262,7 +252,7 @@ begin
 end $$;
 ```
 
-**Why.** Checking and reserving in one transaction under row locks is the simplest way to guarantee no overselling ([ADR 0006](../adr/0006-inventory-history-and-reservations.md)). Locking in a fixed order prevents deadlocks between stock functions, and check constraints (`reserved <= on_hand`, both non-negative) are the backstop. Every change appends a `stock_movements` row, so balances are explainable.
+**Why.** Checking and reserving under row locks in one transaction is the simplest way to prevent overselling ([ADR 0006](../adr/0006-inventory-history-and-reservations.md)); a fixed lock order avoids deadlocks, and `reserved <= on_hand` is a backstop constraint.
 
 ### 5.4 Part acceptance and delivery
 
@@ -288,16 +278,14 @@ sequenceDiagram
   DB->>DB: audit and buyer notification (three wordings)
 ```
 
-The rest of a part-accepted order is not reserved (Inferred rationale: the stock is not there yet, and reserving it would break `reserved <= on_hand`). `deliver_rest` checks free stock when the rest goes and fails with `REST_NOT_IN_STOCK` if it is not there.
+The rest of a part-accepted order is not reserved (Inferred rationale: the stock is not there yet); `deliver_rest` checks free stock when it goes.
 
 ### 5.5 Delivery, problems, credits and disputes
 
-- `mark_out_for_delivery`, then `mark_delivered` (`deliver_order` removes the quantity from both `on_hand` and `reserved`).
-- The buyer confirms with `confirm_all_here`, or calls `report_problem`, which delivers first if the order is still out and records the amount as quantity × unit price.
-- The supplier answers with `answer_issue`: credit, replace, on the way (late only) or dispute. A dispute notifies admins and becomes a high-priority attention item, settled with `resolve_dispute`.
-- A promised credit stays open until the buyer calls `mark_credit_received`, which tells the supplier.
-
-**Notifications** are in-app rows written by `app.notify` inside the same transaction as the change, so a notification never describes a change that rolled back. The bell panel reads them through RLS and picks a button (Reply, Answer, Confirm credit) per kind.
+- `mark_out_for_delivery`, then `mark_delivered`, which removes the quantity from `on_hand` and `reserved`.
+- The buyer confirms (`confirm_all_here`) or reports a problem (`report_problem`, amount = quantity × unit price).
+- The supplier answers (`answer_issue`): credit, replace, on the way or dispute; disputes are settled by an admin (`resolve_dispute`). A credit closes when the buyer confirms it (`mark_credit_received`).
+- Notifications are in-app rows written in the same transaction as the change.
 
 ## 6. Data model
 
@@ -376,7 +364,7 @@ stateDiagram-v2
 | One open "late" problem per order | Unique index `issues_one_open_late` |
 | Schema changes | A new file in `supabase/migrations/`, named with the applied version; applied migrations are never edited |
 
-The 17 migrations also create about 40 `rs_*` tables for a "Tradelink AI shop" foundation (cards, jobs, push). Only the `/r` page uses them (section 12).
+The migrations also create about 40 `rs_*` tables for a Tradelink AI foundation (cards, jobs, push), used only by the `/r` page.
 
 ## 7. Security
 
@@ -392,7 +380,7 @@ The 17 migrations also create about 40 `rs_*` tables for a "Tradelink AI shop" f
 | Headers | `X-Frame-Options: DENY`, `nosniff`, HSTS, Referrer-Policy, Permissions-Policy; no CSP |
 | File uploads | None |
 
-**Accepted risks:** no two-factor sign-in; self sign-up connects a new business to every counterpart; `/api/jobs/run` is public (runs only due jobs, returns counts); a demo password remains in old commits (owner decision, 4 November 2026).
+**Accepted risks:** no two-factor sign-in; self sign-up connects a new business to every counterpart; a demo password remains in old commits (owner decision).
 
 ## 8. Testing
 
@@ -405,47 +393,31 @@ The 17 migrations also create about 40 `rs_*` tables for a "Tradelink AI shop" f
 | Coverage | — | Not measured: no coverage tool |
 | Type-check and lint | `npm run typecheck`, `npm run lint` | Clean |
 
-End-to-end tests read the demo password from `E2E_PASSWORD` in `.env.local`. Tests that write should run against a separate test project, which needs Supabase Pro for branching (section 3).
+End-to-end tests read the demo password from `E2E_PASSWORD` in `.env.local`.
 
 ## 9. Delivery and operations
 
-- **Git and releases.** Work happens on `develop`; release by fast-forwarding `main` (`git push origin develop:main`). There is no CI; run `npm run check` before pushing.
-- **Vercel.** The GitHub repository is connected: `develop` makes previews, `main` deploys production. Environment variables live in the Vercel project, server-only values marked sensitive.
-- **Database.** Test a migration in a rolled-back transaction, apply it to Supabase, then save it as `supabase/migrations/<version>_<name>.sql`. Database changes go live before the app deploys, so keep them backward compatible.
-- **Rollback.** App: promote the previous production deployment in Vercel, or revert on `main`. Database: a new migration that restores the earlier definition.
-- **Monitoring.** `GET /api/health` is liveness only. Structured logs go to Vercel; `ai_usage` records AI tokens and latency. No alerting and no scheduled jobs.
-- **Documentation tooling.** `npm run docs:screenshots` recaptures the guide's screenshots; `npm run docs:pdf` rebuilds the PDFs and diagrams.
+- **Releases.** Work on `develop`; release by fast-forwarding `main`. Run `npm run check` before pushing (no CI).
+- **Vercel.** `develop` makes previews, `main` deploys production; server-only variables are marked sensitive.
+- **Database.** Test a migration in a rolled-back transaction, apply it, then save it in `supabase/migrations/`; keep changes backward compatible.
+- **Rollback.** Promote the previous Vercel deployment; for the database, a new migration restoring the earlier definition.
+- **Monitoring.** `GET /api/health` (liveness), JSON logs in Vercel, AI tokens in `ai_usage`.
 
 ## 10. Running cost
 
-**Measured AI usage** (from `public.ai_usage`, 3 to 4 November 2026, model `claude-sonnet-5-5`):
+| Item | Today | Note |
+| --- | --- | --- |
+| Hosting (Vercel) | Hobby plan, free | Personal and non-commercial use only; Pro is US$20 per developer seat per month |
+| Database (Supabase) | Free plan | Pauses after 7 idle days, 500 MB database; Pro is US$25 per month per organisation |
+| AI (Claude Sonnet 5.5) | Pay per use | US$2 per million input tokens, US$10 per million output tokens, cache reads US$0.20 |
 
-| Feature | Successful calls | Average input tokens | Average output tokens | Total tokens (in / out) |
-| --- | --- | --- | --- | --- |
-| Tradelink AI chat (`ask`) | 135 | 6,551 (includes cached tokens) | 223 | 884,350 / 30,104 |
-| Order reader (unused path) | 5 | 2,889 | 168 | 14,447 / 840 |
+**Measured AI use** (`public.ai_usage`, 3 to 4 November 2026): 135 Tradelink AI replies, averaging 6,551 input and 223 output tokens. That is at most about **US$0.015 per reply** (all input at the full rate; caching lowers it), or about **US$2.07** for all 135.
 
-**Price.** Claude Sonnet 5.5 list price: US$2 per million input tokens, US$10 per million output tokens, US$0.20 per million cache-read tokens (Anthropic model documentation).
-
-- **Cost per chat reply (upper bound):** 6,551 × US$2 / 1,000,000 + 223 × US$10 / 1,000,000 ≈ US$0.013 + US$0.002 ≈ **US$0.015**. This charges every input token at the full rate; cache reads cost a tenth, so the real figure is lower.
-- **The 135 measured replies** cost at most 884,350 × US$2 / 1,000,000 + 30,104 × US$10 / 1,000,000 ≈ US$1.77 + US$0.30 ≈ **US$2.07**.
-
-**Hosting today.** Vercel Hobby (free, for personal and non-commercial use; the Vercel API reports "hobby plan") and Supabase Free (branching failed because it needs Pro). Supabase Free pauses a project after 7 idle days and has a 500 MB database (third-party pricing summary), which is a reason to move to Pro before real customers.
-
-**Hosting for commercial use.** Vercel Pro US$20 per developer seat per month; Supabase Pro US$25 per month per organisation. These list prices come from third-party pricing summaries (September to November 2026); check vercel.com/pricing and supabase.com/pricing before buying.
-
-**Illustrative monthly budget (estimate, not measured):**
-
-| Scenario | Hosting | AI (replies × US$0.015) | Total per month |
-| --- | --- | --- | --- |
-| Pilot | Free plans: US$0 | 1,000 × US$0.015 ≈ US$15 | **≈ US$15** |
-| Small launch | Vercel Pro 1 seat US$20 + Supabase Pro US$25 = US$45 | 6,000 × US$0.015 ≈ US$92 | **≈ US$137** |
-
-Usage-based extras (Vercel and Supabase overages, extra seats) are not included.
+Hosting prices are list prices from third-party summaries; check vercel.com/pricing and supabase.com/pricing before buying.
 
 ## 11. Decision log
 
-Product decisions are in the [Functional Specification](Functional_Specification.md) as DEC-xx. Same decision in both documents: TD-01 = DEC-01, TD-02 = DEC-02, TD-03 = DEC-02, TD-05 = DEC-03, TD-06 = DEC-05, TD-08 = DEC-04, TD-10 = DEC-06, TD-12 = DEC-08, TD-18 = DEC-09, TD-19 = DEC-11.
+Product decisions are in the [Functional Specification](Functional_Specification.md) as DEC-xx; shared ones: TD-01 = DEC-01, TD-02 and TD-03 = DEC-02, TD-05 = DEC-03, TD-06 = DEC-05, TD-08 = DEC-04, TD-10 = DEC-06, TD-12 = DEC-08, TD-18 = DEC-09, TD-19 = DEC-11.
 
 | ID | Decision | Why | Trade-off | Record |
 | --- | --- | --- | --- | --- |
@@ -465,50 +437,4 @@ Product decisions are in the [Functional Specification](Functional_Specification
 | TD-20 | The second delivery is not reserved | **Inferred rationale:** the stock is not there yet | Can fail later with `REST_NOT_IN_STOCK` | `deliver_rest` |
 | TD-21 | Quick orders use one confirm tap, not the cart | **Inferred rationale:** a known short order should take one tap | Less review than the cart | `order_now` |
 
-**For owner review:** the inferred rationales above (TD-09, TD-13, TD-20, TD-21), a new ADR for the tool-using agent, and whether the 21 ADRs still marked "Proposed" should become "Accepted".
-
-## 12. Known technical debt and possible defects
-
-**Technical debt**
-- Unused code: the Claude order reader and grounded Ask (`src/integrations/claude/read-order.ts`, `src/domain/reader/`, `src/features/ask/`), the unwired `render_card` tool, and the `rs_*` Tradelink AI foundation used only by `/r`.
-- Built but not live: push notifications, the job runner (no cron).
-- i18n dictionaries are used only in PWA messages; the theme is per browser (`profiles.theme` unused).
-- No CI, coverage, accessibility tests, pgTAP or AI evaluations.
-- Log redaction is by field name only; request and user IDs are not added automatically.
-
-**Possible defects (recorded, not fixed)**
-
-| ID | Finding | Suggested next step |
-| --- | --- | --- |
-| BUG-01 | Delivering "the rest" before the first delivery counts stock twice (`deliver_rest` allowed while accepted) | Allow it only after the first delivery |
-| BUG-02 | An invited supplier signing up under the same business name is blocked as a duplicate | Decide on a join flow |
-| BUG-03 | Supplier answers for "invoice" problems exist, but nothing creates one | Remove the remnants or build invoice queries |
-| SEC-01 | Later `app.rs_*` helpers keep the default PUBLIC execute grant; later tables lack explicit revokes (RLS still blocks writes) | Add revokes in a new migration |
-| SEC-02 | Any user can call `hit_rate_limit` with any action name; rows are never cleaned up | Restrict names; add cleanup |
-| SEC-03 | No Content Security Policy header | Add a CSP |
-| OPS-01 | `/api/jobs/run` is public and nothing calls it | Schedule it or remove it |
-| OPS-02 | `set_supplier_status` and `cancel_order` lock rows in opposite orders; a rare deadlock is possible | Lock in one order |
-
-## Appendix A. Differences from older documents
-
-The code is authoritative; older documents were not changed.
-
-| Document | Says | As built |
-| --- | --- | --- |
-| `docs/DATA_MODEL.md` | Write functions in an `api` schema | In `public`, helpers in `app` |
-| `docs/DATA_MODEL.md` | Invoice, invitation, negotiation and email tables | Not created |
-| `docs/DATA_MODEL.md`, `docs/SECURITY.md` | Admins need two-factor (aal2) | Removed in `20261103104222_self_sign_up.sql` |
-| `docs/SECURITY.md` | Open sign-up is off | Self sign-up exists |
-| `docs/RPC_CONTRACT.md` | `v_attention` has ten rules | 8 causes |
-| `docs/API.md` | Invoice and invitation actions; `/api/health/ready` | Not built |
-| `docs/ARCHITECTURE.md` | Email outbox with Resend; `/api/ask` with server-sent events | Not built; the assistant is `/api/ai/chat` streaming NDJSON |
-| `docs/TEST_PLAN.md` | pgTAP, axe, AI evals, Lighthouse CI, 90% coverage gate | None exist |
-| [ADR 0010](../adr/0010-untrusted-content-and-prompt-injection.md) | The model has no write tools; strict CSP | Write tools gated by confirm cards; no CSP |
-| [ADR 0023](../adr/0023-ask-with-grounded-facts.md) | Ask is not a tool runner | The live assistant is a tool runner |
-
-## Document history
-
-| Version | Date | Author | Change |
-| --- | --- | --- | --- |
-| 1.0 | 4 November 2026 | Prepared for Janya Mali | First as-built technical specification, from the code at `9250e98` and 17 applied migrations |
-| 1.1 | 4 November 2026 | Prepared for Janya Mali | Condensed to the essentials; added technology choices, options not used, and running cost |
+**For owner review:** the inferred rationales (TD-09, TD-13, TD-20, TD-21).

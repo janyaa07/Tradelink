@@ -24,7 +24,6 @@
 8. [Frequently asked questions](#8-frequently-asked-questions)
 9. [Troubleshooting](#9-troubleshooting)
 10. [Glossary](#10-glossary)
-11. [Document history](#11-document-history)
 
 ### About this guide
 
@@ -50,7 +49,15 @@ Tradelink replaces ordering over WhatsApp and phone calls between small food bus
 
 **Tradelink AI** is an assistant built into the app. Ask it questions or tell it what to do in plain words. It always shows what it is about to do and waits for you to tap a button before anything changes.
 
-**Devices and browsers.** Tradelink is a web app; there is nothing to download. Chrome on a laptop and Chrome on an Android phone are tested automatically. Screens 760 pixels wide or more show the laptop layout; narrower screens show the phone layout. Other browsers are not covered by automated tests. You need an internet connection; without one, Tradelink shows an offline page.
+**Devices and browsers.** Tradelink is a cross-platform web app: it runs in the browser on Windows, macOS, Android, iPhone and iPad, and there is nothing to download from an app store.
+
+| Device | Browser |
+| --- | --- |
+| Laptop or desktop (Windows, macOS) | Chrome, Edge, Safari or Firefox |
+| Android phone or tablet | Chrome |
+| iPhone or iPad (iOS, iPadOS) | Safari |
+
+Screens 760 pixels wide or more show the laptop layout; narrower screens show the phone layout. On any phone you can add Tradelink to the home screen (see 2.4). Automated tests run in Chrome on a laptop and an Android phone; Safari on iPhone has been used and fixed during development but is checked by hand. You need an internet connection; without one, Tradelink shows an offline page.
 
 ---
 
@@ -103,11 +110,11 @@ The page always says the email was sent, so it never reveals which addresses hav
 
 **Common problems:** "That business name may already be in use." Another business of the same kind has that name, including a supplier a buyer already added (4.5). Contact the Tradelink team.
 
-> **Not available yet:** joining through an invitation link.
+<small><em>Not available yet: joining through an invitation link.</em></small>
 
 ### 2.4 Add Tradelink to your phone's home screen
 
-Open Tradelink in your phone's browser, open the browser menu (three dots in Chrome, Share in Safari) and choose **Add to Home screen** or **Install app**. An icon named **Tradelink AI** opens the app full screen. Tradelink shows no install prompt of its own; if your browser has no such option, keep using the browser.
+Open Tradelink in your phone's browser. On an **iPhone or iPad**, tap **Share** in Safari, then **Add to Home Screen**. On **Android**, open Chrome's menu (three dots) and choose **Add to Home screen** or **Install app**. An icon named **Tradelink AI** opens the app full screen. Tradelink shows no install prompt of its own; if your browser has no such option, keep using the browser.
 
 ### 2.5 Use light and dark mode
 
@@ -160,7 +167,7 @@ Select the **bell** to open the alerts panel. Each alert has a button that goes 
 
 *Figure 4. The alerts panel opens beside the page.*
 
-> **Not available yet:** email, text message and phone push notifications. All notifications are inside the app.
+<small><em>Not available yet: email, text message and phone push notifications. All notifications are inside the app.</em></small>
 
 ---
 
@@ -246,7 +253,7 @@ Select the **bell** to open the alerts panel. Each alert has a button that goes 
 
 If the product already exists you see "This already exists. Choose it from the list."
 
-> **Not available yet:** Tradelink does not send the supplier an invitation, and an invited supplier cannot yet take over the record you created. Contact the supplier yourself.
+<small><em>Not available yet: Tradelink does not send the supplier an invitation, and an invited supplier cannot yet take over the record you created. Contact the supplier yourself.</em></small>
 
 ### 4.6 Track your orders
 
@@ -298,7 +305,7 @@ When a supplier promises a credit, the problem shows **Confirm credit** and Orde
 
 *Figure 13. A problem on an order.*
 
-> **Not available yet:** invoices. Tradelink does not hold, check or pay invoices.
+<small><em>Not available yet: invoices. Tradelink does not hold, check or pay invoices.</em></small>
 
 ### 4.10 Products, Insights and Settings
 
@@ -403,7 +410,7 @@ You cannot lower stock below what is held for orders: "This leaves less stock th
 
 The buyer is told. A promised credit shows **Waiting for buyer to confirm** until the buyer confirms it arrived. A dispute goes to the Tradelink team.
 
-> **Not available yet:** invoice queries; buyers cannot raise one.
+<small><em>Not available yet: invoice queries; buyers cannot raise one.</em></small>
 
 ### 5.6 Activity, stock history and settings
 
@@ -502,7 +509,7 @@ Filter **High**. Disputes read "Dispute on ORD-*number*" with both businesses, t
 
 *Figure 31. The audit log.*
 
-> **Not available yet:** approving or declining suppliers, inviting people, editing users or operators, and a system status page.
+<small><em>Not available yet: approving or declining suppliers, inviting people, editing users or operators, and a system status page.</em></small>
 
 ---
 
@@ -553,10 +560,3 @@ Filter **High**. Disputes read "Dispute on ORD-*number*" with both businesses, t
 | Part accept, the rest | Accepting part of an order; the rest may come in a second delivery |
 | Problem, credit, dispute | Something wrong with a delivery; money taken off what the buyer owes; a supplier disagreeing, decided by the Tradelink team |
 | Audit log | The permanent record of every change and blocked attempt |
-
-## 11. Document history
-
-| Version | Date | Author | Change |
-| --- | --- | --- | --- |
-| 1.0 | 4 November 2026 | Janya Mali, drafted with Claude | First version, written from the running app and its code |
-| 1.1 | 4 November 2026 | Janya Mali, drafted with Claude | Shortened; fewer duplicate screenshots |
