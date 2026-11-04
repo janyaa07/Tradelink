@@ -3,18 +3,21 @@
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { plural } from "@/domain/catalogue";
-import { formatMoney, toCents } from "@/domain/money";
+import { minimumGap, topUpOptions, type TopUpOption } from "@/domain/minimum";
+import { formatMoney, lineTotal, toCents } from "@/domain/money";
 import { parseStockShort } from "@/domain/review";
+import { availabilityOf } from "@/features/products/availability";
 import { BusinessLogo } from "@/ui/BusinessLogo";
 import { LinkButton } from "@/ui/LinkButton";
 import { PageHeader } from "@/ui/PageHeader";
 import { Pill } from "@/ui/Pill";
 import { useToast } from "@/ui/Toast";
 import { placeOrdersAction } from "./actions";
+import { BelowMinimum } from "./BelowMinimum";
 import { CartItem, type LineHandlers } from "./CartItem";
 import type { CartPageData } from "./cart-types";
 import type { DraftLine } from "./draft";
-import { markAdded, pickProduct, removeLine, setQuantity, swapProduct } from "./line-ops";
+import { markAdded, pickProduct, quantitiesByProduct, removeLine, setQuantity, swapProduct } from "./line-ops";
 import { AddUsualButton } from "@/features/buyer/AddUsualButton";
 import { OrderSummary, PlaceBar } from "./OrderSummary";
 import { SyncNotice } from "./SyncNotice";
@@ -123,6 +126,37 @@ export function CartWorkspace({ data }: { data: CartPageData }) {
   };
 
   const subtotal = new Map(model.subtotals.map((group) => [group.supplierOrgId, group.totalCents]));
+  const inCart = quantitiesByProduct(lines);
+
+  /** The buyer's usual items from this supplier that are not in the cart yet, at their usual quantity. */
+  const topUpsFor = (supplierOrgId: string, gapCents: number): TopUpOption[] =>
+    topUpOptions(
+      data.usuals.flatMap((usual) => {
+        const item = model.byId.get(usual.productId);
+        if (!item || item.supplierOrgId !== supplierOrgId || inCart.has(item.id)) return [];
+        const availability = availabilityOf(item);
+        const qty = Math.min(Math.max(usual.usualQty, 1), availability.limit);
+        return availability.orderable && qty > 0 ? [{ productId: item.id, name: item.name, qty, totalCents: lineTotal(item.price, qty) }] : [];
+      }),
+      gapCents,
+    );
+
+  const addTopUp = (option: TopUpOption) => {
+    commit((current) => [
+      ...current,
+      {
+        id: newId(),
+        sourceText: option.name,
+        productId: option.productId,
+        qty: option.qty,
+        kg: null,
+        qtyAssumed: false,
+        options: [],
+        state: "manual",
+      },
+    ]);
+    show(`${option.name} added to cart.`);
+  };
   const summary = {
     subtotals: model.subtotals,
     totalCents: model.totalCents,
@@ -184,6 +218,19 @@ export function CartWorkspace({ data }: { data: CartPageData }) {
                     </span>
                   </div>
                   <ul className="flex flex-col divide-y divide-line">{group.lines.map(renderLine)}</ul>
+                  {(() => {
+                    const minimumCents = data.minimums[group.supplierOrgId] ?? 0;
+                    const gapCents = minimumGap(subtotal.get(group.supplierOrgId) ?? 0, minimumCents);
+                    return gapCents > 0 ? (
+                      <BelowMinimum
+                        supplierName={group.supplierName}
+                        minimumCents={minimumCents}
+                        gapCents={gapCents}
+                        options={topUpsFor(group.supplierOrgId, gapCents)}
+                        onAdd={addTopUp}
+                      />
+                    ) : null;
+                  })()}
                 </section>
               ))}
             </div>

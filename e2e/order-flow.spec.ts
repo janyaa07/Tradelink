@@ -38,6 +38,8 @@ test("an order goes from cart to delivered, and a short item is credited", async
 
     await buyer.goto("/buyer/cart");
     await expect(buyer.getByText(TEST_PRODUCT).first()).toBeVisible();
+    // One tin is far below the supplier's minimum: the cart warns but still lets the buyer place it (BUY-24).
+    await expect(buyer.getByText(/^Below Island Spice Traders' S\$[\d.]+ minimum by S\$[\d.]+\.$/)).toBeVisible();
     await buyer
       .getByRole("button", { name: /^Place order/ })
       .first()

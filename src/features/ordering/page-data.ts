@@ -1,6 +1,7 @@
 import "server-only";
 import type { Session } from "@/data/session";
 import { cutoffText } from "@/domain/cutoff";
+import { toCents } from "@/domain/money";
 import {
   getBuyerCatalogue,
   getBuyerSettings,
@@ -26,12 +27,14 @@ export async function getCartPageData(session: Session): Promise<CartPageData> {
   const terms = await getDeliveryTerms(supplierIds);
   const now = new Date();
   const cutoffs = Object.fromEntries([...terms].map(([id, supplierTerms]) => [id, cutoffText(supplierTerms, now)]));
+  const minimums = Object.fromEntries([...terms].map(([id, supplierTerms]) => [id, toCents(supplierTerms.minimumOrder ?? "0")]));
   return {
     draft,
     catalogue,
-    usuals: usuals.map((usual) => ({ productId: usual.productId, lastPaid: usual.lastPaid })),
+    usuals: usuals.map((usual) => ({ productId: usual.productId, usualQty: usual.usualQty, lastPaid: usual.lastPaid })),
     suppliers,
     cutoffs,
+    minimums,
     weekSpentCents,
     budget: settings.weeklyBudget,
     budgetWarning: settings.budgetWarning,

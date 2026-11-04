@@ -81,11 +81,7 @@ const openOrderSchema = z.object({ order_lines: z.array(z.object({ product_id: z
 /** Quantity of each product on the buyer's open orders (pending, accepted, out for delivery). */
 export const getOnOrder = cache(async (orgId: string): Promise<Map<string, number>> => {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select("order_lines(product_id, qty)")
-    .eq("buyer_org_id", orgId)
-    .in("status", OPEN_STATUSES);
+  const { data, error } = await supabase.from("orders").select("order_lines(product_id, qty)").eq("buyer_org_id", orgId).in("status", OPEN_STATUSES);
   if (error) fail("open orders", error.message);
   const totals = new Map<string, number>();
   for (const order of z.array(openOrderSchema).parse(data)) {
@@ -135,7 +131,12 @@ export const getSkippedToday = cache(async (orgId: string): Promise<Set<string>>
     .eq("buyer_org_id", orgId)
     .eq("skip_date", singaporeDateOf(new Date()));
   if (error) fail("skipped items", error.message);
-  return new Set(z.array(z.object({ product_id: z.uuid() })).parse(data).map((row) => row.product_id));
+  return new Set(
+    z
+      .array(z.object({ product_id: z.uuid() }))
+      .parse(data)
+      .map((row) => row.product_id),
+  );
 });
 
 const termsSchema = z.object({
@@ -143,6 +144,7 @@ const termsSchema = z.object({
   cutoff_time: z.string(),
   delivery_days: z.array(z.number()),
   lead_time_days: z.number(),
+  minimum_order: money,
 });
 
 /** Cut-off, delivery days and lead time per supplier; defaults when a supplier has no profile yet. */
@@ -152,7 +154,7 @@ export async function getDeliveryTerms(supplierIds: string[]): Promise<Map<strin
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("supplier_profiles")
-    .select("organisation_id, cutoff_time, delivery_days, lead_time_days")
+    .select("organisation_id, cutoff_time, delivery_days, lead_time_days, minimum_order")
     .in("organisation_id", supplierIds);
   if (error) fail("delivery terms", error.message);
   for (const row of z.array(termsSchema).parse(data)) {
@@ -160,6 +162,7 @@ export async function getDeliveryTerms(supplierIds: string[]): Promise<Map<strin
       cutoffTime: row.cutoff_time,
       deliveryDays: row.delivery_days,
       leadTimeDays: row.lead_time_days,
+      minimumOrder: row.minimum_order,
     });
   }
   return terms;

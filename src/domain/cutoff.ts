@@ -7,6 +7,8 @@ export type DeliveryTerms = {
   /** ISO weekdays the supplier delivers on: 1 = Monday to 7 = Sunday (0 is read as Sunday). */
   deliveryDays: number[];
   leadTimeDays: number;
+  /** The supplier's minimum order as "40.00"; absent or "0.00" means none (BUY-24). */
+  minimumOrder?: string;
 };
 
 export const DEFAULT_TERMS: DeliveryTerms = { cutoffTime: "16:00", deliveryDays: [1, 2, 3, 4, 5, 6], leadTimeDays: 1 };
