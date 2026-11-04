@@ -6,9 +6,7 @@
 | --- | --- |
 | Document | User Guide |
 | Product | Tradelink, with Tradelink AI |
-| Version | 1.1 |
 | Date | 4 November 2026 |
-| Status | Draft for review |
 | Owner | Janya Mali |
 | Applies to | The web app at commit `9250e98` and later |
 

@@ -6,9 +6,7 @@
 | --- | --- |
 | Document | Technical Specification Document (TSD), as built |
 | Product | Tradelink, with Tradelink AI |
-| Version | 1.1 |
 | Date | 4 November 2026 |
-| Status | Draft for review |
 | Owner | Janya Mali |
 | Code baseline | `develop` at commit `9250e98` and 17 applied database migrations (latest `20261104040939`) |
 

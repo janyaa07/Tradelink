@@ -6,9 +6,7 @@
 | --- | --- |
 | Document | Functional Specification Document (FSD), as built |
 | Product | Tradelink, with Tradelink AI |
-| Version | 1.1 |
 | Date | 4 November 2026 |
-| Status | Draft for review |
 | Owner | Janya Mali |
 | Related | [User Guide](User_Guide.md), [Technical Specification](Technical_Specification.md), [User stories](../USER_STORIES.md), [Decision records](../adr/README.md) |
 

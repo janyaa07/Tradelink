@@ -1,6 +1,6 @@
 # Documentation
 
-## Final documents (version 1.1, 4 November 2026)
+## Final documents (4 November 2026)
 
 | Document | Audience | Files |
 | --- | --- | --- |
