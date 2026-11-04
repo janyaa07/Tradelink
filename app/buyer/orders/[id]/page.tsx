@@ -11,11 +11,16 @@ import { CreditReceivedButton, OrderActions } from "@/features/buyer/orders/Orde
 import { OrderProgress } from "@/features/buyer/orders/OrderProgress";
 import { getMinimums, orderBelowMinimum } from "@/features/buyer/orders/minimum";
 import { getBuyerIssues, getOrderChanges, type OrderChange } from "@/features/buyer/orders/queries";
+import { CancelRestButton } from "@/features/buyer/orders/CancelRestButton";
+import { LaterStatusPill, restToCome } from "@/features/buyer/orders/rest";
 import { TodoActions } from "@/features/buyer/TodoActions";
 import { ISSUE_STATUS_PILLS, issueAnswer, problemTitle } from "@/features/buyer/orders/summary";
 import { StatusPill } from "@/features/orders/OrderCard";
+import { OrderConversation } from "@/features/orders/OrderConversation";
 import type { OrderLineView, OrderView } from "@/features/orders/queries";
 import { getOrderById } from "@/features/orders/queries";
+import { getOrderRequests } from "@/features/orders/requests";
+import { singaporeDateOf } from "@/domain/singapore-time";
 import { BusinessLogo } from "@/ui/BusinessLogo";
 import { formatDate, formatDateTime, orderNumber } from "@/ui/format";
 import { Pill } from "@/ui/Pill";
@@ -53,7 +58,7 @@ function LineName({ line }: { line: OrderLineView }) {
       <span className="block font-semibold break-words">{line.name}</span>
       <span className="block text-[.75rem] text-muted">
         <span className="font-mono">{line.sku}</span>
-        {line.askedQty !== line.qty ? <span> · You asked for {line.askedQty}</span> : null}
+        {line.askedQty !== line.qty + line.laterQty ? <span> · You asked for {line.askedQty}</span> : null}
       </span>
       {!line.held ? <span className="block text-[.75rem] font-semibold text-warn">Stock and price to confirm</span> : null}
     </>
@@ -106,7 +111,77 @@ function ReportLink({ order, line }: { order: OrderView; line: OrderLineView }) 
   );
 }
 
+type Later = NonNullable<OrderView["later"]>;
+
+const REST_TITLE: Record<Later["status"], (date: string) => string> = {
+  waiting: (date) => `The rest comes ${formatDate(date)}`,
+  out_for_delivery: () => "The rest is on the way",
+  delivered: () => "The rest is delivered",
+  cancelled: () => "The rest is cancelled",
+};
+
+function restNote(supplierName: string, later: Later): string {
+  switch (later.status) {
+    case "waiting":
+      return `${supplierName} sends these in a second delivery. You can cancel them until they go out.`;
+    case "out_for_delivery":
+      return `Due ${formatDate(later.date)}. Check them when they arrive.`;
+    case "delivered":
+      return "It is in the items above.";
+    case "cancelled":
+      return `${supplierName} is not sending the rest. Order it again if you still need it.`;
+  }
+}
+
+/** The second delivery: what is in it, when it comes and where it is (two deliveries per order). */
+function RestCard({ order, later }: { order: OrderView; later: Later }) {
+  const lines = order.lines.filter((line) => line.laterQty > 0);
+  return (
+    <section aria-labelledby="rest-title" className={`${CARD} border-l-4 border-l-info`}>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-4 py-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h2 id="rest-title">{REST_TITLE[later.status](later.date)}</h2>
+            <LaterStatusPill status={later.status} />
+          </div>
+          <p className="mt-0.5 text-[.84rem] text-muted">{restNote(order.supplier.name, later)}</p>
+        </div>
+        {later.status === "waiting" ? <CancelRestButton orderId={order.id} /> : null}
+      </div>
+      {lines.length > 0 ? (
+        <ul className="divide-y divide-line border-t border-line">
+          {lines.map((line) => (
+            <li key={line.id} className="flex items-baseline justify-between gap-3 px-4 py-2.5 text-[.875rem]">
+              <span className="min-w-0 break-words">
+                <b className="font-semibold">{line.name}</b>
+                <span className="num text-muted"> {plural(line.laterQty, line.unit)}</span>
+              </span>
+              <span className="num font-semibold whitespace-nowrap">{formatMoney(lineTotal(line.unitPrice, line.laterQty))}</span>
+            </li>
+          ))}
+          <li className="flex items-center justify-between px-4 py-2.5 text-[.875rem]">
+            <span className="text-muted">Second delivery</span>
+            <span className="num font-bold">{formatMoney(order.laterCents)}</span>
+          </li>
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+/** "S$12.00", or "S$12.00 now" with "+ S$3.90 later" under it. */
+function TotalValue({ order }: { order: OrderView }) {
+  if (order.laterCents === 0) return <>{formatMoney(order.totalCents)}</>;
+  return (
+    <>
+      <span className="block">{formatMoney(order.totalCents)} now</span>
+      <span className="block text-[.8rem] font-semibold text-muted">+ {formatMoney(order.laterCents)} later</span>
+    </>
+  );
+}
+
 function ItemsCard({ order, canReport }: { order: OrderView; canReport: boolean }) {
+  const hasLater = order.lines.some((line) => line.laterQty > 0);
   return (
     <section aria-labelledby="items-title" className={`${CARD} @container`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 py-3.5">
@@ -123,8 +198,13 @@ function ItemsCard({ order, canReport }: { order: OrderView; canReport: boolean 
               Item
             </th>
             <th scope="col" className={`${TH} text-right`}>
-              Qty
+              {hasLater ? "Now" : "Qty"}
             </th>
+            {hasLater ? (
+              <th scope="col" className={`${TH} text-right`}>
+                Later
+              </th>
+            ) : null}
             <th scope="col" className={`${TH} text-right`}>
               Price
             </th>
@@ -145,22 +225,29 @@ function ItemsCard({ order, canReport }: { order: OrderView; canReport: boolean 
                 <LineName line={line} />
               </td>
               <td className="num px-4 py-2.5 text-right whitespace-nowrap">{plural(line.qty, line.unit)}</td>
-              <td className="num px-4 py-2.5 text-right whitespace-nowrap">{formatMoney(line.unitPrice)}</td>
-              <td className="num px-4 py-2.5 text-right font-semibold whitespace-nowrap">{formatMoney(lineTotal(line.unitPrice, line.qty))}</td>
-              {canReport ? (
-                <td className="px-4 py-2.5 text-right">
-                  <ReportLink order={order} line={line} />
+              {hasLater ? (
+                <td className="num px-4 py-2.5 text-right whitespace-nowrap">
+                  {line.laterQty > 0 ? (
+                    <span className="font-semibold text-info">{plural(line.laterQty, line.unit)}</span>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
                 </td>
               ) : null}
+              <td className="num px-4 py-2.5 text-right whitespace-nowrap">{formatMoney(line.unitPrice)}</td>
+              <td className="num px-4 py-2.5 text-right font-semibold whitespace-nowrap">{formatMoney(lineTotal(line.unitPrice, line.qty))}</td>
+              {canReport ? <td className="px-4 py-2.5 text-right">{line.qty > 0 ? <ReportLink order={order} line={line} /> : null}</td> : null}
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={3} className="px-4 py-3 text-right text-muted">
+            <td colSpan={hasLater ? 4 : 3} className="px-4 py-3 text-right align-top text-muted">
               Total
             </td>
-            <td className="num px-4 py-3 text-right text-[.95rem] font-bold whitespace-nowrap">{formatMoney(order.totalCents)}</td>
+            <td className="num px-4 py-3 text-right text-[.95rem] font-bold whitespace-nowrap">
+              <TotalValue order={order} />
+            </td>
             {canReport ? <td /> : null}
           </tr>
         </tfoot>
@@ -173,17 +260,20 @@ function ItemsCard({ order, canReport }: { order: OrderView; canReport: boolean 
               <LineName line={line} />
               <span className="num block text-[.8rem] text-muted">
                 {plural(line.qty, line.unit)} × {formatMoney(line.unitPrice)}
+                {line.laterQty > 0 ? <span className="font-semibold text-info"> · + {line.laterQty} later</span> : null}
               </span>
             </div>
             <div className="flex flex-col items-end gap-1">
               <span className="num font-semibold">{formatMoney(lineTotal(line.unitPrice, line.qty))}</span>
-              {canReport ? <ReportLink order={order} line={line} /> : null}
+              {canReport && line.qty > 0 ? <ReportLink order={order} line={line} /> : null}
             </div>
           </li>
         ))}
-        <li className="flex items-center justify-between px-4 py-3">
+        <li className="flex items-start justify-between px-4 py-3">
           <span className="text-muted">Total</span>
-          <span className="num font-bold">{formatMoney(order.totalCents)}</span>
+          <span className="num text-right font-bold">
+            <TotalValue order={order} />
+          </span>
         </li>
       </ul>
     </section>
@@ -207,6 +297,17 @@ function DetailsCard({ order, belowCents, minimumCents }: { order: OrderView; be
           ? `${formatDate(order.requestedDeliveryDate)}, requested`
           : "Not set yet",
     ],
+    ...(order.later
+      ? [
+          [
+            "Rest",
+            <span key="rest" className="inline-flex flex-wrap items-center justify-end gap-1.5">
+              {formatDate(order.later.date)}
+              <LaterStatusPill status={order.later.status} />
+            </span>,
+          ] satisfies [string, ReactNode],
+        ]
+      : []),
     ["Supplier", order.supplier.name],
     ...(belowCents > 0
       ? [
@@ -222,7 +323,7 @@ function DetailsCard({ order, belowCents, minimumCents }: { order: OrderView; be
     [
       "Total",
       <span key="total" className="num font-semibold">
-        {formatMoney(order.totalCents)}
+        {order.laterCents > 0 ? `${formatMoney(order.totalCents)} now + ${formatMoney(order.laterCents)} later` : formatMoney(order.totalCents)}
       </span>,
     ],
   ];
@@ -251,17 +352,23 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
   // RLS hides other businesses' orders, so they read as missing.
   const order = await getOrderById(id, session.orgId);
   if (!order) notFound();
-  const [issues, changes, minimums] = await Promise.all([
+  const [issues, changes, minimums, requests] = await Promise.all([
     getBuyerIssues({ orgId: session.orgId, orderId: order.id }),
     getOrderChanges(order.id),
     getMinimums([order.supplier.id]),
+    getOrderRequests(order.id),
   ]);
   const belowCents = orderBelowMinimum(order, minimums);
   const report = firstParam((await searchParams).report);
-  const reportProductId = order.lines.some((line) => line.productId === report) ? report : undefined;
+  // Lines with nothing delivered yet (all of it comes later) cannot be reported.
+  const reportProductId = order.lines.some((line) => line.productId === report && line.qty > 0) ? report : undefined;
   const ref = orderNumber(order.number);
   const delivery = order.confirmedDeliveryDate ?? order.requestedDeliveryDate;
   const canReport = needsCheck(order);
+  const later = order.later;
+  const restToGo = restToCome(order);
+  const firstDate = order.status === "pending" || order.status === "accepted" ? delivery : null;
+  const restCard = later ? <RestCard order={order} later={later} /> : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -290,6 +397,7 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
                   <span aria-hidden="true">·</span>
                   <span>
                     {order.confirmedDeliveryDate ? "delivery" : "delivery requested"} {formatDate(delivery)}
+                    {later && later.status !== "cancelled" ? `, rest ${formatDate(later.date)}` : null}
                   </span>
                 </>
               ) : null}
@@ -304,7 +412,9 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @min-[820px]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-4">
             {changes.length > 0 ? <ChangesCard supplierName={order.supplier.name} changes={changes} /> : null}
+            {restToGo ? restCard : null}
             <ItemsCard order={order} canReport={canReport} />
+            {restToGo ? null : restCard}
 
             {issues.length > 0 ? (
               <section id="problems" aria-labelledby="problems-title" className={`${CARD} scroll-mt-6`}>
@@ -336,6 +446,16 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
                 </ul>
               </section>
             ) : null}
+
+            <OrderConversation
+              orderId={order.id}
+              myOrgId={session.orgId}
+              otherName={order.supplier.name}
+              requests={requests}
+              firstDate={firstDate}
+              restDate={later?.status === "waiting" ? later.date : null}
+              today={singaporeDateOf(new Date())}
+            />
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">

@@ -23,8 +23,10 @@ function toType(value: string): ProblemType {
 /** Report a problem: item, what happened, quantity affected and an optional note (BUY-30). */
 export function ProblemForm({ order, initialProductId, onClose }: Props) {
   const { show } = useToast();
+  // A problem is only about what arrived; lines coming entirely in a later delivery are left out.
+  const arrived = order.lines.filter((line) => line.qty > 0);
   const [productId, setProductId] = useState(
-    order.lines.find((orderLine) => orderLine.productId === initialProductId)?.productId ?? order.lines[0]?.productId ?? "",
+    arrived.find((orderLine) => orderLine.productId === initialProductId)?.productId ?? arrived[0]?.productId ?? "",
   );
   const [type, setType] = useState<ProblemType>("short");
   const [qty, setQty] = useState("1");
@@ -32,7 +34,7 @@ export function ProblemForm({ order, initialProductId, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [key] = useState(() => crypto.randomUUID());
   const [sending, startSending] = useTransition();
-  const line = order.lines.find((candidate) => candidate.productId === productId);
+  const line = arrived.find((candidate) => candidate.productId === productId);
   const max = line?.qty ?? 1;
 
   const send = () => {
@@ -60,7 +62,7 @@ export function ProblemForm({ order, initialProductId, onClose }: Props) {
       </div>
       <FieldGrid>
         <SelectField label="Item" value={productId} onChange={(event) => setProductId(event.currentTarget.value)} autoFocus>
-          {order.lines.map((orderLine) => (
+          {arrived.map((orderLine) => (
             <option key={orderLine.id} value={orderLine.productId}>
               {orderLine.name}
             </option>

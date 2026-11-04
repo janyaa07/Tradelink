@@ -10,8 +10,11 @@ export async function getMinimums(supplierIds: string[]): Promise<Map<string, nu
   return new Map([...terms].map(([id, supplierTerms]) => [id, toCents(supplierTerms.minimumOrder ?? "0")]));
 }
 
-/** How far a live order is below its supplier's minimum; 0 when it is not, or when it was cancelled or rejected. */
+/**
+ * How far a live order is below its supplier's minimum; 0 when it is not, or when it was cancelled or rejected.
+ * The rest still to come counts, since the supplier chose to send it in a second delivery.
+ */
 export function orderBelowMinimum(order: OrderView, minimums: Map<string, number>): number {
   if (order.status === "cancelled" || order.status === "rejected") return 0;
-  return minimumGap(order.totalCents, minimums.get(order.supplier.id) ?? 0);
+  return minimumGap(order.totalCents + order.laterCents, minimums.get(order.supplier.id) ?? 0);
 }

@@ -8,6 +8,7 @@ import { formatDateTime, orderNumber } from "@/ui/format";
 import { Pill } from "@/ui/Pill";
 import { needsCheck } from "./filters";
 import type { BuyerIssue } from "./queries";
+import { RestPill } from "./rest";
 import { ISSUE_STATUS_PILLS, itemSummary, problemSummary } from "./summary";
 
 const ROW_LINK =
@@ -43,7 +44,7 @@ export function OrderRow({ order }: { order: OrderView }) {
               {formatDateTime(order.createdAt)}
             </p>
           </div>
-          <p className="num text-right font-semibold rail:order-3">{formatMoney(order.totalCents)}</p>
+          <p className="num text-right font-semibold rail:order-3">{formatMoney(order.totalCents + order.laterCents)}</p>
           <div className="flex min-w-0 items-center gap-2 text-[.84rem] text-muted rail:order-2 rail:flex-col rail:items-start rail:gap-0">
             <p className="flex min-w-0 max-w-full gap-1.5">
               <span className="flex-none text-ink">{items.count}</span>
@@ -51,8 +52,9 @@ export function OrderRow({ order }: { order: OrderView }) {
             </p>
             {tag ? <Tag>{tag}</Tag> : null}
           </div>
-          <div className="justify-self-end rail:order-4">
+          <div className="flex flex-wrap items-center justify-end gap-1 justify-self-end rail:order-4">
             <StatusPill status={order.status} />
+            <RestPill order={order} />
           </div>
         </div>
       </Link>

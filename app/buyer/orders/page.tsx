@@ -15,6 +15,7 @@ import {
   type OrderListFilter,
 } from "@/features/buyer/orders/filters";
 import { OrderRow, ProblemRow, RowList } from "@/features/buyer/orders/OrderRows";
+import { RestPill } from "@/features/buyer/orders/rest";
 import { countBuyerIssues, getBuyerIssues } from "@/features/buyer/orders/queries";
 import { getMinimums, orderBelowMinimum } from "@/features/buyer/orders/minimum";
 import { ISSUE_STATUS_PILLS, itemSummary, problemSummary, waitingBanner } from "@/features/buyer/orders/summary";
@@ -223,11 +224,12 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
                 </Cell>
                 <Cell num>{delivery ? formatDate(delivery) : "—"}</Cell>
                 <Cell num strong align="right">
-                  {formatMoney(order.totalCents)}
+                  {formatMoney(order.totalCents + order.laterCents)}
                 </Cell>
                 <Cell>
                   <span className="flex flex-wrap items-center gap-1">
                     <OrderState order={order} />
+                    <RestPill order={order} />
                     {orderBelowMinimum(order, minimums) > 0 ? <Pill tone="warn">Below minimum</Pill> : null}
                   </span>
                 </Cell>
