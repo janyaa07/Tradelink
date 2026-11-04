@@ -111,3 +111,45 @@ export async function getOpenDateRequests(orgId: string): Promise<OpenDateReques
         : [],
     );
 }
+
+/** The other side's latest message on an order, when nobody here has written since. */
+export type UnansweredMessage = { orderId: string; orderNumber: number; fromName: string; body: string; createdAt: string };
+
+const messageRowSchema = z.object({
+  from_org_id: z.uuid(),
+  body: z.string(),
+  created_at: z.string(),
+  from: z.object({ name: z.string() }).nullable(),
+  parent: z.object({ id: z.uuid(), number: z.number() }).nullable(),
+});
+
+const MESSAGES_SCANNED = 60;
+
+/** Orders whose newest message is from the other side, newest first: each waits for a reply. */
+export async function getUnansweredMessages(orgId: string): Promise<UnansweredMessage[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("order_requests")
+    .select("from_org_id, body, created_at, from:organisations!order_requests_from_org_id_fkey(name), parent:orders(id, number)")
+    .eq("kind", "message")
+    .order("created_at", { ascending: false })
+    .limit(MESSAGES_SCANNED);
+  if (error) throw new Error(`Could not load messages: ${error.message}`);
+  const latest = new Map<string, z.infer<typeof messageRowSchema>>();
+  for (const row of z.array(messageRowSchema).parse(data)) {
+    if (row.parent && !latest.has(row.parent.id)) latest.set(row.parent.id, row);
+  }
+  return [...latest.values()].flatMap((row) =>
+    row.parent && row.from_org_id !== orgId
+      ? [
+          {
+            orderId: row.parent.id,
+            orderNumber: row.parent.number,
+            fromName: row.from?.name ?? "The other business",
+            body: row.body,
+            createdAt: row.created_at,
+          },
+        ]
+      : [],
+  );
+}

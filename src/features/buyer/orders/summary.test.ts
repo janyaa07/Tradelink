@@ -30,18 +30,14 @@ describe("problem summary", () => {
   });
 
   it("says where an answered problem stands", () => {
-    expect(problemSummary({ ...short, status: "credit_promised" })).toBe(
-      "Short: 2 × Dried noodles · Harbour Dry Goods will credit S$8.40",
-    );
+    expect(problemSummary({ ...short, status: "credit_promised" })).toBe("Short: 2 × Dried noodles · Harbour Dry Goods will credit S$8.40");
     expect(problemSummary({ ...short, status: "disputed" })).toBe("Short: 2 × Dried noodles · Tradelink is reviewing it");
     expect(problemSummary({ ...short, status: "credit_received" })).toBe("Short: 2 × Dried noodles · credit of S$8.40 received");
   });
 
   it("gives the supplier's answer as a sentence", () => {
     expect(issueAnswer(short)).toBe("Waiting for Harbour Dry Goods to answer.");
-    expect(issueAnswer({ ...short, status: "replacement_promised" })).toBe(
-      "Harbour Dry Goods will replace this on the next delivery.",
-    );
+    expect(issueAnswer({ ...short, status: "replacement_promised" })).toBe("Harbour Dry Goods will replace this on the next delivery.");
     expect(issueAnswer({ ...short, status: "credit_received" })).toBe("Harbour Dry Goods credited S$8.40. You marked it received.");
   });
 

@@ -86,7 +86,8 @@ export function SelectRowLink({ href, selected, children }: { href: string; sele
       href={href}
       scroll={false}
       aria-current={selected ? "true" : undefined}
-      className="font-semibold text-ink no-underline after:absolute after:inset-0 after:content-[''] hover:underline"
+      data-row-link
+      className="font-semibold text-ink no-underline hover:underline"
     >
       {children}
     </Link>

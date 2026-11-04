@@ -55,10 +55,7 @@ export function DataTable({ label, columns, children, phone, footer }: DataTable
   );
 }
 
-/** A table row. With href the whole row opens it, through a link on its first cell's text. */
-export function Row({ children, selected }: { children: ReactNode; selected?: boolean }) {
-  return <tr className={cx("relative transition-colors duration-150 hover:bg-sunken/60", selected && "bg-accent-soft/60")}>{children}</tr>;
-}
+export { Row } from "./DataRow";
 
 type CellProps = {
   children?: ReactNode;
@@ -87,16 +84,16 @@ export function Cell({ children, align, muted, strong, num, className }: CellPro
   );
 }
 
-/** The link that makes a whole row clickable; buttons in the row sit above it. */
+/** The link that makes a whole row clickable: a click anywhere on its Row follows it. */
 export function RowLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-semibold text-ink no-underline after:absolute after:inset-0 after:content-[''] hover:underline">
+    <Link href={href} data-row-link className="font-semibold text-ink no-underline hover:underline">
       {children}
     </Link>
   );
 }
 
-/** A table cell's own controls stay clickable above the row link. */
+/** A table cell's own controls; clicks on them never open the row. */
 export function CellActions({ children }: { children: ReactNode }) {
-  return <div className="relative z-[1] flex items-center justify-end gap-1.5">{children}</div>;
+  return <div className="flex items-center justify-end gap-1.5">{children}</div>;
 }

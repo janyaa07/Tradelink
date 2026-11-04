@@ -3,6 +3,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/data/supabase/server";
 import { buildTodos, type DateRequestInput, type PartialInput, type PriceChangeInput, type ReplyInput, type Todo } from "@/domain/todos";
+import { getUnansweredMessages } from "@/features/orders/requests";
 import { formatDate, orderNumber } from "@/ui/format";
 import { getBuyerSettings, getUsualItems } from "./queries";
 
@@ -172,7 +173,7 @@ async function getDateRequests(orgId: string): Promise<DateRequestInput[]> {
 /** The buyer's To do list, most urgent first. Cached per request. */
 export const getTodos = cache(async (orgId: string): Promise<Todo[]> => {
   const [settings, usuals] = await Promise.all([getBuyerSettings(orgId), getUsualItems(orgId)]);
-  const [priceChanges, partials, replies, dateRequests] = await Promise.all([
+  const [priceChanges, partials, replies, dateRequests, unanswered] = await Promise.all([
     settings.priceAlerts
       ? getPriceChanges(
           orgId,
@@ -182,6 +183,13 @@ export const getTodos = cache(async (orgId: string): Promise<Todo[]> => {
     getPartials(),
     getReplies(orgId),
     getDateRequests(orgId),
+    getUnansweredMessages(orgId),
   ]);
-  return buildTodos({ priceChanges, partials, replies, dateRequests }, settings.priceAlerts);
+  const messages = unanswered.map((message) => ({
+    orderId: message.orderId,
+    orderRef: orderNumber(message.orderNumber),
+    fromName: message.fromName,
+    body: message.body,
+  }));
+  return buildTodos({ priceChanges, partials, replies, dateRequests, messages }, settings.priceAlerts);
 });

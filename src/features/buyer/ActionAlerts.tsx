@@ -10,6 +10,7 @@ const KINDS: Record<TodoAction["kind"], { label: string; icon: IconName }> = {
   reply: { label: "Reply", icon: "chat" },
   credit: { label: "Credit", icon: "receipt" },
   date: { label: "Date change", icon: "truck" },
+  message: { label: "Message", icon: "chat" },
 };
 
 const ICON_TONES: Record<TodoTone, string> = {

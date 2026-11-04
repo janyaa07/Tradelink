@@ -259,6 +259,7 @@ export const BUYER_TOOLS: AiTool[] = [
           ...(todo.action.kind === "price" ? { price_change_id: todo.action.id } : {}),
           ...(todo.action.kind === "credit" || todo.action.kind === "reply" ? { issue_id: todo.action.id } : {}),
           ...(todo.action.kind === "date" ? { request_id: todo.action.id } : {}),
+          ...(todo.action.kind === "message" ? { reply_with: "message_supplier" } : {}),
         })),
         cards,
       };

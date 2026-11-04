@@ -24,3 +24,23 @@ export function routeFor(role: NotificationRole, link: string): string {
   if (section === "buyers" && id) return role === "admin" ? `/admin/users/buyers/${id}` : `/${role}`;
   return `/${role}`;
 }
+
+/** What a notification asks the person to do: the button's words, and where on the page it lands. */
+export function actionFor(role: NotificationRole, note: { kind: string; title: string }): { label: string; hash: string } {
+  switch (note.kind) {
+    case "Message":
+      return { label: "Reply", hash: "#messages" };
+    case "Date change":
+      return note.title.includes(" asks to move ") ? { label: "Answer", hash: "#messages" } : { label: "View order", hash: "#messages" };
+    case "New order":
+      return { label: role === "supplier" ? "Review order" : "View order", hash: "" };
+    case "Order delivered":
+      return { label: role === "buyer" ? "Check delivery" : "View order", hash: "" };
+    case "Order part accepted":
+      return { label: "See changes", hash: "" };
+    case "Problem reported":
+      return { label: "Answer", hash: "#problems" };
+    default:
+      return { label: "Open", hash: "" };
+  }
+}

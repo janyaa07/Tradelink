@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import type { TodoAction } from "@/domain/todos";
 import type { ActionResult } from "@/lib/errors";
 import { Button } from "@/ui/Button";
+import { LinkButton } from "@/ui/LinkButton";
 import { useToast } from "@/ui/Toast";
 import { answerDeliveryDateAction } from "@/features/orders/request-actions";
 import { ackPriceChangeAction, markCreditReceivedAction, markIssueSeenAction, orderRemainderAction, skipPartialAction } from "./home-actions";
@@ -68,6 +69,12 @@ export function TodoActions({ action }: { action: TodoAction }) {
             Skip
           </Button>
         </>
+      );
+    case "message":
+      return (
+        <LinkButton href={`/buyer/orders/${action.id}#messages`} variant="primary" size="small">
+          Reply
+        </LinkButton>
       );
     case "date":
       return (

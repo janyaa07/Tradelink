@@ -4,7 +4,7 @@ import { requireRole } from "@/data/session";
 import { BellPanel } from "@/features/notifications/BellPanel";
 import { countUnreadNotifications, getNotifications } from "@/features/notifications/queries";
 import { RoleShell } from "@/features/shell/RoleShell";
-import { getOpenDateRequests } from "@/features/orders/requests";
+import { getOpenDateRequests, getUnansweredMessages } from "@/features/orders/requests";
 import { SupplierBellActions } from "@/features/supplier/SupplierBellActions";
 import { countNewOrders, getOpenIssues } from "@/features/supplier/queries";
 import { needsReorder } from "@/features/supplier/stock";
@@ -19,8 +19,12 @@ export default async function SupplierLayout({ children }: { children: ReactNode
     countUnreadNotifications(),
     getNotifications(PANEL_NOTES),
   ]);
-  const [dateRequests, issues] = await Promise.all([getOpenDateRequests(session.orgId), getOpenIssues(session.orgId)]);
-  const actionCount = dateRequests.length + (newOrders > 0 ? 1 : 0) + (issues.length > 0 ? 1 : 0);
+  const [dateRequests, messages, issues] = await Promise.all([
+    getOpenDateRequests(session.orgId),
+    getUnansweredMessages(session.orgId),
+    getOpenIssues(session.orgId),
+  ]);
+  const actionCount = dateRequests.length + messages.length + (newOrders > 0 ? 1 : 0) + (issues.length > 0 ? 1 : 0);
 
   return (
     <RoleShell
@@ -31,13 +35,17 @@ export default async function SupplierLayout({ children }: { children: ReactNode
         "/supplier/orders": newOrders,
         "/supplier/inventory": catalogue.filter(needsReorder).length,
       }}
-      bellCount={unread + dateRequests.length}
+      bellCount={unread + dateRequests.length + messages.length}
       bellPanel={
         <BellPanel
           role="supplier"
           notes={notes}
           unread={unread}
-          actions={actionCount > 0 ? <SupplierBellActions dateRequests={dateRequests} newOrders={newOrders} problems={issues.length} /> : undefined}
+          actions={
+            actionCount > 0 ? (
+              <SupplierBellActions dateRequests={dateRequests} messages={messages} newOrders={newOrders} problems={issues.length} />
+            ) : undefined
+          }
         />
       }
     >

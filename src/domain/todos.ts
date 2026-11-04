@@ -37,6 +37,9 @@ export type DateRequestInput = {
   note: string | null;
 };
 
+/** The other side's latest message on an order, waiting for a reply. */
+export type MessageInput = { orderId: string; orderRef: string; fromName: string; body: string };
+
 export type TodoAction =
   | { kind: "price"; id: string }
   | { kind: "partial"; id: string; remainder: number }
@@ -44,7 +47,9 @@ export type TodoAction =
   /** A promised credit: the buyer marks it received once it arrives. */
   | { kind: "credit"; id: string }
   /** The supplier asks to move a delivery; the buyer accepts or declines. */
-  | { kind: "date"; id: string };
+  | { kind: "date"; id: string }
+  /** A message waiting for a reply; id is the order. */
+  | { kind: "message"; id: string };
 
 export type Todo = {
   key: string;
@@ -127,9 +132,29 @@ function dateTodo(request: DateRequestInput): Todo {
   };
 }
 
+const QUOTE_LENGTH = 120;
+
+function messageTodo(message: MessageInput): Todo {
+  const body = message.body.length > QUOTE_LENGTH ? `${message.body.slice(0, QUOTE_LENGTH - 3)}...` : message.body;
+  return {
+    key: `message-${message.orderId}`,
+    tone: "warn",
+    title: `${message.fromName} wrote about ${message.orderRef}`,
+    detail: `"${body}"`,
+    action: { kind: "message", id: message.orderId },
+    orderId: message.orderId,
+  };
+}
+
 const TONE_ORDER: Record<TodoTone, number> = { bad: 0, warn: 1, good: 2 };
 
-type TodoInputs = { priceChanges: PriceChangeInput[]; partials: PartialInput[]; replies: ReplyInput[]; dateRequests?: DateRequestInput[] };
+type TodoInputs = {
+  priceChanges: PriceChangeInput[];
+  partials: PartialInput[];
+  replies: ReplyInput[];
+  dateRequests?: DateRequestInput[];
+  messages?: MessageInput[];
+};
 
 /** Price changes (only when price alerts are on), part deliveries, replies and date requests; most urgent first. */
 export function buildTodos(inputs: TodoInputs, priceAlerts: boolean): Todo[] {
@@ -138,6 +163,7 @@ export function buildTodos(inputs: TodoInputs, priceAlerts: boolean): Todo[] {
     ...inputs.partials.map(partialTodo),
     ...inputs.replies.map(replyTodo).filter((todo): todo is Todo => todo !== null),
     ...(inputs.dateRequests ?? []).map(dateTodo),
+    ...(inputs.messages ?? []).map(messageTodo),
   ];
   return items.sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone]);
 }

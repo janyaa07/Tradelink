@@ -15,6 +15,23 @@ const dispute = { id: "i1", orderRef: "ORD-1040", supplierName: "Harbour Dry Goo
 const credit = { ...dispute, id: "i2", status: "credit_promised" };
 
 describe("to do", () => {
+  it("asks for a reply to the other side's latest message, quoting it", () => {
+    const [todo] = buildTodos(
+      {
+        priceChanges: [],
+        partials: [],
+        replies: [],
+        messages: [{ orderId: "o1", orderRef: "ORD-1039", fromName: "Fresh Lane Produce", body: "Can we come at 9 instead?" }],
+      },
+      true,
+    );
+    expect(todo).toMatchObject({
+      title: "Fresh Lane Produce wrote about ORD-1039",
+      detail: '"Can we come at 9 instead?"',
+      action: { kind: "message", id: "o1" },
+    });
+  });
+
   it("asks the buyer to answer a supplier's new delivery date", () => {
     const [todo] = buildTodos(
       {

@@ -89,7 +89,11 @@ export function OrderConversation({ orderId, myOrgId, otherName, requests, first
     );
 
   return (
-    <section aria-labelledby={`${id}-title`} className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-card">
+    <section
+      id="messages"
+      aria-labelledby={`${id}-title`}
+      className="min-w-0 scroll-mt-6 overflow-hidden rounded-xl border border-line bg-surface shadow-card"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5">
         <h2 id={`${id}-title`}>Messages with {otherName}</h2>
         {canMove && !moving ? (

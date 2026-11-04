@@ -111,7 +111,7 @@ export type AiProblem = {
 
 export type AiAlert = {
   id: string;
-  kind: "price" | "partial" | "reply" | "credit" | "date";
+  kind: "price" | "partial" | "reply" | "credit" | "date" | "message";
   title: string;
   detail: string;
   tone: "good" | "warn" | "bad";

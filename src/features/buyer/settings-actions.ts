@@ -12,10 +12,7 @@ function done<T>(result: ActionResult<T>): ActionResult<T> {
 }
 
 const settingsInput = z.object({
-  weeklyBudget: z
-    .number({ error: "Enter a budget above 0." })
-    .gt(0, "Enter a budget above 0.")
-    .max(9999999, "Enter a budget above 0."),
+  weeklyBudget: z.number({ error: "Enter a budget above 0." }).gt(0, "Enter a budget above 0.").max(9999999, "Enter a budget above 0."),
   suggestReorder: z.boolean(),
   priceAlerts: z.boolean(),
   budgetWarning: z.boolean(),
@@ -38,9 +35,19 @@ export async function updateBuyerSettingsAction(input: z.infer<typeof settingsIn
 
 const usualInput = z.object({
   productId: z.uuid(),
-  usualQty: z.number().int("Enter a whole number between 1 and 9999.").min(1, "Enter a whole number between 1 and 9999.").max(9999, "Enter a whole number between 1 and 9999."),
-  usePerDay: z.number({ error: "Enter how many you use per day, 0 or more." }).min(0, "Enter how many you use per day, 0 or more.").max(9999, "Enter how many you use per day, 0 or more."),
-  inShop: z.number({ error: "Enter how many you have, 0 or more." }).min(0, "Enter how many you have, 0 or more.").max(999999, "Enter how many you have, 0 or more."),
+  usualQty: z
+    .number()
+    .int("Enter a whole number between 1 and 9999.")
+    .min(1, "Enter a whole number between 1 and 9999.")
+    .max(9999, "Enter a whole number between 1 and 9999."),
+  usePerDay: z
+    .number({ error: "Enter how many you use per day, 0 or more." })
+    .min(0, "Enter how many you use per day, 0 or more.")
+    .max(9999, "Enter how many you use per day, 0 or more."),
+  inShop: z
+    .number({ error: "Enter how many you have, 0 or more." })
+    .min(0, "Enter how many you have, 0 or more.")
+    .max(999999, "Enter how many you have, 0 or more."),
 });
 
 /** Adds or updates a usual item: usual quantity, use per day and the count in the shop (BUY-46). */

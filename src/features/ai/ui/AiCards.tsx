@@ -665,7 +665,14 @@ function ProblemCardView({ problem }: { problem: AiProblem }) {
   );
 }
 
-const ALERT_ICONS: Record<AiAlert["kind"], IconName> = { price: "trend", partial: "truck", reply: "chat", credit: "receipt", date: "truck" };
+const ALERT_ICONS: Record<AiAlert["kind"], IconName> = {
+  price: "trend",
+  partial: "truck",
+  reply: "chat",
+  credit: "receipt",
+  date: "truck",
+  message: "chat",
+};
 
 function AlertCardView({ alert }: { alert: AiAlert }) {
   const { busy, result, run } = useCardRun(() => undefined);

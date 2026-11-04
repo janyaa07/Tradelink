@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cx } from "@/ui/cx";
 import { formatDateTime } from "@/ui/format";
 import type { NotificationRow } from "./queries";
-import { routeFor, toneOf, type NotificationRole } from "./routes";
+import { actionFor, routeFor, toneOf, type NotificationRole } from "./routes";
 
 const TONE_TEXT = { good: "text-good", bad: "text-bad", info: "text-info", warn: "text-warn", plain: "text-muted" } as const;
 
@@ -34,23 +34,33 @@ function ItemBody({ note }: { note: NotificationRow }) {
 export function NotificationItems({ notes, role }: { notes: NotificationRow[]; role: NotificationRole }) {
   return (
     <ul className="flex flex-col">
-      {notes.map((note) => (
-        <li key={note.id} className="border-t border-line first:border-t-0">
-          {note.link ? (
-            <Link
-              href={routeFor(role, note.link)}
-              className="flex min-w-0 items-start gap-3 px-4 py-3 no-underline transition-colors duration-150 hover:bg-sunken/60"
-            >
-              <ItemBody note={note} />
-              <span className="flex-none self-center text-[.8rem] font-semibold text-accent">Open</span>
-            </Link>
-          ) : (
-            <div className="flex min-w-0 items-start gap-3 px-4 py-3">
-              <ItemBody note={note} />
-            </div>
-          )}
-        </li>
-      ))}
+      {notes.map((note) => {
+        const action = actionFor(role, note);
+        return (
+          <li key={note.id} className="border-t border-line first:border-t-0">
+            {note.link ? (
+              <Link
+                href={`${routeFor(role, note.link)}${action.hash}`}
+                className="flex min-w-0 items-start gap-3 px-4 py-3 no-underline transition-colors duration-150 hover:bg-sunken/60"
+              >
+                <ItemBody note={note} />
+                <span
+                  className={cx(
+                    "flex-none self-center rounded-lg border px-2.5 py-1 text-[.8rem] font-semibold whitespace-nowrap",
+                    action.label === "Open" ? "border-transparent text-accent" : "border-accent bg-accent text-on-accent",
+                  )}
+                >
+                  {action.label}
+                </span>
+              </Link>
+            ) : (
+              <div className="flex min-w-0 items-start gap-3 px-4 py-3">
+                <ItemBody note={note} />
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
