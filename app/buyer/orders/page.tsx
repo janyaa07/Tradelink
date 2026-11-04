@@ -16,6 +16,7 @@ import {
 } from "@/features/buyer/orders/filters";
 import { OrderRow, ProblemRow, RowList } from "@/features/buyer/orders/OrderRows";
 import { countBuyerIssues, getBuyerIssues } from "@/features/buyer/orders/queries";
+import { getMinimums, orderBelowMinimum } from "@/features/buyer/orders/minimum";
 import { ISSUE_STATUS_PILLS, itemSummary, problemSummary, waitingBanner } from "@/features/buyer/orders/summary";
 import { StatusPill } from "@/features/orders/OrderCard";
 import { countOrders, getOrders, type OrderSearch, type OrderView } from "@/features/orders/queries";
@@ -88,6 +89,7 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
     filter === "problems" ? getBuyerIssues({ orgId: session.orgId, search, limit: shown + 1 }) : Promise.resolve([]),
   ]);
   const rows = filter === "problems" ? issues.length : orders.length;
+  const minimums = await getMinimums(orders.map((order) => order.supplier.id));
   const hasMore = rows > shown && shown < MAX_SHOWN;
 
   const more = hasMore ? (
@@ -224,7 +226,10 @@ export default async function BuyerOrdersPage({ searchParams }: Props) {
                   {formatMoney(order.totalCents)}
                 </Cell>
                 <Cell>
-                  <OrderState order={order} />
+                  <span className="flex flex-wrap items-center gap-1">
+                    <OrderState order={order} />
+                    {orderBelowMinimum(order, minimums) > 0 ? <Pill tone="warn">Below minimum</Pill> : null}
+                  </span>
                 </Cell>
               </Row>
             );

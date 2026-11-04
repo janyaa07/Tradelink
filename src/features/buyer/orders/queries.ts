@@ -67,7 +67,11 @@ function applyFilter<Q extends Filterable<Q>>(start: Q, filter: IssueFilter): Q 
 export async function getBuyerIssues(filter: IssueFilter): Promise<BuyerIssue[]> {
   const supabase = await createSupabaseServerClient();
   const select = `id, number, type, status, qty, amount, note, created_at, answered_at, ${PRODUCT}, ${supplierJoin(filter.search)}, ${PARENT}`;
-  const ordered = supabase.from("issues").select(select).order("created_at", { ascending: false }).limit(filter.limit ?? 100);
+  const ordered = supabase
+    .from("issues")
+    .select(select)
+    .order("created_at", { ascending: false })
+    .limit(filter.limit ?? 100);
   const { data, error } = await applyFilter(ordered, filter);
   if (error) throw new Error(`Could not load problems: ${error.message}`);
   return z
@@ -98,4 +102,37 @@ export async function countBuyerIssues(filter: IssueFilter): Promise<number> {
   const { count, error } = await applyFilter(supabase.from("issues").select(columns, { count: "exact", head: true }).limit(1), filter);
   if (error) throw new Error(`Could not count problems: ${error.message}`);
   return count ?? 0;
+}
+
+/** An item the supplier could not send in full when they part accepted (BUY-04). */
+export type OrderChange = { id: string; productName: string; unit: string; asked: number; sent: number; status: "new" | "added" | "skipped" };
+
+const changeSchema = z.object({
+  id: z.uuid(),
+  asked: z.number(),
+  sent: z.number(),
+  status: z.enum(["new", "added", "skipped"]),
+  product: z.object({ name: z.string(), unit: z.string() }).nullable(),
+});
+
+/** What the supplier changed on one order, including items it cannot send at all (those leave the order's lines). */
+export async function getOrderChanges(orderId: string): Promise<OrderChange[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("partial_fulfilments")
+    .select("id, asked, sent, status, product:products(name, unit)")
+    .eq("order_id", orderId)
+    .order("created_at");
+  if (error) throw new Error(`Could not load order changes: ${error.message}`);
+  return z
+    .array(changeSchema)
+    .parse(data)
+    .map((row) => ({
+      id: row.id,
+      productName: row.product?.name ?? "An item",
+      unit: row.product?.unit ?? "unit",
+      asked: row.asked,
+      sent: row.sent,
+      status: row.status,
+    }));
 }

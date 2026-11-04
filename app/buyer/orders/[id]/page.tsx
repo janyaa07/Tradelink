@@ -9,7 +9,9 @@ import { needsCheck } from "@/features/buyer/orders/filters";
 import { OrderAskBox } from "@/features/buyer/orders/OrderAskBox";
 import { CreditReceivedButton, OrderActions } from "@/features/buyer/orders/OrderActions";
 import { OrderProgress } from "@/features/buyer/orders/OrderProgress";
-import { getBuyerIssues } from "@/features/buyer/orders/queries";
+import { getMinimums, orderBelowMinimum } from "@/features/buyer/orders/minimum";
+import { getBuyerIssues, getOrderChanges, type OrderChange } from "@/features/buyer/orders/queries";
+import { TodoActions } from "@/features/buyer/TodoActions";
 import { ISSUE_STATUS_PILLS, issueAnswer, problemTitle } from "@/features/buyer/orders/summary";
 import { StatusPill } from "@/features/orders/OrderCard";
 import type { OrderLineView, OrderView } from "@/features/orders/queries";
@@ -55,6 +57,40 @@ function LineName({ line }: { line: OrderLineView }) {
       </span>
       {!line.held ? <span className="block text-[.75rem] font-semibold text-warn">Stock and price to confirm</span> : null}
     </>
+  );
+}
+
+/** "Not coming, you asked for 3" or "2 of 3 coming". */
+function changeText(change: OrderChange): string {
+  return change.sent === 0 ? `Not coming, you asked for ${change.asked}` : `${change.sent} of ${change.asked} coming`;
+}
+
+/** What the supplier could not send when they accepted, with Order the rest for each item (BUY-04). */
+function ChangesCard({ supplierName, changes }: { supplierName: string; changes: OrderChange[] }) {
+  return (
+    <section aria-labelledby="changes-title" className={`${CARD} border-l-4 border-l-[#C98A1A]`}>
+      <div className="px-4 py-3.5">
+        <h2 id="changes-title">{supplierName} cannot send everything</h2>
+        <p className="mt-0.5 text-[.84rem] text-muted">The total below is for what is coming. Order the rest here or from another supplier.</p>
+      </div>
+      <ul className="divide-y divide-line border-t border-line">
+        {changes.map((change) => (
+          <li key={change.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-[.875rem]">
+            <span className="min-w-0 flex-1">
+              <b className="font-semibold">{change.productName}</b>
+              <span className={change.sent === 0 ? "font-semibold text-warn" : "text-muted"}> · {changeText(change)}</span>
+            </span>
+            {change.status === "new" ? (
+              <span className="flex gap-2">
+                <TodoActions action={{ kind: "partial", id: change.id, remainder: Math.max(1, change.asked - change.sent) }} />
+              </span>
+            ) : (
+              <Pill tone="plain">{change.status === "added" ? "Rest added to cart" : "Skipped"}</Pill>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -154,7 +190,7 @@ function ItemsCard({ order, canReport }: { order: OrderView; canReport: boolean 
   );
 }
 
-function DetailsCard({ order }: { order: OrderView }) {
+function DetailsCard({ order, belowCents, minimumCents }: { order: OrderView; belowCents: number; minimumCents: number }) {
   const rows: [string, ReactNode][] = [
     [
       "Order",
@@ -172,6 +208,16 @@ function DetailsCard({ order }: { order: OrderView }) {
           : "Not set yet",
     ],
     ["Supplier", order.supplier.name],
+    ...(belowCents > 0
+      ? [
+          [
+            "Minimum",
+            <span key="minimum" className="font-semibold text-warn">
+              {formatMoney(belowCents)} below the {formatMoney(minimumCents)} minimum
+            </span>,
+          ] satisfies [string, ReactNode],
+        ]
+      : []),
     ["Items", plural(order.lines.length, "line")],
     [
       "Total",
@@ -205,7 +251,12 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
   // RLS hides other businesses' orders, so they read as missing.
   const order = await getOrderById(id, session.orgId);
   if (!order) notFound();
-  const issues = await getBuyerIssues({ orgId: session.orgId, orderId: order.id });
+  const [issues, changes, minimums] = await Promise.all([
+    getBuyerIssues({ orgId: session.orgId, orderId: order.id }),
+    getOrderChanges(order.id),
+    getMinimums([order.supplier.id]),
+  ]);
+  const belowCents = orderBelowMinimum(order, minimums);
   const report = firstParam((await searchParams).report);
   const reportProductId = order.lines.some((line) => line.productId === report) ? report : undefined;
   const ref = orderNumber(order.number);
@@ -228,6 +279,7 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
               <h1 className="min-w-0 break-words">{order.supplier.name}</h1>
               <OrderState order={order} />
+              {belowCents > 0 ? <Pill tone="warn">Below minimum</Pill> : null}
             </div>
             <p className="num flex flex-wrap gap-x-1.5 text-[.84rem] text-muted">
               <span className="font-mono text-ink">{ref}</span>
@@ -251,6 +303,7 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
       <div className="@container">
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @min-[820px]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-4">
+            {changes.length > 0 ? <ChangesCard supplierName={order.supplier.name} changes={changes} /> : null}
             <ItemsCard order={order} canReport={canReport} />
 
             {issues.length > 0 ? (
@@ -287,7 +340,7 @@ export default async function BuyerOrderPage({ params, searchParams }: Props) {
 
           <div className="flex min-w-0 flex-col gap-4">
             <OrderAskBox orderRef={ref} supplierName={order.supplier.name} />
-            <DetailsCard order={order} />
+            <DetailsCard order={order} belowCents={belowCents} minimumCents={minimums.get(order.supplier.id) ?? 0} />
           </div>
         </div>
       </div>
