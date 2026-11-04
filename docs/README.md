@@ -1,5 +1,17 @@
 # Documentation
 
+## Final documents (version 1.0, 4 November 2026)
+
+| Document | Audience | Files |
+| --- | --- | --- |
+| User Guide | Buyers, suppliers and admins | [Markdown](final/User_Guide.md), [PDF](final/User_Guide.pdf) |
+| Functional Specification | Product, design, QA and business reviewers | [Markdown](final/Functional_Specification.md), [PDF](final/Functional_Specification.pdf) |
+| Technical Specification | Engineers maintaining the code | [Markdown](final/Technical_Specification.md), [PDF](final/Technical_Specification.pdf) |
+
+These describe the product as built and take priority where older documents below disagree; the Technical Specification's Appendix A lists the differences. `npm run docs:screenshots` recaptures the screenshots (with the app running) and `npm run docs:pdf` rebuilds the PDFs and diagrams.
+
+## Working documents
+
 | Document | What it covers |
 | --- | --- |
 | [USER_GUIDE.md](USER_GUIDE.md) | Demo accounts and a walkthrough for each role |

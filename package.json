@@ -16,6 +16,8 @@
     "tokens": "node scripts/build-tokens.mjs",
     "icons": "node scripts/build-icons.mjs",
     "e2e": "playwright test",
+    "docs:screenshots": "playwright test --config scripts/capture-docs.config.ts",
+    "docs:pdf": "node scripts/export-docs-pdf.mjs",
     "check": "npm run tokens && npm run lint && npm run typecheck && npm run test"
   },
   "dependencies": {
@@ -38,6 +40,7 @@
     "@types/web-push": "3.6.4",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.2",
+    "marked": "18.1.0",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "vitest": "4.1.12"
